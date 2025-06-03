@@ -10,6 +10,7 @@ import { extractTextWithOCR } from "./ocr-service";
 import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
+import { persistentStorage } from "./persistent-storage";
 import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
@@ -130,7 +131,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         filename: req.file.originalname,
         fileSize: req.file.size,
-        filePath: req.file.path, // Store original file path
         apiProvider,
         flashcardCount: parseInt(flashcardCount),
         subject: subject || "general",
