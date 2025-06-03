@@ -132,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const jobId = parseInt(req.params.id);
       const job = await storage.getFlashcardJob(jobId);
       
-      if (!job || job.status !== "completed" || !job.ankiDeckPath) {
+      if (!job || !job.ankiDeckPath) {
         return res.status(404).json({ message: "Anki deck not ready" });
       }
 
@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const format = req.params.format as 'csv' | 'json' | 'quizlet';
       const job = await storage.getFlashcardJob(jobId);
       
-      if (!job || job.status !== "completed" || !job.flashcards) {
+      if (!job || !job.flashcards) {
         return res.status(404).json({ message: "Flashcards not ready" });
       }
 
