@@ -164,7 +164,12 @@ export default function Home() {
   }, [selectedFile, currentStep]);
 
   // Check if user can upload based on premium status or upload limit
-  const canUpload = user && ((user as any).isPremium || (user as any).monthlyUploads < (user as any).monthlyLimit) && (user as any).isEmailVerified;
+  const userUploads = (user as any)?.monthlyUploads || 0;
+  const userLimit = (user as any)?.monthlyLimit || 3;
+  const isPremium = (user as any)?.isPremium || false;
+  const isEmailVerified = (user as any)?.isEmailVerified || false;
+  
+  const canUpload = user && (isPremium || userUploads < userLimit) && isEmailVerified;
   const isGenerateDisabled = !selectedFile || !canUpload || uploadMutation.isPending;
 
   // Debug logging for upload status
@@ -317,6 +322,24 @@ export default function Home() {
                       </>
                     )}
                   </Button>
+                  
+                  {/* Debug info and helpful messages */}
+                  {isGenerateDisabled && !uploadMutation.isPending && (
+                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                      <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                        <div className="font-medium mb-2">Generate button is disabled:</div>
+                        {!user && <div>• Please sign in to continue</div>}
+                        {user && !isEmailVerified && <div>• Please verify your email address</div>}
+                        {user && isEmailVerified && userUploads >= userLimit && !isPremium && (
+                          <div>• Upload limit reached ({userUploads}/{userLimit}). Upgrade to Pro for more uploads.</div>
+                        )}
+                        {user && isEmailVerified && !selectedFile && <div>• Please select a PDF file</div>}
+                        <div className="mt-2 text-xs opacity-75">
+                          Debug: uploads={userUploads}, limit={userLimit}, premium={isPremium ? 'yes' : 'no'}, verified={isEmailVerified ? 'yes' : 'no'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
