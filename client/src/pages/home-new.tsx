@@ -40,7 +40,7 @@ export default function Home() {
 
   // Poll for job status
   const { data: jobStatus } = useQuery<FlashcardJob>({
-    queryKey: ['/api/jobs', currentJobId],
+    queryKey: [`/api/jobs/${currentJobId}`],
     enabled: !!currentJobId,
     refetchInterval: currentJobId ? 2000 : false,
   });
