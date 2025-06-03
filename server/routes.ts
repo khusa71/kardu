@@ -631,14 +631,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get subscription details and update user
       if (session.subscription) {
-        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+        console.log(`Processing subscription verification for user ${userId}`);
         
-        await storage.updateUserSubscription(userId, {
-          subscriptionId: subscription.id,
-          status: subscription.status,
-          periodEnd: new Date((subscription as any).current_period_end * 1000),
-        });
-
+        // Simple premium upgrade without complex subscription tracking
+        await storage.upgradeToPremium(userId);
+        
         console.log(`Manual subscription verification successful for user ${userId}`);
         
         const updatedUser = await storage.getUser(userId);

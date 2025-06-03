@@ -5,7 +5,7 @@ import { CheckCircle, Crown, Upload, ArrowRight, AlertCircle, RefreshCw } from "
 import { Link, useLocation } from "wouter";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Success() {
   const [, setLocation] = useLocation();
@@ -41,34 +41,23 @@ export default function Success() {
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
         
-        if (sessionId && auth.currentUser) {
+        if (sessionId) {
           try {
             console.log('Attempting manual verification with session:', sessionId);
-            const token = await auth.currentUser.getIdToken();
-            console.log('Got Firebase token, length:', token.length);
             
-            const response = await fetch('/api/verify-subscription', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify({ sessionId }),
-            });
+            const response = await apiRequest("POST", "/api/verify-subscription", { sessionId });
+            const result = await response.json();
             
-            console.log('Verification response status:', response.status);
+            console.log('Verification response:', result);
             
-            if (response.ok) {
-              const result = await response.json();
-              if (result.isPremium) {
-                await refreshUserData();
-                setIsChecking(false);
-                toast({
-                  title: "Subscription activated!",
-                  description: "Welcome to StudyCards Pro!",
-                });
-                return;
-              }
+            if (result.isPremium) {
+              await refreshUserData();
+              setIsChecking(false);
+              toast({
+                title: "Subscription activated!",
+                description: "Welcome to StudyCards Pro!",
+              });
+              return;
             }
           } catch (verifyError) {
             console.error('Manual verification failed:', verifyError);
@@ -146,29 +135,19 @@ export default function Success() {
                     const urlParams = new URLSearchParams(window.location.search);
                     const sessionId = urlParams.get('session_id');
                     
-                    if (sessionId && auth.currentUser) {
+                    if (sessionId) {
                       try {
-                        const token = await auth.currentUser.getIdToken();
-                        const response = await fetch('/api/verify-subscription', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`,
-                          },
-                          body: JSON.stringify({ sessionId }),
-                        });
+                        const response = await apiRequest("POST", "/api/verify-subscription", { sessionId });
+                        const result = await response.json();
                         
-                        if (response.ok) {
-                          const result = await response.json();
-                          if (result.isPremium) {
-                            await refreshUserData();
-                            setHasTimedOut(false);
-                            toast({
-                              title: "Subscription activated!",
-                              description: "Welcome to StudyCards Pro!",
-                            });
-                            return;
-                          }
+                        if (result.isPremium) {
+                          await refreshUserData();
+                          setHasTimedOut(false);
+                          toast({
+                            title: "Subscription activated!",
+                            description: "Welcome to StudyCards Pro!",
+                          });
+                          return;
                         }
                       } catch (error) {
                         console.error('Manual retry verification failed:', error);

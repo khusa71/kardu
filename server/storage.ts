@@ -117,12 +117,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upgradeToPremium(userId: string): Promise<void> {
+    const now = new Date();
+    console.log('Upgrading user to premium with timestamp:', now.toISOString());
+    
     await db
       .update(users)
       .set({
         isPremium: true,
         monthlyLimit: 100,
-        updatedAt: new Date(),
+        updatedAt: now,
       })
       .where(eq(users.id, userId));
   }
