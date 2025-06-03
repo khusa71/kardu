@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Brain, FileText, Settings, Download, Upload, Eye, EyeOff, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Key, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw } from "lucide-react";
+import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw } from "lucide-react";
 import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 
 export default function Home() {
@@ -24,11 +24,13 @@ export default function Home() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   
-  // Advanced options
+  // Subject and focus areas
+  const [subject, setSubject] = useState<string>("programming");
   const [focusAreas, setFocusAreas] = useState({
-    syntax: true,
-    dataStructures: true,
-    controlFlow: false,
+    concepts: true,
+    definitions: true,
+    examples: false,
+    procedures: false,
   });
   const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
   
@@ -37,10 +39,16 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(1);
   const [previewFlashcards, setPreviewFlashcards] = useState<FlashcardPair[]>([]);
   const [showAllFlashcards, setShowAllFlashcards] = useState(false);
+  const [viewMode, setViewMode] = useState<'upload' | 'edit' | 'study'>('upload');
+  const [editableFlashcards, setEditableFlashcards] = useState<FlashcardPair[]>([]);
+  
+  // Auth state
+  const [user, setUser] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Poll for job status
   const { data: jobStatus } = useQuery<FlashcardJob>({
-    queryKey: ['/api/jobs', currentJobId],
+    queryKey: [`/api/jobs/${currentJobId}`],
     enabled: !!currentJobId,
     refetchInterval: currentJobId ? 2000 : false,
   });
@@ -145,7 +153,7 @@ export default function Home() {
     if (!selectedFile) {
       toast({
         title: "Please select a PDF file",
-        description: "Upload a Python PDF to generate flashcards.",
+        description: "Upload an educational PDF to generate flashcards.",
         variant: "destructive",
       });
       return;
@@ -155,6 +163,7 @@ export default function Home() {
     formData.append('pdf', selectedFile);
     formData.append('apiProvider', apiProvider);
     formData.append('flashcardCount', flashcardCount.toString());
+    formData.append('subject', subject);
     formData.append('focusAreas', JSON.stringify(focusAreas));
     formData.append('difficulty', difficulty);
 
@@ -179,10 +188,14 @@ export default function Home() {
     return step < currentStep ? "100%" : "0%";
   };
 
+  const safeProgress = (value: number | null | undefined): number => {
+    return value || 0;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -190,13 +203,13 @@ export default function Home() {
                 <Brain className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-neutral">Python Syntax Flashcard Generator</h1>
-                <p className="text-gray-600 text-sm">Transform PDFs into interactive Anki flashcards</p>
+                <h1 className="text-2xl font-bold text-neutral dark:text-white">StudyCards AI</h1>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">Transform any educational PDF into interactive Anki flashcards</p>
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-4">
-              <span className="text-sm text-gray-500">Powered by AI</span>
-              <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+              <span className="text-sm text-gray-500 dark:text-gray-400">Powered by AI</span>
+              <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full text-sm font-medium">
                 <Shield className="w-3 h-3 mr-1 inline" />
                 Secure
               </div>
@@ -211,28 +224,28 @@ export default function Home() {
           <div className="flex items-center justify-center space-x-4 md:space-x-8">
             <div className="flex items-center">
               <div className={getStepIndicatorClass(1)}>1</div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 1 ? 'text-neutral' : 'text-gray-400'}`}>Upload PDF</span>
+              <span className={`ml-2 text-sm font-medium ${currentStep >= 1 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Upload PDF</span>
             </div>
-            <div className="flex-1 h-1 bg-gray-200 rounded-full max-w-20">
+            <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full max-w-20">
               <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: getProgressWidth(2) }}></div>
             </div>
             <div className="flex items-center">
               <div className={getStepIndicatorClass(2)}>2</div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 2 ? 'text-neutral' : 'text-gray-400'}`}>Configure</span>
+              <span className={`ml-2 text-sm font-medium ${currentStep >= 2 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Configure</span>
             </div>
-            <div className="flex-1 h-1 bg-gray-200 rounded-full max-w-20">
+            <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full max-w-20">
               <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: getProgressWidth(3) }}></div>
             </div>
             <div className="flex items-center">
               <div className={getStepIndicatorClass(3)}>3</div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 3 ? 'text-neutral' : 'text-gray-400'}`}>Generate</span>
+              <span className={`ml-2 text-sm font-medium ${currentStep >= 3 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Generate</span>
             </div>
-            <div className="flex-1 h-1 bg-gray-200 rounded-full max-w-20">
+            <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full max-w-20">
               <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: getProgressWidth(4) }}></div>
             </div>
             <div className="flex items-center">
               <div className={getStepIndicatorClass(4)}>4</div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 4 ? 'text-neutral' : 'text-gray-400'}`}>Download</span>
+              <span className={`ml-2 text-sm font-medium ${currentStep >= 4 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Download</span>
             </div>
           </div>
         </div>
@@ -248,28 +261,28 @@ export default function Home() {
                   <div className="bg-primary text-white rounded-lg p-2 mr-3">
                     <FileText className="w-5 h-5" />
                   </div>
-                  <h2 className="text-xl font-semibold text-neutral">Upload Your Python PDF</h2>
+                  <h2 className="text-xl font-semibold text-neutral dark:text-white">Upload Your Educational PDF</h2>
                 </div>
                 
                 <div 
-                  className={`upload-zone border-2 border-dashed rounded-xl p-8 text-center cursor-pointer ${isDragOver ? 'dragover border-primary' : 'border-gray-300'}`}
+                  className={`upload-zone border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${isDragOver ? 'dragover border-primary bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600'}`}
                   onDrop={handleDrop}
                   onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
                   onDragLeave={() => setIsDragOver(false)}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="space-y-4">
-                    <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
                       <Upload className="w-8 h-8 text-primary" />
                     </div>
                     <div>
-                      <p className="text-lg font-medium text-neutral mb-2">Drop your PDF here, or click to browse</p>
-                      <p className="text-sm text-gray-500">Supports PDF files up to 10MB</p>
+                      <p className="text-lg font-medium text-neutral dark:text-white mb-2">Drop your PDF here, or click to browse</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Supports PDF files up to 10MB</p>
                     </div>
                     <div className="flex items-center justify-center space-x-4 text-xs text-gray-400">
-                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Python tutorials</span>
-                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Documentation</span>
-                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Textbooks</span>
+                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Academic textbooks</span>
+                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Course materials</span>
+                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Study guides</span>
                     </div>
                   </div>
                   <input 
@@ -283,13 +296,13 @@ export default function Home() {
 
                 {/* File Preview */}
                 {selectedFile && (
-                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <FileText className="w-5 h-5 text-red-500" />
                         <div>
-                          <p className="font-medium text-neutral">{selectedFile.name}</p>
-                          <p className="text-sm text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                          <p className="font-medium text-neutral dark:text-white">{selectedFile.name}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{(selectedFile.size / 1024 / 1024).toFixed(1)} MB</p>
                         </div>
                       </div>
                       <Button 
@@ -313,29 +326,33 @@ export default function Home() {
                   <div className={`rounded-lg p-2 mr-3 ${currentStep >= 2 ? 'bg-primary text-white' : 'bg-gray-400 text-white'}`}>
                     <Settings className="w-5 h-5" />
                   </div>
-                  <h2 className={`text-xl font-semibold ${currentStep >= 2 ? 'text-neutral' : 'text-gray-400'}`}>Configuration Settings</h2>
+                  <h2 className={`text-xl font-semibold ${currentStep >= 2 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Configuration Settings</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium text-neutral">AI Provider</Label>
-                    <Select value={apiProvider} onValueChange={(value: "openai" | "anthropic") => setApiProvider(value)}>
+                    <Label className="text-sm font-medium text-neutral dark:text-white">Subject Area</Label>
+                    <Select value={subject} onValueChange={(value: string) => setSubject(value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="anthropic">Anthropic Claude (Recommended)</SelectItem>
-                        <SelectItem value="openai">OpenAI GPT-4</SelectItem>
+                        <SelectItem value="programming">Programming & Computer Science</SelectItem>
+                        <SelectItem value="mathematics">Mathematics & Statistics</SelectItem>
+                        <SelectItem value="science">Science & Engineering</SelectItem>
+                        <SelectItem value="medicine">Medicine & Health Sciences</SelectItem>
+                        <SelectItem value="business">Business & Economics</SelectItem>
+                        <SelectItem value="history">History & Social Studies</SelectItem>
+                        <SelectItem value="language">Language & Literature</SelectItem>
+                        <SelectItem value="law">Law & Legal Studies</SelectItem>
+                        <SelectItem value="psychology">Psychology & Behavioral Sciences</SelectItem>
+                        <SelectItem value="general">General Education</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500 flex items-center">
-                      <Shield className="w-3 h-3 mr-1" />
-                      AI processing powered by secure system keys
-                    </p>
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium text-neutral">Number of Flashcards</Label>
+                    <Label className="text-sm font-medium text-neutral dark:text-white">Number of Flashcards</Label>
                     <Select value={flashcardCount.toString()} onValueChange={(value) => setFlashcardCount(parseInt(value))}>
                       <SelectTrigger>
                         <SelectValue />
@@ -347,63 +364,77 @@ export default function Home() {
                         <SelectItem value="100">100 flashcards (Premium)</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {flashcardCount <= 25 ? 'Free tier includes up to 25 flashcards' : 'Premium feature - upgrade for more flashcards'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium text-neutral dark:text-white">AI Provider</Label>
+                    <Select value={apiProvider} onValueChange={(value: "openai" | "anthropic") => setApiProvider(value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="anthropic">Anthropic Claude (Recommended)</SelectItem>
+                        <SelectItem value="openai">OpenAI GPT-4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                      <Shield className="w-3 h-3 mr-1" />
+                      AI processing powered by secure system keys
                     </p>
                   </div>
 
                   <div className="md:col-span-2">
                     <Button 
                       variant="ghost" 
+                      size="sm"
                       onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="text-primary text-sm font-medium hover:text-blue-700 flex items-center p-0"
+                      className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                     >
-                      <ChevronDown className={`w-4 h-4 mr-1 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                      <Settings className="w-4 h-4 mr-1" />
                       Advanced Options
+                      <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
                     </Button>
-                    
+
                     {showAdvanced && (
-                      <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm font-medium text-neutral mb-2 block">Focus Areas</Label>
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                  checked={focusAreas.syntax}
-                                  onCheckedChange={(checked) => setFocusAreas({...focusAreas, syntax: !!checked})}
+                      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium text-neutral dark:text-white mb-3 block">Focus Areas</Label>
+                          <div className="space-y-3">
+                            {Object.entries(focusAreas).map(([key, value]) => (
+                              <div key={key} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={key}
+                                  checked={value}
+                                  onCheckedChange={(checked) => 
+                                    setFocusAreas(prev => ({ ...prev, [key]: !!checked }))
+                                  }
                                 />
-                                <label className="text-sm">Syntax & Grammar</label>
+                                <Label htmlFor={key} className="text-sm text-gray-700 dark:text-gray-300">
+                                  {key === 'concepts' && 'Key concepts and theories'}
+                                  {key === 'definitions' && 'Definitions and terminology'}
+                                  {key === 'examples' && 'Examples and case studies'}
+                                  {key === 'procedures' && 'Procedures and methods'}
+                                </Label>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                  checked={focusAreas.dataStructures}
-                                  onCheckedChange={(checked) => setFocusAreas({...focusAreas, dataStructures: !!checked})}
-                                />
-                                <label className="text-sm">Data Structures</label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                  checked={focusAreas.controlFlow}
-                                  onCheckedChange={(checked) => setFocusAreas({...focusAreas, controlFlow: !!checked})}
-                                />
-                                <label className="text-sm">Control Flow</label>
-                              </div>
-                            </div>
+                            ))}
                           </div>
-                          <div>
-                            <Label className="text-sm font-medium text-neutral mb-2 block">Difficulty Level</Label>
-                            <Select value={difficulty} onValueChange={(value: "beginner" | "intermediate" | "advanced") => setDifficulty(value)}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="beginner">Beginner</SelectItem>
-                                <SelectItem value="intermediate">Intermediate</SelectItem>
-                                <SelectItem value="advanced">Advanced</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium text-neutral dark:text-white">Difficulty Level</Label>
+                          <Select value={difficulty} onValueChange={(value: "beginner" | "intermediate" | "advanced") => setDifficulty(value)}>
+                            <SelectTrigger className="mt-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="beginner">Beginner</SelectItem>
+                              <SelectItem value="intermediate">Intermediate</SelectItem>
+                              <SelectItem value="advanced">Advanced</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                     )}
@@ -423,7 +454,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        <Brain className="w-4 h-4 mr-2" />
+                        <Lightbulb className="w-4 h-4 mr-2" />
                         Generate Flashcards
                       </>
                     )}
@@ -432,345 +463,231 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Step 3: Processing */}
-            {currentStep === 3 && jobStatus && (
-              <Card>
+            {/* Step 3: Processing Status */}
+            {currentStep >= 3 && jobStatus && (
+              <Card className="animate-slide-up">
                 <CardContent className="p-8">
                   <div className="flex items-center mb-6">
                     <div className="bg-accent text-white rounded-lg p-2 mr-3">
-                      <Brain className="w-5 h-5" />
+                      <LoaderPinwheel className="w-5 h-5 animate-spin" />
                     </div>
-                    <h2 className="text-xl font-semibold text-neutral">Generating Flashcards</h2>
-                  </div>
-
-                  <div className="mb-8">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-600">{jobStatus.currentTask || 'Processing...'}</span>
-                      <span className="text-sm text-gray-600">{jobStatus.progress}%</span>
-                    </div>
-                    <Progress value={jobStatus.progress} className="h-3" />
+                    <h2 className="text-xl font-semibold text-neutral dark:text-white">Processing Your PDF</h2>
                   </div>
 
                   <div className="space-y-4">
-                    <div className={`flex items-center p-3 rounded-lg ${jobStatus.progress >= 25 ? 'bg-green-50' : 'bg-gray-50'}`}>
-                      {jobStatus.progress >= 25 ? (
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-gray-400 mr-3" />
-                      )}
-                      <span className={`text-sm ${jobStatus.progress >= 25 ? 'text-green-700' : 'text-gray-400'}`}>
-                        PDF text extracted successfully
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {jobStatus.currentTask || 'Processing...'}
+                      </span>
+                      <span className="text-sm font-medium text-primary">
+                        {safeProgress(jobStatus.progress)}%
                       </span>
                     </div>
                     
-                    <div className={`flex items-center p-3 rounded-lg ${jobStatus.progress >= 75 ? 'bg-green-50' : jobStatus.progress >= 25 ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                      {jobStatus.progress >= 75 ? (
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                      ) : jobStatus.progress >= 25 ? (
-                        <LoaderPinwheel className="w-5 h-5 text-primary mr-3 animate-spin" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-gray-400 mr-3" />
-                      )}
-                      <span className={`text-sm ${jobStatus.progress >= 75 ? 'text-green-700' : jobStatus.progress >= 25 ? 'text-primary' : 'text-gray-400'}`}>
-                        Analyzing content with AI...
-                      </span>
-                    </div>
+                    <Progress value={safeProgress(jobStatus.progress)} className="h-2" />
                     
-                    <div className={`flex items-center p-3 rounded-lg ${jobStatus.progress >= 90 ? 'bg-green-50' : jobStatus.progress >= 75 ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                      {jobStatus.progress >= 90 ? (
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                      ) : jobStatus.progress >= 75 ? (
-                        <LoaderPinwheel className="w-5 h-5 text-primary mr-3 animate-spin" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-gray-400 mr-3" />
-                      )}
-                      <span className={`text-sm ${jobStatus.progress >= 90 ? 'text-green-700' : jobStatus.progress >= 75 ? 'text-primary' : 'text-gray-400'}`}>
-                        Creating flashcard pairs
-                      </span>
-                    </div>
-                    
-                    <div className={`flex items-center p-3 rounded-lg ${jobStatus.progress >= 100 ? 'bg-green-50' : jobStatus.progress >= 90 ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                      {jobStatus.progress >= 100 ? (
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                      ) : jobStatus.progress >= 90 ? (
-                        <LoaderPinwheel className="w-5 h-5 text-primary mr-3 animate-spin" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-gray-400 mr-3" />
-                      )}
-                      <span className={`text-sm ${jobStatus.progress >= 100 ? 'text-green-700' : jobStatus.progress >= 90 ? 'text-primary' : 'text-gray-400'}`}>
-                        Generating Anki deck
-                      </span>
-                    </div>
-                  </div>
-
-                  {jobStatus.errorMessage && (
-                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-center">
-                        <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                        <span className="text-sm text-red-700">{jobStatus.errorMessage}</span>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                      <div className={`p-3 rounded-lg ${safeProgress(jobStatus.progress) >= 25 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                        <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${safeProgress(jobStatus.progress) >= 25 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                          {safeProgress(jobStatus.progress) >= 25 ? <Check className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                        </div>
+                        <p className="text-xs font-medium">Text Extraction</p>
+                      </div>
+                      
+                      <div className={`p-3 rounded-lg ${safeProgress(jobStatus.progress) >= 50 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                        <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${safeProgress(jobStatus.progress) >= 50 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                          {safeProgress(jobStatus.progress) >= 50 ? <Check className="w-4 h-4" /> : <Brain className="w-4 h-4" />}
+                        </div>
+                        <p className="text-xs font-medium">AI Analysis</p>
+                      </div>
+                      
+                      <div className={`p-3 rounded-lg ${safeProgress(jobStatus.progress) >= 75 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                        <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${safeProgress(jobStatus.progress) >= 75 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                          {safeProgress(jobStatus.progress) >= 75 ? <Check className="w-4 h-4" /> : <Lightbulb className="w-4 h-4" />}
+                        </div>
+                        <p className="text-xs font-medium">Flashcard Creation</p>
+                      </div>
+                      
+                      <div className={`p-3 rounded-lg ${safeProgress(jobStatus.progress) >= 100 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                        <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${safeProgress(jobStatus.progress) >= 100 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                          {safeProgress(jobStatus.progress) >= 100 ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                        </div>
+                        <p className="text-xs font-medium">Anki Export</p>
                       </div>
                     </div>
-                  )}
+
+                    {jobStatus.status === 'failed' && jobStatus.errorMessage && (
+                      <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
+                        <div className="flex items-center">
+                          <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+                          <p className="text-sm font-medium text-red-700 dark:text-red-300">Processing Failed</p>
+                        </div>
+                        <p className="text-sm text-red-600 dark:text-red-400 mt-1">{jobStatus.errorMessage}</p>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Step 4: Preview and Download */}
-            {currentStep === 4 && jobStatus && (
-              <>
-                <Card>
-                  <CardContent className="p-8">
-                    <div className="flex items-center justify-between mb-6">
+            {/* Step 4: Download and Preview */}
+            {currentStep >= 4 && jobStatus?.status === 'completed' && (
+              <Card className="animate-slide-up">
+                <CardContent className="p-8">
+                  <div className="flex items-center mb-6">
+                    <div className="bg-green-500 text-white rounded-lg p-2 mr-3">
+                      <CheckCircle className="w-5 h-5" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-neutral dark:text-white">Flashcards Ready!</h2>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
                       <div className="flex items-center">
-                        <div className="bg-secondary text-white rounded-lg p-2 mr-3">
-                          <Eye className="w-5 h-5" />
-                        </div>
-                        <h2 className="text-xl font-semibold text-neutral">Preview Flashcards</h2>
-                      </div>
-                      <span className="text-sm text-gray-600">{flashcardCount} flashcards generated</span>
-                    </div>
-
-                    {previewFlashcards.map((card, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg mb-4">
-                        <div className="p-4 bg-gray-50 border-b border-gray-200">
-                          <h4 className="font-medium text-neutral mb-2">Question:</h4>
-                          <p className="text-gray-700">{card.question}</p>
-                        </div>
-                        <div className="p-4">
-                          <h4 className="font-medium text-neutral mb-2">Answer:</h4>
-                          <pre className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm whitespace-pre-wrap">
-                            <code>{card.answer}</code>
-                          </pre>
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                        <div>
+                          <p className="font-medium text-green-700 dark:text-green-300">Generation Complete</p>
+                          <p className="text-sm text-green-600 dark:text-green-400">
+                            Created {JSON.parse(jobStatus.flashcards || '[]').length} flashcards
+                          </p>
                         </div>
                       </div>
-                    ))}
-
-                    <div className="flex items-center justify-between mt-6">
                       <Button 
-                        variant="outline"
-                        onClick={() => setShowAllFlashcards(true)}
+                        onClick={() => downloadMutation.mutate(currentJobId!)}
+                        disabled={downloadMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700 text-white"
                       >
-                        View All {flashcardCount} Flashcards
-                      </Button>
-                      <div className="flex space-x-3">
-                        <Button 
-                          variant="outline"
-                          onClick={() => {
-                            setCurrentStep(2);
-                            setCurrentJobId(null);
-                          }}
-                        >
-                          <RotateCcw className="w-4 h-4 mr-2" />
-                          Regenerate
-                        </Button>
-                        <Button 
-                          onClick={() => setCurrentStep(5)}
-                          className="bg-secondary text-white hover:bg-green-700"
-                        >
+                        {downloadMutation.isPending ? (
+                          <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
                           <Download className="w-4 h-4 mr-2" />
-                          Create Anki Deck
-                        </Button>
-                      </div>
+                        )}
+                        Download Anki Deck
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Final Download */}
-                {currentStep === 5 && (
-                  <Card>
-                    <CardContent className="p-8">
-                      <div className="flex items-center mb-6">
-                        <div className="bg-secondary text-white rounded-lg p-2 mr-3">
-                          <Download className="w-5 h-5" />
+                    {/* Flashcard Preview */}
+                    {previewFlashcards.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-neutral dark:text-white mb-4">Preview Flashcards</h3>
+                        <div className="space-y-3">
+                          {(showAllFlashcards ? JSON.parse(jobStatus.flashcards || '[]') : previewFlashcards).map((card: FlashcardPair, index: number) => (
+                            <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
+                              <div className="mb-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Question {index + 1}</span>
+                                  {card.topic && (
+                                    <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">
+                                      {card.topic}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-gray-900 dark:text-gray-100">{card.question}</p>
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium text-green-600 dark:text-green-400 block mb-1">Answer</span>
+                                <div className="bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded font-mono text-sm whitespace-pre-wrap">
+                                  {card.answer}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <h2 className="text-xl font-semibold text-neutral">Your Anki Deck is Ready!</h2>
-                      </div>
-
-                      <div className="text-center py-8">
-                        <div className="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Check className="w-8 h-8 text-secondary" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-neutral mb-2">Flashcards Generated Successfully</h3>
-                        <p className="text-gray-600 mb-6">Your Python syntax flashcard deck has been created and is ready for import into Anki.</p>
                         
-                        <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                            <div>
-                              <div className="text-2xl font-bold text-primary">{flashcardCount}</div>
-                              <div className="text-sm text-gray-600">Flashcards</div>
-                            </div>
-                            <div>
-                              <div className="text-2xl font-bold text-primary">~1.2MB</div>
-                              <div className="text-sm text-gray-600">File Size</div>
-                            </div>
-                            <div>
-                              <div className="text-2xl font-bold text-primary">Mixed</div>
-                              <div className="text-sm text-gray-600">Topics</div>
-                            </div>
-                            <div>
-                              <div className="text-2xl font-bold text-primary">{difficulty}</div>
-                              <div className="text-sm text-gray-600">Difficulty</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Button 
-                          onClick={() => currentJobId && downloadMutation.mutate(currentJobId)}
-                          disabled={downloadMutation.isPending}
-                          className="bg-secondary text-white px-8 py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors mb-4"
-                        >
-                          {downloadMutation.isPending ? (
-                            <>
-                              <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
-                              Downloading...
-                            </>
-                          ) : (
-                            <>
-                              <Download className="w-4 h-4 mr-2" />
-                              Download Python_Syntax_Flashcards.apkg
-                            </>
-                          )}
-                        </Button>
-                        
-                        <p className="text-sm text-gray-500">
-                          <Info className="w-4 h-4 mr-1 inline" />
-                          Import this file directly into Anki to start studying
-                        </p>
+                        {!showAllFlashcards && JSON.parse(jobStatus.flashcards || '[]').length > 3 && (
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setShowAllFlashcards(true)}
+                            className="mt-4 w-full"
+                          >
+                            Show All {JSON.parse(jobStatus.flashcards || '[]').length} Flashcards
+                          </Button>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Help & Instructions */}
+            {/* Info Card */}
             <Card>
               <CardContent className="p-6">
-                <h3 className="font-semibold text-neutral mb-4 flex items-center">
-                  <HelpCircle className="w-5 h-5 text-primary mr-2" />
-                  How It Works
-                </h3>
-                <div className="space-y-4 text-sm text-gray-600">
-                  <div className="flex">
-                    <span className="bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-3 mt-0.5 flex-shrink-0">1</span>
-                    <p>Upload any Python-related PDF document (tutorials, textbooks, documentation)</p>
+                <div className="flex items-center mb-4">
+                  <Info className="w-5 h-5 text-blue-500 mr-2" />
+                  <h3 className="font-semibold text-neutral dark:text-white">How it works</h3>
+                </div>
+                <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                  <div className="flex items-start">
+                    <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">1</div>
+                    <p>Upload any educational PDF (textbooks, notes, study guides)</p>
                   </div>
-                  <div className="flex">
-                    <span className="bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-3 mt-0.5 flex-shrink-0">2</span>
-                    <p>Configure your AI provider and set the number of flashcards you want</p>
+                  <div className="flex items-start">
+                    <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">2</div>
+                    <p>AI analyzes content and identifies key concepts in your subject area</p>
                   </div>
-                  <div className="flex">
-                    <span className="bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-3 mt-0.5 flex-shrink-0">3</span>
-                    <p>AI analyzes the content and generates Python syntax-focused flashcards</p>
+                  <div className="flex items-start">
+                    <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">3</div>
+                    <p>Smart flashcards are generated with definitions, examples, and explanations</p>
                   </div>
-                  <div className="flex">
-                    <span className="bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-3 mt-0.5 flex-shrink-0">4</span>
-                    <p>Download the .apkg file and import it directly into Anki</p>
+                  <div className="flex items-start">
+                    <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">4</div>
+                    <p>Download as Anki deck for spaced repetition learning</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* API Key Info */}
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-6">
-                <h3 className="font-semibold text-neutral mb-3 flex items-center">
-                  <Key className="w-5 h-5 text-primary mr-2" />
-                  API Key Required
-                </h3>
-                <p className="text-sm text-gray-700 mb-4">You'll need an API key from either:</p>
-                <div className="space-y-2 text-sm">
-                  <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:text-blue-700 transition-colors">
-                    <Brain className="w-4 h-4 mr-2" />
-                    OpenAI Platform
-                    <ExternalLink className="w-3 h-3 ml-1" />
-                  </a>
-                  <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="flex items-center text-primary hover:text-blue-700 transition-colors">
-                    <Brain className="w-4 h-4 mr-2" />
-                    Anthropic Console
-                    <ExternalLink className="w-3 h-3 ml-1" />
-                  </a>
-                </div>
-                <div className="mt-4 p-3 bg-white rounded-lg border border-blue-200">
-                  <p className="text-xs text-gray-600 flex items-center">
-                    <ShieldCheck className="w-3 h-3 text-green-500 mr-1" />
-                    Keys are used securely and never stored on our servers
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Sample Output */}
+            {/* Tips Card */}
             <Card>
               <CardContent className="p-6">
-                <h3 className="font-semibold text-neutral mb-4 flex items-center">
-                  <Lightbulb className="w-5 h-5 text-accent mr-2" />
-                  Sample Flashcard
-                </h3>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 p-3 border-b">
-                    <p className="text-sm font-medium text-neutral">Front:</p>
-                    <p className="text-sm text-gray-700 mt-1">What's the syntax for a Python dictionary comprehension?</p>
+                <div className="flex items-center mb-4">
+                  <Lightbulb className="w-5 h-5 text-yellow-500 mr-2" />
+                  <h3 className="font-semibold text-neutral dark:text-white">Tips for better results</h3>
+                </div>
+                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                  <div className="flex items-center">
+                    <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
+                    <p>Choose the correct subject area for optimal results</p>
                   </div>
-                  <div className="p-3">
-                    <p className="text-sm font-medium text-neutral">Back:</p>
-                    <pre className="text-xs bg-gray-900 text-green-400 p-2 rounded mt-1 font-mono">{`{key: value for item in iterable}`}</pre>
+                  <div className="flex items-center">
+                    <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
+                    <p>Use PDFs with clear examples and explanations</p>
+                  </div>
+                  <div className="flex items-center">
+                    <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
+                    <p>Focus on concepts and definitions for core learning</p>
+                  </div>
+                  <div className="flex items-center">
+                    <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
+                    <p>Start with 25 flashcards to avoid overwhelm</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Features */}
+            {/* Support Card */}
             <Card>
               <CardContent className="p-6">
-                <h3 className="font-semibold text-neutral mb-4 flex items-center">
-                  <Star className="w-5 h-5 text-accent mr-2" />
-                  Features
-                </h3>
-                <div className="space-y-3">
-                  {[
-                    "AI-powered content analysis",
-                    "Python syntax focused",
-                    "Direct Anki compatibility",
-                    "Batch processing",
-                    "Customizable quantity",
-                    "Secure processing"
-                  ].map((feature, index) => (
-                    <div key={index} className="flex items-center text-sm text-gray-700">
-                      <CheckCircle className="w-4 h-4 text-secondary mr-2" />
-                      {feature}
-                    </div>
-                  ))}
+                <div className="flex items-center mb-4">
+                  <HelpCircle className="w-5 h-5 text-gray-500 mr-2" />
+                  <h3 className="font-semibold text-neutral dark:text-white">Need help?</h3>
                 </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  Having trouble with the flashcard generator? Check our guide or contact support.
+                </p>
+                <Button variant="outline" size="sm" className="w-full">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Help Center
+                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-4 mb-4 md:mb-0">
-              <p className="text-sm text-gray-600">Built with Python, AI, and ❤️</p>
-              <div className="flex space-x-2">
-                <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">PyMuPDF</span>
-                <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">genanki</span>
-                <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">OpenAI/Claude</span>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
-              <a href="#" className="hover:text-primary transition-colors">Privacy</a>
-              <a href="#" className="hover:text-primary transition-colors">Terms</a>
-              <a href="#" className="hover:text-primary transition-colors">Support</a>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
