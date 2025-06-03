@@ -1,0 +1,70 @@
+{
+  "hash": "d6ad64206ff3cc959f9197174f9f332d0876407fef5dbbe97d4d8f3f3b6fab10",
+  "text": "Introducing\nDataFrames\nDATA MANIPULATION WITH PANDAS\nRichie Cotton\nData Evangelist at DataCamp\n\n\nDATA MANIPULATION WITH PANDAS\nWhat's the point of pandas?\nData Manipulation skill track\nData Visualization skill track\n\n\nDATA MANIPULATION WITH PANDAS\nCourse outline\nChapter 1: DataFrames\nSorting and subsetting\nCreating new columns\nChapter 2: Aggregating Data\nSummary statistics\nCounting\nGrouped summary statistics\nChapter 3: Slicing and Indexing Data\nSubsetting using slicing\nIndexes and subsetting using indexes\nChapter 4: Creating and Visualizing Data\nPlotting\nHandling missing data\nReading data into a DataFrame\n\n\nDATA MANIPULATION WITH PANDAS\npandas is built on NumPy and Matplotlib\n\n\nDATA MANIPULATION WITH PANDAS\npandas is popular\n https://pypistats.org/packages/pandas\n1\n\n\nDATA MANIPULATION WITH PANDAS\nRectangular data\nName\nBreed\nColor\nHeight (cm)\nWeight (kg)\nDate of Birth\nBella\nLabrador\nBrown\n56\n25\n2013-07-01\nCharlie\nPoodle\nBlack\n43\n23\n2016-09-16\nLucy\nChow Chow\nBrown\n46\n22\n2014-08-25\nCooper",
+  "subject": "programming",
+  "flashcards": [
+    {
+      "question": "What is the difference between a list and a tuple in Python, and when would you use each?",
+      "answer": "Lists are mutable (can be changed after creation) and use square brackets []. Tuples are immutable (cannot be changed) and use parentheses (). Use lists when you need to modify data; use tuples for fixed data like coordinates or database records.",
+      "topic": "Data Structures",
+      "difficulty": "intermediate"
+    },
+    {
+      "question": "How do you implement a decorator function that measures execution time of another function?",
+      "answer": "import time\n\ndef timer(func):\n    def wrapper(*args, **kwargs):\n        start = time.time()\n        result = func(*args, **kwargs)\n        end = time.time()\n        print(f'{func.__name__} took {end - start} seconds')\n        return result\n    return wrapper",
+      "topic": "Decorators",
+      "difficulty": "intermediate"
+    },
+    {
+      "question": "What is the purpose of the '__init__' method in Python classes and how is it different from '__new__'?",
+      "answer": "__init__ initializes an instance after it's created, setting up attributes. __new__ actually creates the instance and returns it. __init__ is called automatically after __new__ and is where you typically set up object state.",
+      "topic": "Object-Oriented Programming",
+      "difficulty": "intermediate"
+    },
+    {
+      "question": "How do you handle multiple exceptions in a single try-except block?",
+      "answer": "Use a tuple of exception types: try:\n    # code\nexcept (ValueError, TypeError) as e:\n    # handle both exceptions\n\nOr use multiple except blocks:\ntry:\n    # code\nexcept ValueError:\n    # handle ValueError\nexcept TypeError:\n    # handle TypeError",
+      "topic": "Exception Handling",
+      "difficulty": "intermediate"
+    },
+    {
+      "question": "What is a generator in Python and how do you create one using yield?",
+      "answer": "A generator is a function that returns an iterator object, yielding values one at a time instead of returning all at once. Use 'yield' keyword:\n\ndef my_generator():\n    yield 1\n    yield 2\n    yield 3\n\nGenerators save memory and are lazy-evaluated.",
+      "topic": "Generators",
+      "difficulty": "intermediate"
+    },
+    {
+      "question": "How do you implement method overriding in Python inheritance?",
+      "answer": "Define a method in the child class with the same name as the parent class method:\n\nclass Parent:\n    def speak(self):\n        return 'Parent speaking'\n\nclass Child(Parent):\n    def speak(self):\n        return 'Child speaking'\n\nUse super() to call parent method if needed.",
+      "topic": "Inheritance",
+      "difficulty": "intermediate"
+    },
+    {
+      "question": "What is the difference between '==' and 'is' operators in Python?",
+      "answer": "'==' checks for value equality (calls __eq__ method). 'is' checks for identity (same object in memory). Example: a = [1,2] and b = [1,2] → a == b is True, but a is b is False. Use 'is' for None, True, False comparisons.",
+      "topic": "Operators",
+      "difficulty": "intermediate"
+    },
+    {
+      "question": "How do you create a context manager using the 'with' statement?",
+      "answer": "Implement __enter__ and __exit__ methods:\n\nclass MyContext:\n    def __enter__(self):\n        # setup code\n        return self\n    def __exit__(self, exc_type, exc_val, exc_tb):\n        # cleanup code\n        return False\n\nOr use @contextmanager decorator with yield.",
+      "topic": "Context Managers",
+      "difficulty": "intermediate"
+    },
+    {
+      "question": "What is the purpose of *args and **kwargs in function definitions?",
+      "answer": "*args allows a function to accept any number of positional arguments as a tuple. **kwargs allows any number of keyword arguments as a dictionary. Example:\n\ndef func(*args, **kwargs):\n    print(args)    # tuple of positional args\n    print(kwargs)  # dict of keyword args",
+      "topic": "Function Parameters",
+      "difficulty": "intermediate"
+    },
+    {
+      "question": "How do you implement a property in Python with getter and setter methods?",
+      "answer": "class MyClass:\n    def __init__(self):\n        self._value = 0\n    \n    @property\n    def value(self):\n        return self._value\n    \n    @value.setter\n    def value(self, val):\n        if val < 0:\n            raise ValueError('Value must be positive')\n        self._value = val",
+      "topic": "Properties",
+      "difficulty": "intermediate"
+    }
+  ],
+  "timestamp": 1748952889583,
+  "difficulty": "intermediate",
+  "focusAreas": "{\"concepts\":true,\"definitions\":true,\"examples\":false,\"procedures\":false}"
+}
