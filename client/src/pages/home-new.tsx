@@ -294,7 +294,7 @@ export default function Home() {
         )}
 
         {currentView === 'upload' && (
-          <>
+          <div>
         {/* Progress Steps */}
         <div className="mb-12">
           <div className="flex items-center justify-center space-x-4 md:space-x-8">
@@ -822,7 +822,7 @@ export default function Home() {
             </Card>
           </div>
         </div>
-          </>
+          </div>
         )}
       </main>
 
