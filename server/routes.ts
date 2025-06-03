@@ -116,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No PDF file uploaded" });
       }
 
-      const userId = req.user.claims.sub;
+      const userId = req.user!.uid;
       const {
         apiProvider,
         flashcardCount,
@@ -149,7 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         jobId: job.id, 
         status: "pending",
-        uploadsRemaining: req.uploadsRemaining - 1
+        uploadsRemaining: (req as any).uploadsRemaining - 1
       });
     } catch (error) {
       console.error("Upload error:", error);
@@ -278,7 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's job history
   app.get("/api/user/jobs", verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.uid;
       const jobs = await storage.getUserJobs(userId);
       res.json(jobs);
     } catch (error) {
@@ -288,9 +288,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upgrade to premium
-  app.post("/api/user/upgrade", isAuthenticated, async (req: any, res) => {
+  app.post("/api/user/upgrade", verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.uid;
       await storage.upgradeToPremium(userId);
       
       const updatedUser = await storage.getUser(userId);
