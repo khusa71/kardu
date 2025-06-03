@@ -60,7 +60,23 @@ export default function Home() {
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiRequest("POST", "/api/upload", formData);
+      const token = localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Upload failed");
+      }
+      
       return response.json();
     },
     onSuccess: (data) => {
@@ -163,6 +179,17 @@ export default function Home() {
       return;
     }
 
+    // Check if user is authenticated
+    if (!user) {
+      setShowAuthModal(true);
+      toast({
+        title: "Authentication required",
+        description: "Please sign up or log in to continue generating flashcards.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append('pdf', selectedFile);
     formData.append('apiProvider', apiProvider);
@@ -172,7 +199,7 @@ export default function Home() {
     formData.append('difficulty', difficulty);
 
     uploadMutation.mutate(formData);
-  }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation]);
+  }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation, user, toast]);
 
   // Check for existing auth token on load
   useEffect(() => {
@@ -208,6 +235,13 @@ export default function Home() {
 
   const handleAuthSuccess = (userData: any, token: string) => {
     setUser(userData);
+    
+    // If user was trying to generate flashcards, continue with generation
+    if (selectedFile && currentStep === 2) {
+      setTimeout(() => {
+        handleGenerate();
+      }, 100);
+    }
   };
 
   const handleLogout = () => {
