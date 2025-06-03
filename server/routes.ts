@@ -462,6 +462,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
 
+      console.log(`Created checkout session ${session.id} for user ${userId} with customer ${customerId}`);
+
       res.json({ url: session.url });
     } catch (error) {
       console.error("Checkout session error:", error);
@@ -482,6 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      console.log(`Webhook received: ${event.type} (ID: ${event.id})`);
     } catch (err: any) {
       console.error("Webhook signature verification failed:", err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -493,6 +496,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const session = event.data.object as Stripe.Checkout.Session;
           const firebaseUID = session.metadata?.firebaseUID;
           
+          console.log(`Processing checkout.session.completed for session ${session.id}, Firebase UID: ${firebaseUID}`);
+          
           if (!firebaseUID) {
             console.error("No Firebase UID in session metadata");
             break;
@@ -501,11 +506,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get subscription details
           if (session.subscription) {
             const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+            console.log(`Updating subscription for user ${firebaseUID}: ${subscription.id} (${subscription.status})`);
+            
             await storage.updateUserSubscription(firebaseUID, {
               subscriptionId: subscription.id,
               status: subscription.status,
-              periodEnd: new Date((subscription as any).current_period_end * 1000),
+              periodEnd: new Date(subscription.current_period_end * 1000),
             });
+            
+            console.log(`Successfully updated subscription for user ${firebaseUID}`);
+          } else {
+            // Handle one-time payment
+            console.log(`One-time payment completed for user ${firebaseUID}`);
+          }
+          break;
+        }
+
+        case 'invoice.paid': {
+          const invoice = event.data.object as Stripe.Invoice;
+          console.log(`Processing invoice.paid: ${invoice.id}`);
+          
+          if (invoice.subscription) {
+            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+            const customer = await stripe.customers.retrieve(subscription.customer as string);
+            
+            if ('metadata' in customer && customer.metadata?.firebaseUID) {
+              console.log(`Updating subscription from invoice.paid for user ${customer.metadata.firebaseUID}`);
+              
+              await storage.updateUserSubscription(customer.metadata.firebaseUID, {
+                subscriptionId: subscription.id,
+                status: subscription.status,
+                periodEnd: new Date(subscription.current_period_end * 1000),
+              });
+              
+              console.log(`Successfully updated subscription from invoice for user ${customer.metadata.firebaseUID}`);
+            }
+          }
+          break;
+        }
+
+        case 'customer.subscription.created': {
+          const subscription = event.data.object as Stripe.Subscription;
+          const customer = await stripe.customers.retrieve(subscription.customer as string);
+          
+          console.log(`Processing customer.subscription.created: ${subscription.id}`);
+          
+          if ('metadata' in customer && customer.metadata?.firebaseUID) {
+            console.log(`Creating subscription for user ${customer.metadata.firebaseUID}`);
+            
+            await storage.updateUserSubscription(customer.metadata.firebaseUID, {
+              subscriptionId: subscription.id,
+              status: subscription.status,
+              periodEnd: new Date(subscription.current_period_end * 1000),
+            });
+            
+            console.log(`Successfully created subscription for user ${customer.metadata.firebaseUID}`);
           }
           break;
         }
@@ -514,12 +569,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const subscription = event.data.object as Stripe.Subscription;
           const customer = await stripe.customers.retrieve(subscription.customer as string);
           
+          console.log(`Processing customer.subscription.updated: ${subscription.id} (${subscription.status})`);
+          
           if ('metadata' in customer && customer.metadata?.firebaseUID) {
             await storage.updateUserSubscription(customer.metadata.firebaseUID, {
               subscriptionId: subscription.id,
               status: subscription.status,
-              periodEnd: new Date((subscription as any).current_period_end * 1000),
+              periodEnd: new Date(subscription.current_period_end * 1000),
             });
+            
+            console.log(`Successfully updated subscription for user ${customer.metadata.firebaseUID}`);
           }
           break;
         }
@@ -528,8 +587,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const subscription = event.data.object as Stripe.Subscription;
           const customer = await stripe.customers.retrieve(subscription.customer as string);
           
+          console.log(`Processing customer.subscription.deleted: ${subscription.id}`);
+          
           if ('metadata' in customer && customer.metadata?.firebaseUID) {
             await storage.cancelUserSubscription(customer.metadata.firebaseUID);
+            console.log(`Successfully cancelled subscription for user ${customer.metadata.firebaseUID}`);
           }
           break;
         }
@@ -541,6 +603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ received: true });
     } catch (error) {
       console.error("Webhook processing error:", error);
+      console.error("Event data:", JSON.stringify(event, null, 2));
       res.status(500).json({ message: "Webhook processing failed" });
     }
   });

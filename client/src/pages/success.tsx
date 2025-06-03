@@ -1,14 +1,54 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Crown, Upload, ArrowRight } from "lucide-react";
+import { CheckCircle, Crown, Upload, ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Success() {
   const [, setLocation] = useLocation();
-  const { user, refetchUser } = useAuth();
+  const { user, refreshUserData } = useFirebaseAuth();
+  const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(true);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const checkSubscriptionStatus = async () => {
+    try {
+      setIsChecking(true);
+      setHasTimedOut(false);
+      
+      // Wait for webhook processing
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Refresh user data from server
+      await refreshUserData();
+      
+      // Check if user is now premium
+      if (user && (user as any).isPremium) {
+        setIsChecking(false);
+        toast({
+          title: "Subscription activated!",
+          description: "Welcome to StudyCards Pro!",
+        });
+        return;
+      }
+      
+      // If not premium after multiple retries, show timeout
+      if (retryCount >= 2) {
+        setHasTimedOut(true);
+        setIsChecking(false);
+      } else {
+        setRetryCount(prev => prev + 1);
+        setTimeout(checkSubscriptionStatus, 5000);
+      }
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+      setHasTimedOut(true);
+      setIsChecking(false);
+    }
+  };
 
   useEffect(() => {
     // Get session_id from URL params
@@ -16,28 +56,67 @@ export default function Success() {
     const sessionId = urlParams.get('session_id');
 
     if (sessionId) {
-      // Refetch user data to get updated premium status
-      const checkStatus = async () => {
-        setIsChecking(true);
-        // Wait a moment for webhook to process
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        await refetchUser();
-        setIsChecking(false);
-      };
-      checkStatus();
+      checkSubscriptionStatus();
     } else {
       setIsChecking(false);
     }
-  }, [refetchUser]);
+  }, []);
 
-  if (isChecking) {
+  if (isChecking && !hasTimedOut) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-muted-foreground">Confirming your subscription...</p>
+            <div className="text-center space-y-4">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+              <div>
+                <p className="text-muted-foreground mb-2">Confirming your subscription...</p>
+                <p className="text-sm text-gray-500">This may take a few moments</p>
+              </div>
+              {retryCount > 0 && (
+                <p className="text-xs text-gray-400">Retry {retryCount + 1}/3</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (hasTimedOut) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto" />
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Processing Your Subscription</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Your payment was successful, but we're still confirming your subscription. 
+                  This sometimes takes a few extra minutes.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => {
+                    setRetryCount(0);
+                    checkSubscriptionStatus();
+                  }}
+                  className="w-full"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Check Status Again
+                </Button>
+                <Link href="/">
+                  <Button variant="outline" className="w-full">
+                    Continue to Home
+                  </Button>
+                </Link>
+              </div>
+              <p className="text-xs text-gray-500">
+                If issues persist, contact support with your payment confirmation.
+              </p>
             </div>
           </CardContent>
         </Card>
