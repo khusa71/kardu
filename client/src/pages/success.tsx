@@ -5,6 +5,7 @@ import { CheckCircle, Crown, Upload, ArrowRight, AlertCircle, RefreshCw } from "
 import { Link, useLocation } from "wouter";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
 
 export default function Success() {
   const [, setLocation] = useLocation();
@@ -40,15 +41,22 @@ export default function Success() {
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
         
-        if (sessionId) {
+        if (sessionId && auth.currentUser) {
           try {
+            console.log('Attempting manual verification with session:', sessionId);
+            const token = await auth.currentUser.getIdToken();
+            console.log('Got Firebase token, length:', token.length);
+            
             const response = await fetch('/api/verify-subscription', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
               },
               body: JSON.stringify({ sessionId }),
             });
+            
+            console.log('Verification response status:', response.status);
             
             if (response.ok) {
               const result = await response.json();
@@ -132,8 +140,42 @@ export default function Success() {
               </div>
               <div className="space-y-3">
                 <Button 
-                  onClick={() => {
+                  onClick={async () => {
                     setRetryCount(0);
+                    // Try manual verification immediately on retry
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sessionId = urlParams.get('session_id');
+                    
+                    if (sessionId && auth.currentUser) {
+                      try {
+                        const token = await auth.currentUser.getIdToken();
+                        const response = await fetch('/api/verify-subscription', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                          },
+                          body: JSON.stringify({ sessionId }),
+                        });
+                        
+                        if (response.ok) {
+                          const result = await response.json();
+                          if (result.isPremium) {
+                            await refreshUserData();
+                            setHasTimedOut(false);
+                            toast({
+                              title: "Subscription activated!",
+                              description: "Welcome to StudyCards Pro!",
+                            });
+                            return;
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Manual retry verification failed:', error);
+                      }
+                    }
+                    
+                    // Fallback to normal check if manual verification fails
                     checkSubscriptionStatus();
                   }}
                   className="w-full"
