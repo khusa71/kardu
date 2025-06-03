@@ -413,7 +413,7 @@ export default function Home() {
                 <div className="mt-8">
                   <Button 
                     onClick={handleGenerate}
-                    disabled={!selectedFile || !apiKey.trim() || uploadMutation.isPending}
+                    disabled={!selectedFile || uploadMutation.isPending}
                     className="w-full bg-primary text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
                   >
                     {uploadMutation.isPending ? (
