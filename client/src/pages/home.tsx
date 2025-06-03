@@ -167,6 +167,20 @@ export default function Home() {
   const canUpload = user && ((user as any).isPremium || (user as any).monthlyUploads < (user as any).monthlyLimit) && (user as any).isEmailVerified;
   const isGenerateDisabled = !selectedFile || !canUpload || uploadMutation.isPending;
 
+  // Debug logging for upload status
+  console.log('Debug upload status:', {
+    user: user ? {
+      isPremium: (user as any).isPremium,
+      monthlyUploads: (user as any).monthlyUploads,
+      monthlyLimit: (user as any).monthlyLimit,
+      isEmailVerified: (user as any).isEmailVerified
+    } : null,
+    selectedFile: !!selectedFile,
+    canUpload,
+    isGenerateDisabled,
+    uploadMutationPending: uploadMutation.isPending
+  });
+
   // Update UI based on job status
   if (jobStatus) {
     if (jobStatus.status === 'completed' && currentStep < 4) {
