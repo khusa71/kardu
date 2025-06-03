@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,9 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw } from "lucide-react";
+import { FlashcardEditor } from "@/components/flashcard-editor";
+import { StudyMode } from "@/components/study-mode";
+import { AuthModal } from "@/components/auth-modal";
+import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw, Edit, Play, User, LogOut, Crown, Zap } from "lucide-react";
 import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 
 export default function Home() {
@@ -170,13 +174,50 @@ export default function Home() {
     uploadMutation.mutate(formData);
   }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation]);
 
+  // Check for existing auth token on load
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      // Verify token and get user info
+      fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) {
+          setUser(data.user);
+        } else {
+          localStorage.removeItem('auth_token');
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('auth_token');
+      });
+    }
+  }, []);
+
   // Update UI based on job status
   if (jobStatus) {
     if (jobStatus.status === 'completed' && currentStep < 4) {
       setCurrentStep(4);
-      setPreviewFlashcards(JSON.parse(jobStatus.flashcards || '[]').slice(0, 3));
+      const allFlashcards = JSON.parse(jobStatus.flashcards || '[]');
+      setPreviewFlashcards(allFlashcards.slice(0, 3));
+      setEditableFlashcards(allFlashcards);
     }
   }
+
+  const handleAuthSuccess = (userData: any, token: string) => {
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    setUser(null);
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+    });
+  };
 
   const getStepIndicatorClass = (step: number) => {
     if (step < currentStep) return "step-indicator step-completed w-10 h-10 rounded-full text-white flex items-center justify-center text-sm font-semibold";
@@ -191,6 +232,78 @@ export default function Home() {
   const safeProgress = (value: number | null | undefined): number => {
     return value || 0;
   };
+
+  // Render different views based on mode
+  if (viewMode === 'edit' && editableFlashcards.length > 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Button variant="outline" onClick={() => setViewMode('upload')}>
+                  ← Back to Upload
+                </Button>
+                <h1 className="text-xl font-bold">Edit Flashcards</h1>
+              </div>
+              <Button onClick={() => setViewMode('study')} className="flex items-center">
+                <Play className="w-4 h-4 mr-2" />
+                Start Study Mode
+              </Button>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          <FlashcardEditor
+            flashcards={editableFlashcards}
+            onFlashcardsChange={setEditableFlashcards}
+          />
+        </main>
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+        />
+      </div>
+    );
+  }
+
+  if (viewMode === 'study' && editableFlashcards.length > 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Button variant="outline" onClick={() => setViewMode('edit')}>
+                  ← Back to Edit
+                </Button>
+                <h1 className="text-xl font-bold">Study Mode</h1>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          <StudyMode
+            flashcards={editableFlashcards}
+            onComplete={(results) => {
+              toast({
+                title: "Study session complete!",
+                description: `Accuracy: ${Math.round(results.accuracy)}% • Time: ${Math.round(results.timeSpent)} min`,
+              });
+              setViewMode('edit');
+            }}
+            onExit={() => setViewMode('edit')}
+          />
+        </main>
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -207,12 +320,39 @@ export default function Home() {
                 <p className="text-gray-600 dark:text-gray-300 text-sm">Transform any educational PDF into interactive Anki flashcards</p>
               </div>
             </div>
-            <div className="hidden md:flex items-center space-x-4">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Powered by AI</span>
-              <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full text-sm font-medium">
-                <Shield className="w-3 h-3 mr-1 inline" />
-                Secure
-              </div>
+            <div className="flex items-center space-x-4">
+              {user ? (
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-neutral dark:text-white">{user.email}</div>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <Badge className={user.plan === 'pro' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}>
+                        {user.plan === 'pro' ? (
+                          <>
+                            <Crown className="w-3 h-3 mr-1" />
+                            Pro
+                          </>
+                        ) : 'Free'}
+                      </Badge>
+                      <span className="ml-2">{user.monthly_uploads}/{user.monthly_limit} uploads</span>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={handleLogout}>
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowAuthModal(true)}>
+                    <User className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Button>
+                  <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full text-sm font-medium">
+                    <Shield className="w-3 h-3 mr-1 inline" />
+                    Secure
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -542,28 +682,101 @@ export default function Home() {
                   </div>
 
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                      <div className="flex items-center">
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                        <div>
-                          <p className="font-medium text-green-700 dark:text-green-300">Generation Complete</p>
-                          <p className="text-sm text-green-600 dark:text-green-400">
-                            Created {JSON.parse(jobStatus.flashcards || '[]').length} flashcards
-                          </p>
+                    <div className="space-y-4">
+                      {/* Cost Optimization Display */}
+                      {jobStatus.currentTask && jobStatus.currentTask.includes('cache') && (
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                          <div className="flex items-center">
+                            <Zap className="w-5 h-5 text-blue-500 mr-3" />
+                            <div>
+                              <p className="font-medium text-blue-700 dark:text-blue-300">Cost Optimized</p>
+                              <p className="text-sm text-blue-600 dark:text-blue-400">
+                                Retrieved from cache - saved processing time and costs
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* OCR Indicator */}
+                      {jobStatus.currentTask && jobStatus.currentTask.includes('OCR') && (
+                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                          <div className="flex items-center">
+                            <FileText className="w-5 h-5 text-purple-500 mr-3" />
+                            <div>
+                              <p className="font-medium text-purple-700 dark:text-purple-300">OCR Processing</p>
+                              <p className="text-sm text-purple-600 dark:text-purple-400">
+                                Scanned PDF detected - text extracted using OCR
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                        <div className="flex items-center">
+                          <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                          <div>
+                            <p className="font-medium text-green-700 dark:text-green-300">Generation Complete</p>
+                            <p className="text-sm text-green-600 dark:text-green-400">
+                              Created {JSON.parse(jobStatus.flashcards || '[]').length} flashcards
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button 
+                            onClick={() => setViewMode('edit')}
+                            variant="outline"
+                            className="flex items-center"
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit Cards
+                          </Button>
+                          <Button 
+                            onClick={() => downloadMutation.mutate(currentJobId!)}
+                            disabled={downloadMutation.isPending}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            {downloadMutation.isPending ? (
+                              <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4 mr-2" />
+                            )}
+                            Download Anki
+                          </Button>
                         </div>
                       </div>
-                      <Button 
-                        onClick={() => downloadMutation.mutate(currentJobId!)}
-                        disabled={downloadMutation.isPending}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {downloadMutation.isPending ? (
-                          <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Download className="w-4 h-4 mr-2" />
-                        )}
-                        Download Anki Deck
-                      </Button>
+
+                      {/* Additional Export Formats */}
+                      <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Additional Export Formats</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/api/export/${currentJobId}/csv`, '_blank')}
+                            className="text-xs"
+                          >
+                            CSV Export
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/api/export/${currentJobId}/json`, '_blank')}
+                            className="text-xs"
+                          >
+                            JSON Export
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/api/export/${currentJobId}/quizlet`, '_blank')}
+                            className="text-xs"
+                          >
+                            Quizlet Import
+                          </Button>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Flashcard Preview */}
