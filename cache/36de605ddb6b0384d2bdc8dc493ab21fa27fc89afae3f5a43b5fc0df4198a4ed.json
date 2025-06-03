@@ -1,0 +1,9 @@
+{
+  "hash": "36de605ddb6b0384d2bdc8dc493ab21fa27fc89afae3f5a43b5fc0df4198a4ed",
+  "text": "Introducing\nDataFrames\nDATA MANIPULATION WITH PANDAS\nRichie Cotton\nData Evangelist at DataCamp\n\n\nDATA MANIPULATION WITH PANDAS\nWhat's the point of pandas?\nData Manipulation skill track\nData Visualization skill track\n\n\nDATA MANIPULATION WITH PANDAS\nCourse outline\nChapter 1: DataFrames\nSorting and subsetting\nCreating new columns\nChapter 2: Aggregating Data\nSummary statistics\nCounting\nGrouped summary statistics\nChapter 3: Slicing and Indexing Data\nSubsetting using slicing\nIndexes and subsetting using indexes\nChapter 4: Creating and Visualizing Data\nPlotting\nHandling missing data\nReading data into a DataFrame\n\n\nDATA MANIPULATION WITH PANDAS\npandas is built on NumPy and Matplotlib\n\n\nDATA MANIPULATION WITH PANDAS\npandas is popular\n https://pypistats.org/packages/pandas\n1\n\n\nDATA MANIPULATION WITH PANDAS\nRectangular data\nName\nBreed\nColor\nHeight (cm)\nWeight (kg)\nDate of Birth\nBella\nLabrador\nBrown\n56\n25\n2013-07-01\nCharlie\nPoodle\nBlack\n43\n23\n2016-09-16\nLucy\nChow Chow\nBrown\n46\n22\n2014-08-25\nCooper",
+  "subject": "computer-science",
+  "flashcards": [],
+  "timestamp": 1748955186175,
+  "difficulty": "beginner",
+  "focusAreas": "{\"concepts\":true,\"definitions\":true,\"examples\":true,\"procedures\":false}"
+}
