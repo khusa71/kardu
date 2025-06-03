@@ -7,7 +7,7 @@ import {
   type InsertFlashcardJob,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -91,7 +91,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const uploadsUsed = user.monthlyUploads || 0;
-    const uploadsRemaining = Math.max(0, user.monthlyLimit - uploadsUsed);
+    const uploadsRemaining = Math.max(0, (user.monthlyLimit || 3) - uploadsUsed);
     const canUpload = uploadsRemaining > 0;
 
     return { canUpload, uploadsRemaining };
@@ -133,7 +133,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFlashcardJob(id: number): Promise<boolean> {
     const result = await db.delete(flashcardJobs).where(eq(flashcardJobs.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   async getUserJobs(userId: string): Promise<FlashcardJob[]> {
@@ -141,7 +141,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(flashcardJobs)
       .where(eq(flashcardJobs.userId, userId))
-      .orderBy(flashcardJobs.createdAt);
+      .orderBy(desc(flashcardJobs.createdAt));
   }
 }
 

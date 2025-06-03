@@ -10,16 +10,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FlashcardEditor } from "@/components/flashcard-editor";
 import { StudyMode } from "@/components/study-mode";
-import { AuthModal } from "@/components/auth-modal";
-import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw, Edit, Play, User, LogOut, Crown, Zap } from "lucide-react";
+import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw, Edit, Play, User, LogOut, Crown, Zap, Mail } from "lucide-react";
 import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 
 export default function Home() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user, isLoading, isAuthenticated } = useAuth();
   
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -46,9 +48,9 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<'upload' | 'edit' | 'study'>('upload');
   const [editableFlashcards, setEditableFlashcards] = useState<FlashcardPair[]>([]);
   
-  // Auth state
-  const [user, setUser] = useState<any>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  // User status states
+  const [showEmailVerificationMessage, setShowEmailVerificationMessage] = useState(false);
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
   // Poll for job status
   const { data: jobStatus } = useQuery<FlashcardJob>({
@@ -60,23 +62,7 @@ export default function Home() {
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const token = localStorage.getItem('auth_token');
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-      
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        headers,
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Upload failed");
-      }
-      
+      const response = await apiRequest("POST", "/api/upload", formData);
       return response.json();
     },
     onSuccess: (data) => {
@@ -87,12 +73,36 @@ export default function Home() {
         description: "Your PDF is being processed...",
       });
     },
-    onError: (error) => {
-      toast({
-        title: "Upload failed",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      // Handle specific error types
+      if (error.message.includes("verify your email")) {
+        setShowEmailVerificationMessage(true);
+        toast({
+          title: "Email verification required",
+          description: "Please verify your email to continue generating flashcards.",
+          variant: "destructive",
+        });
+      } else if (error.message.includes("monthly limit")) {
+        setShowUpgradeBanner(true);
+        toast({
+          title: "Upload limit reached",
+          description: "You've reached your monthly limit. Upgrade to generate more flashcards.",
+          variant: "destructive",
+        });
+      } else if (isUnauthorizedError(error)) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to continue.",
+          variant: "destructive",
+        });
+        window.location.href = "/api/login";
+      } else {
+        toast({
+          title: "Upload failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -180,13 +190,14 @@ export default function Home() {
     }
 
     // Check if user is authenticated
-    if (!user) {
-      setShowAuthModal(true);
+    if (!isAuthenticated) {
       toast({
         title: "Authentication required",
-        description: "Please sign up or log in to continue generating flashcards.",
+        description: "Please sign in to continue generating flashcards.",
         variant: "destructive",
       });
+      // Redirect to Replit Auth login
+      window.location.href = "/api/login";
       return;
     }
 
@@ -199,7 +210,7 @@ export default function Home() {
     formData.append('difficulty', difficulty);
 
     uploadMutation.mutate(formData);
-  }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation, user, toast]);
+  }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation, isAuthenticated, toast]);
 
   // Check for existing auth token on load
   useEffect(() => {
