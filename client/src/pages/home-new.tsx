@@ -24,11 +24,13 @@ export default function Home() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   
-  // Advanced options
+  // Subject and focus areas
+  const [subject, setSubject] = useState<string>("programming");
   const [focusAreas, setFocusAreas] = useState({
-    syntax: true,
-    dataStructures: true,
-    controlFlow: false,
+    concepts: true,
+    definitions: true,
+    examples: false,
+    procedures: false,
   });
   const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
   
@@ -155,6 +157,7 @@ export default function Home() {
     formData.append('pdf', selectedFile);
     formData.append('apiProvider', apiProvider);
     formData.append('flashcardCount', flashcardCount.toString());
+    formData.append('subject', subject);
     formData.append('focusAreas', JSON.stringify(focusAreas));
     formData.append('difficulty', difficulty);
 
@@ -194,8 +197,8 @@ export default function Home() {
                 <Brain className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-neutral dark:text-white">Python Syntax Flashcard Generator</h1>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">Transform PDFs into interactive Anki flashcards</p>
+                <h1 className="text-2xl font-bold text-neutral dark:text-white">StudyCards AI</h1>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">Transform any educational PDF into interactive Anki flashcards</p>
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-4">
@@ -252,7 +255,7 @@ export default function Home() {
                   <div className="bg-primary text-white rounded-lg p-2 mr-3">
                     <FileText className="w-5 h-5" />
                   </div>
-                  <h2 className="text-xl font-semibold text-neutral dark:text-white">Upload Your Python PDF</h2>
+                  <h2 className="text-xl font-semibold text-neutral dark:text-white">Upload Your Educational PDF</h2>
                 </div>
                 
                 <div 
@@ -271,9 +274,9 @@ export default function Home() {
                       <p className="text-sm text-gray-500 dark:text-gray-400">Supports PDF files up to 10MB</p>
                     </div>
                     <div className="flex items-center justify-center space-x-4 text-xs text-gray-400">
-                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Python tutorials</span>
-                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Documentation</span>
-                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Textbooks</span>
+                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Academic textbooks</span>
+                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Course materials</span>
+                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Study guides</span>
                     </div>
                   </div>
                   <input 
@@ -322,20 +325,24 @@ export default function Home() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium text-neutral dark:text-white">AI Provider</Label>
-                    <Select value={apiProvider} onValueChange={(value: "openai" | "anthropic") => setApiProvider(value)}>
+                    <Label className="text-sm font-medium text-neutral dark:text-white">Subject Area</Label>
+                    <Select value={subject} onValueChange={(value: string) => setSubject(value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="anthropic">Anthropic Claude (Recommended)</SelectItem>
-                        <SelectItem value="openai">OpenAI GPT-4</SelectItem>
+                        <SelectItem value="programming">Programming & Computer Science</SelectItem>
+                        <SelectItem value="mathematics">Mathematics & Statistics</SelectItem>
+                        <SelectItem value="science">Science & Engineering</SelectItem>
+                        <SelectItem value="medicine">Medicine & Health Sciences</SelectItem>
+                        <SelectItem value="business">Business & Economics</SelectItem>
+                        <SelectItem value="history">History & Social Studies</SelectItem>
+                        <SelectItem value="language">Language & Literature</SelectItem>
+                        <SelectItem value="law">Law & Legal Studies</SelectItem>
+                        <SelectItem value="psychology">Psychology & Behavioral Sciences</SelectItem>
+                        <SelectItem value="general">General Education</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                      <Shield className="w-3 h-3 mr-1" />
-                      AI processing powered by secure system keys
-                    </p>
                   </div>
 
                   <div className="space-y-3">
@@ -353,6 +360,23 @@ export default function Home() {
                     </Select>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {flashcardCount <= 25 ? 'Free tier includes up to 25 flashcards' : 'Premium feature - upgrade for more flashcards'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium text-neutral dark:text-white">AI Provider</Label>
+                    <Select value={apiProvider} onValueChange={(value: "openai" | "anthropic") => setApiProvider(value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="anthropic">Anthropic Claude (Recommended)</SelectItem>
+                        <SelectItem value="openai">OpenAI GPT-4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                      <Shield className="w-3 h-3 mr-1" />
+                      AI processing powered by secure system keys
                     </p>
                   </div>
 
@@ -383,9 +407,10 @@ export default function Home() {
                                   }
                                 />
                                 <Label htmlFor={key} className="text-sm text-gray-700 dark:text-gray-300">
-                                  {key === 'syntax' && 'Python syntax and grammar'}
-                                  {key === 'dataStructures' && 'Data structures (lists, dictionaries, sets)'}
-                                  {key === 'controlFlow' && 'Control flow (loops, conditionals, exceptions)'}
+                                  {key === 'concepts' && 'Key concepts and theories'}
+                                  {key === 'definitions' && 'Definitions and terminology'}
+                                  {key === 'examples' && 'Examples and case studies'}
+                                  {key === 'procedures' && 'Procedures and methods'}
                                 </Label>
                               </div>
                             ))}
@@ -592,15 +617,15 @@ export default function Home() {
                 <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
                   <div className="flex items-start">
                     <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">1</div>
-                    <p>Upload your Python PDF (tutorials, documentation, textbooks)</p>
+                    <p>Upload any educational PDF (textbooks, notes, study guides)</p>
                   </div>
                   <div className="flex items-start">
                     <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">2</div>
-                    <p>AI analyzes content and identifies key Python syntax concepts</p>
+                    <p>AI analyzes content and identifies key concepts in your subject area</p>
                   </div>
                   <div className="flex items-start">
                     <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">3</div>
-                    <p>Smart flashcards are generated with questions and code examples</p>
+                    <p>Smart flashcards are generated with definitions, examples, and explanations</p>
                   </div>
                   <div className="flex items-start">
                     <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">4</div>
@@ -620,15 +645,15 @@ export default function Home() {
                 <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                   <div className="flex items-center">
                     <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                    <p>Use PDFs with clear Python code examples</p>
+                    <p>Choose the correct subject area for optimal results</p>
                   </div>
                   <div className="flex items-center">
                     <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                    <p>Choose intermediate level for comprehensive learning</p>
+                    <p>Use PDFs with clear examples and explanations</p>
                   </div>
                   <div className="flex items-center">
                     <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                    <p>Focus on syntax and data structures for beginners</p>
+                    <p>Focus on concepts and definitions for core learning</p>
                   </div>
                   <div className="flex items-center">
                     <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
