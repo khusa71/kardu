@@ -202,7 +202,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUserData = async () => {
     if (auth.currentUser) {
       await auth.currentUser.reload();
-      await syncUserWithBackend(auth.currentUser);
+      const backendUserData = await syncUserWithBackend(auth.currentUser);
+      
+      if (backendUserData) {
+        setUser({
+          uid: auth.currentUser.uid,
+          email: auth.currentUser.email,
+          displayName: auth.currentUser.displayName,
+          photoURL: auth.currentUser.photoURL,
+          emailVerified: auth.currentUser.emailVerified,
+          provider: auth.currentUser.providerData[0]?.providerId === 'google.com' ? 'google' : 'email',
+          isEmailVerified: backendUserData.isEmailVerified || auth.currentUser.emailVerified,
+          isPremium: backendUserData.isPremium || false,
+          monthlyUploads: backendUserData.monthlyUploads || 0,
+          monthlyLimit: backendUserData.monthlyLimit || 3
+        });
+      }
     }
   };
 
