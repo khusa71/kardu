@@ -10,6 +10,7 @@ import { extractTextWithOCR } from "./ocr-service";
 import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
+import { authService, AuthRequest } from "./auth-service";
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -29,8 +30,48 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Upload PDF and start processing
-  app.post("/api/upload", upload.single("pdf"), async (req, res) => {
+  // Authentication routes
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password required" });
+      }
+
+      const result = await authService.register(email, password);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password required" });
+      }
+
+      const result = await authService.login(email, password);
+      res.json(result);
+    } catch (error: any) {
+      res.status(401).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/auth/me", authService.authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const { password_hash: _, ...user } = req.user!;
+      res.json({ user });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user info" });
+    }
+  });
+
+  // Upload PDF and start processing (with optional auth and rate limiting)
+  app.post("/api/upload", authService.optionalAuth, upload.single("pdf"), async (req: AuthRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No PDF file uploaded" });

@@ -1,0 +1,122 @@
+Add Remaining Features to Complete Flashcard Generation Platform
+Objective:
+Enhance the flashcard platform with user interaction, spaced repetition, mobile support, account systems, and monetization features—while maintaining cost efficiency and scalability.
+
+✅ Existing Features (Already Implemented)
+OCR support for scanned PDFs with auto-detection and confidence scoring
+
+Smart caching to reduce API calls and minimize costs
+
+LLM-based content filtering and batching
+
+Multi-format export: Anki, CSV, JSON, Quizlet
+
+Real-time cost estimation
+
+Multi-subject flashcard support (10+ categories)
+
+🚀 Features to Add
+1. 📋 Flashcard Preview & Edit Interface
+Allow users to:
+
+View generated flashcards before export
+
+Edit question or answer text
+
+Delete cards
+
+Reorder cards
+
+Key UI needs:
+
+Scrollable list of flashcards
+
+In-place editing using input fields or modals
+
+Save changes to updated deck export
+
+2. 🧠 Spaced Repetition & Progress Tracking
+Add lightweight study mode with:
+
+Status tags: "New", "Learning", "Known"
+
+Optional interval scheduling based on review behavior
+
+Visual progress: deck completion %, pie charts, etc.
+
+Optional:
+Support Anki-compatible intervals and card statuses
+
+3. 👤 User Accounts & Deck History
+Let users:
+
+Sign up/sign in (Google OAuth or email/password)
+
+Store uploaded PDFs and generated decks
+
+View deck history and re-download past decks
+
+Track LLM usage/credit quota
+
+Backend considerations:
+
+Use PostgreSQL or Firebase for auth + storage
+
+Link decks to user profiles
+
+Track per-user API usage (for freemium model)
+
+4. 💸 Freemium Model & Billing
+Support a usage-limited free tier and paid Pro tier with:
+
+Monthly quotas (e.g., 3 PDF uploads/month for free users)
+
+Pro perks: faster processing, larger PDFs, full OCR access, unlimited exports
+
+Stripe or Paddle integration for subscription management
+
+UX Ideas:
+
+Show remaining quota on dashboard
+
+Prompt upgrade at limit
+
+5. 📱 Mobile-First UI & Offline Mode
+Ensure:
+
+Fully responsive web interface
+
+PWA support for offline access to decks
+
+LocalStorage to cache decks for offline review
+
+6. 🌍 Deck Sharing & Community
+Enable:
+
+Publishing of flashcard decks (with tags and descriptions)
+
+Public search/discovery UI
+
+“Duplicate this deck” functionality
+
+Optional: Likes, comments, download count
+
+Backend:
+
+Add public/private flag to decks
+
+Search index by subject and keyword
+
+🧩 Optional Bonus Features
+Text-to-Speech for flashcard reading
+
+Multilingual support (OCR + translation)
+
+“Performance Mode” toggle: cheap vs high-quality LLM output
+
+🧠 Optimization Guidance (Do Not Skip)
+Use embeddings and vector DB (e.g., FAISS) to avoid reprocessing similar inputs
+
+Use content hashing to identify duplicate pages or documents
+
+Prioritize cheaper LLMs (e.g., gpt-3.5-turbo, mistral) for bulk tasks and summaries
