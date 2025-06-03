@@ -66,9 +66,13 @@ export default function Home() {
       const response = await apiRequest("POST", "/api/upload", formData);
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setCurrentJobId(data.jobId);
       setCurrentStep(3);
+      
+      // Refresh user data to update upload counter
+      await refreshUserData();
+      
       toast({
         title: "Upload successful",
         description: "Your PDF is being processed...",
