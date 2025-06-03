@@ -34,18 +34,46 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+    try {
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            email: userData.email,
+            displayName: userData.displayName,
+            photoURL: userData.photoURL,
+            provider: userData.provider,
+            isEmailVerified: userData.isEmailVerified,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      return user;
+    } catch (error: any) {
+      // Handle email uniqueness constraint violation
+      if (error.code === '23505' && error.constraint === 'users_email_unique') {
+        // Try to find existing user with this email and update their Firebase UID
+        const existingUser = await db.select().from(users).where(eq(users.email, userData.email!));
+        if (existingUser.length > 0) {
+          const [updatedUser] = await db
+            .update(users)
+            .set({
+              id: userData.id,
+              displayName: userData.displayName,
+              photoURL: userData.photoURL,
+              provider: userData.provider,
+              isEmailVerified: userData.isEmailVerified,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.email, userData.email!))
+            .returning();
+          return updatedUser;
+        }
+      }
+      throw error;
+    }
   }
 
   async incrementUserUploads(userId: string): Promise<void> {
