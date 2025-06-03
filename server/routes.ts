@@ -10,7 +10,7 @@ import { extractTextWithOCR } from "./ocr-service";
 import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
-import { authService, AuthRequest } from "./auth-service";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -30,53 +30,75 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Authentication routes
-  app.post("/api/auth/register", async (req, res) => {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const { email, password } = req.body;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password required" });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
-
-      const result = await authService.register(email, password);
-      res.json(result);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
       
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password required" });
-      }
-
-      const result = await authService.login(email, password);
-      res.json(result);
-    } catch (error: any) {
-      res.status(401).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/auth/me", authService.authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const { password_hash: _, ...user } = req.user!;
-      res.json({ user });
+      res.json(user);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get user info" });
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
-  // Upload PDF and start processing (with optional auth and rate limiting)
-  app.post("/api/upload", authService.optionalAuth, upload.single("pdf"), async (req: AuthRequest, res) => {
+  // Check upload limits middleware
+  const checkUploadLimits = async (req: any, res: any, next: any) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check email verification
+      if (!user.isEmailVerified) {
+        return res.status(403).json({ 
+          message: "Please verify your email to continue",
+          requiresEmailVerification: true 
+        });
+      }
+
+      // Check upload limits
+      const { canUpload, uploadsRemaining } = await storage.checkUploadLimit(userId);
+      if (!canUpload) {
+        return res.status(429).json({ 
+          message: "You've reached your monthly limit. Upgrade to generate more flashcards.",
+          plan: user.plan,
+          monthlyUploads: user.monthlyUploads,
+          monthlyLimit: user.monthlyLimit,
+          requiresUpgrade: true
+        });
+      }
+
+      req.uploadsRemaining = uploadsRemaining;
+      next();
+    } catch (error) {
+      console.error("Upload limit check error:", error);
+      res.status(500).json({ message: "Failed to check upload limits" });
+    }
+  };
+
+  // Upload PDF and start processing (with auth and rate limiting)
+  app.post("/api/upload", isAuthenticated, checkUploadLimits, upload.single("pdf"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No PDF file uploaded" });
       }
 
+      const userId = req.user.claims.sub;
       const {
         apiProvider,
         flashcardCount,
@@ -87,6 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate input
       const jobData = {
+        userId,
         filename: req.file.originalname,
         fileSize: req.file.size,
         apiProvider,
@@ -99,10 +122,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create job record
       const job = await storage.createFlashcardJob(jobData);
 
+      // Increment user upload count
+      await storage.incrementUserUploads(userId);
+
       // Start processing asynchronously
       processFlashcardJob(job.id, req.file.path, apiProvider, subject, focusAreas, difficulty);
 
-      res.json({ jobId: job.id, status: "pending" });
+      res.json({ 
+        jobId: job.id, 
+        status: "pending",
+        uploadsRemaining: req.uploadsRemaining - 1
+      });
     } catch (error) {
       console.error("Upload error:", error);
       res.status(500).json({ message: "Upload failed" });
@@ -121,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(job);
     } catch (error) {
-      console.error("Get job error:", error);
+      console.error("Job status error:", error);
       res.status(500).json({ message: "Failed to get job status" });
     }
   });
@@ -141,12 +171,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Anki deck file not found" });
       }
 
-      const filename = `StudyCards_Flashcards_${job.id}.apkg`;
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader('Content-Disposition', `attachment; filename="StudyCards_${jobId}.apkg"`);
+      res.setHeader('Content-Type', 'application/vnd.anki');
       
       const fileStream = fs.createReadStream(filePath);
       fileStream.pipe(res);
+      
     } catch (error) {
       console.error("Download error:", error);
       res.status(500).json({ message: "Download failed" });
@@ -224,6 +254,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Stats error:", error);
       res.status(500).json({ message: "Failed to generate stats" });
+    }
+  });
+
+  // Get user's job history
+  app.get("/api/user/jobs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const jobs = await storage.getUserJobs(userId);
+      res.json(jobs);
+    } catch (error) {
+      console.error("User jobs error:", error);
+      res.status(500).json({ message: "Failed to get user jobs" });
+    }
+  });
+
+  // Upgrade to premium
+  app.post("/api/user/upgrade", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.upgradeToPremium(userId);
+      
+      const updatedUser = await storage.getUser(userId);
+      res.json({ message: "Successfully upgraded to premium", user: updatedUser });
+    } catch (error) {
+      console.error("Upgrade error:", error);
+      res.status(500).json({ message: "Failed to upgrade account" });
     }
   });
 
@@ -371,16 +427,13 @@ async function processFlashcardJob(
 // Extract text from PDF using Python subprocess
 function extractTextFromPDF(pdfPath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const pythonProcess = spawn("python3", [
-      path.join(process.cwd(), "server/pdf-processor.py"),
-      pdfPath,
-    ]);
-
-    let output = "";
+    const pythonProcess = spawn("python3", ["server/pdf-processor.py", pdfPath]);
+    
+    let result = "";
     let error = "";
 
     pythonProcess.stdout.on("data", (data) => {
-      output += data.toString();
+      result += data.toString();
     });
 
     pythonProcess.stderr.on("data", (data) => {
@@ -389,9 +442,9 @@ function extractTextFromPDF(pdfPath: string): Promise<string> {
 
     pythonProcess.on("close", (code) => {
       if (code === 0) {
-        resolve(output.trim());
+        resolve(result.trim());
       } else {
-        reject(new Error(`PDF extraction failed: ${error}`));
+        reject(new Error(`PDF processing failed: ${error}`));
       }
     });
   });
@@ -400,18 +453,13 @@ function extractTextFromPDF(pdfPath: string): Promise<string> {
 // Generate Anki deck using Python subprocess
 function generateAnkiDeck(jobId: number, flashcards: any[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const outputPath = path.join(process.cwd(), "outputs", `deck_${jobId}.apkg`);
+    const outputPath = path.join("outputs", `deck_${jobId}.apkg`);
+    const flashcardsJson = JSON.stringify(flashcards);
     
-    // Ensure outputs directory exists
-    const outputDir = path.dirname(outputPath);
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
     const pythonProcess = spawn("python3", [
-      path.join(process.cwd(), "server/anki-generator.py"),
-      JSON.stringify(flashcards),
-      outputPath,
+      "server/anki-generator.py",
+      flashcardsJson,
+      outputPath
     ]);
 
     let error = "";

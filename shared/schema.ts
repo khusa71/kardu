@@ -1,9 +1,47 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  varchar,
+  timestamp,
+  jsonb,
+  index,
+  serial,
+  integer,
+  boolean,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table for Replit Auth
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().notNull(),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  isEmailVerified: boolean("is_email_verified").default(false),
+  plan: text("plan").default("free"), // 'free' | 'premium'
+  monthlyUploads: integer("monthly_uploads").default(0),
+  monthlyLimit: integer("monthly_limit").default(3),
+  lastUploadDate: timestamp("last_upload_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const flashcardJobs = pgTable("flashcard_jobs", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id),
   filename: text("filename").notNull(),
   fileSize: integer("file_size").notNull(),
   apiProvider: text("api_provider").notNull(), // 'openai' | 'anthropic'
@@ -24,6 +62,8 @@ export const insertFlashcardJobSchema = createInsertSchema(flashcardJobs).omit({
 
 export type InsertFlashcardJob = z.infer<typeof insertFlashcardJobSchema>;
 export type FlashcardJob = typeof flashcardJobs.$inferSelect;
+export type UpsertUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect;
 
 export interface FlashcardPair {
   question: string;
