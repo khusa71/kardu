@@ -2,12 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
@@ -15,22 +10,21 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FlashcardEditor } from "@/components/flashcard-editor";
 import { StudyMode } from "@/components/study-mode";
 import { AuthModal } from "@/components/auth-modal";
-import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw, Edit, Play, User, LogOut, Crown, Zap, Mail } from "lucide-react";
-import { UpgradeButton } from "@/components/upgrade-button";
-import { PremiumStatus } from "@/components/premium-status";
+import { ResponsiveNavbar } from "@/components/responsive-navbar";
+import { ResponsiveProgressStepper } from "@/components/responsive-progress-stepper";
+import { ResponsiveUploadZone } from "@/components/responsive-upload-zone";
+import { ResponsiveConfigPanel } from "@/components/responsive-config-panel";
+import { Download, LoaderPinwheel, Check, Star, HelpCircle, ExternalLink, AlertCircle, RotateCcw, Edit, Play } from "lucide-react";
 import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 
 export default function Home() {
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, logout, sendVerificationEmail, refreshUserData } = useFirebaseAuth();
   
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [apiProvider, setApiProvider] = useState<"openai" | "anthropic">("anthropic");
   const [flashcardCount, setFlashcardCount] = useState(25);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
   
   // Subject and focus areas
   const [subject, setSubject] = useState<string>("programming");
@@ -106,97 +100,24 @@ export default function Home() {
       } else {
         toast({
           title: "Upload failed",
-          description: error.message,
+          description: error.message || "Please try again.",
           variant: "destructive",
         });
       }
     },
   });
 
-  // Download mutation
-  const downloadMutation = useMutation({
-    mutationFn: async (jobId: number) => {
-      const response = await apiRequest("GET", `/api/download/${jobId}`);
-      const blob = await response.blob();
-      return { blob, filename: response.headers.get('Content-Disposition')?.split('filename=')[1] || 'flashcards.apkg' };
-    },
-    onSuccess: ({ blob, filename }) => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast({
-        title: "Download complete",
-        description: "Your Anki deck has been downloaded!",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Download failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // File handling
-  const handleFileSelect = useCallback((file: File) => {
-    if (file.type !== 'application/pdf') {
-      toast({
-        title: "Invalid file type",
-        description: "Please select a PDF file.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      toast({
-        title: "File too large",
-        description: "Please select a PDF smaller than 10MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setSelectedFile(file);
-    setCurrentStep(2);
-  }, [toast]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFileSelect(files[0]);
-    }
-  }, [handleFileSelect]);
-
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      handleFileSelect(files[0]);
-    }
-  }, [handleFileSelect]);
-
-  // Form submission
-  const handleGenerate = useCallback(() => {
+  // Handle upload
+  const handleUpload = useCallback(() => {
     if (!selectedFile) {
       toast({
-        title: "Please select a PDF file",
-        description: "Upload an educational PDF to generate flashcards.",
+        title: "No file selected",
+        description: "Please select a PDF file to continue.",
         variant: "destructive",
       });
       return;
     }
 
-    // Check if user is authenticated
     if (!user) {
       toast({
         title: "Authentication required",
@@ -226,7 +147,7 @@ export default function Home() {
       setShowEmailVerificationMessage(false);
     }
 
-    if (user && (user as any).monthlyUploads >= (user as any).monthlyLimit && (user as any).plan === 'free') {
+    if (user && (user as any).monthlyUploads >= (user as any).monthlyLimit && !(user as any).isPremium) {
       setShowUpgradeBanner(true);
     } else {
       setShowUpgradeBanner(false);
@@ -257,20 +178,6 @@ export default function Home() {
         variant: "destructive",
       });
     }
-  };
-
-  const getStepIndicatorClass = (step: number) => {
-    if (step < currentStep) return "step-indicator step-completed w-10 h-10 rounded-full text-white flex items-center justify-center text-sm font-semibold";
-    if (step === currentStep) return "step-indicator step-active w-10 h-10 rounded-full text-white flex items-center justify-center text-sm font-semibold";
-    return "step-indicator w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-semibold";
-  };
-
-  const getProgressWidth = (step: number) => {
-    return step < currentStep ? "100%" : "0%";
-  };
-
-  const safeProgress = (value: number | null | undefined): number => {
-    return value || 0;
   };
 
   // Render different views based on mode
@@ -306,19 +213,7 @@ export default function Home() {
   if (viewMode === 'study' && editableFlashcards.length > 0) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Button variant="outline" onClick={() => setViewMode('edit')}>
-                  ← Back to Edit
-                </Button>
-                <h1 className="text-xl font-bold">Study Mode</h1>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="max-w-4xl mx-auto px-4 py-8">
+        <main className="h-screen">
           <StudyMode
             flashcards={editableFlashcards}
             onComplete={(results) => {
@@ -337,515 +232,107 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-primary text-white rounded-lg p-2">
-                <Brain className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-neutral dark:text-white">StudyCards AI</h1>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">Transform any educational PDF into interactive Anki flashcards</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <div className="flex items-center space-x-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => window.location.href = "/history"}
-                    className="flex items-center"
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    History
-                  </Button>
-                  <PremiumStatus />
-                  <UpgradeButton size="sm" />
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-neutral dark:text-white">{(user as any).email}</div>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={handleLogout}>
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => setShowAuthModal(true)}>
-                    <User className="w-4 h-4 mr-2" />
-                    Sign In
-                  </Button>
-                  <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full text-sm font-medium">
-                    <Shield className="w-3 h-3 mr-1 inline" />
-                    Secure
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Responsive Header */}
+      <ResponsiveNavbar 
+        onAuthModalOpen={() => setShowAuthModal(true)}
+        onLogout={handleLogout}
+      />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Progress Steps */}
-        <div className="mb-12">
-          <div className="flex items-center justify-center space-x-4 md:space-x-8">
-            <div className="flex items-center">
-              <div className={getStepIndicatorClass(1)}>1</div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 1 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Upload PDF</span>
-            </div>
-            <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full max-w-20">
-              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: getProgressWidth(2) }}></div>
-            </div>
-            <div className="flex items-center">
-              <div className={getStepIndicatorClass(2)}>2</div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 2 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Configure</span>
-            </div>
-            <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full max-w-20">
-              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: getProgressWidth(3) }}></div>
-            </div>
-            <div className="flex items-center">
-              <div className={getStepIndicatorClass(3)}>3</div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 3 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Generate</span>
-            </div>
-            <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full max-w-20">
-              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: getProgressWidth(4) }}></div>
-            </div>
-            <div className="flex items-center">
-              <div className={getStepIndicatorClass(4)}>4</div>
-              <span className={`ml-2 text-sm font-medium ${currentStep >= 4 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Download</span>
-            </div>
-          </div>
-        </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
+        {/* Responsive Progress Steps */}
+        <ResponsiveProgressStepper currentStep={currentStep} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
           {/* Main Workflow */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-4 lg:space-y-8">
             
             {/* Step 1: PDF Upload */}
-            <Card className="animate-fade-in">
-              <CardContent className="p-8">
-                <div className="flex items-center mb-6">
-                  <div className="bg-primary text-white rounded-lg p-2 mr-3">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-neutral dark:text-white">Upload Your Educational PDF</h2>
-                </div>
-                
-                <div 
-                  className={`upload-zone border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${isDragOver ? 'dragover border-primary bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600'}`}
-                  onDrop={handleDrop}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                  onDragLeave={() => setIsDragOver(false)}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <div className="space-y-4">
-                    <div className="bg-blue-50 dark:bg-blue-900/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                      <Upload className="w-8 h-8 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-medium text-neutral dark:text-white mb-2">Drop your PDF here, or click to browse</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Supports PDF files up to 10MB</p>
-                    </div>
-                    <div className="flex items-center justify-center space-x-4 text-xs text-gray-400">
-                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Academic textbooks</span>
-                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Course materials</span>
-                      <span className="flex items-center"><CheckCircle className="w-3 h-3 mr-1 text-green-500" />Study guides</span>
-                    </div>
-                  </div>
-                  <input 
-                    ref={fileInputRef}
-                    type="file" 
-                    className="hidden" 
-                    accept=".pdf"
-                    onChange={handleFileInputChange}
-                  />
-                </div>
-
-                {/* File Preview */}
-                {selectedFile && (
-                  <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="w-5 h-5 text-red-500" />
-                        <div>
-                          <p className="font-medium text-neutral dark:text-white">{selectedFile.name}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{(selectedFile.size / 1024 / 1024).toFixed(1)} MB</p>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setSelectedFile(null)}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ResponsiveUploadZone 
+              selectedFile={selectedFile}
+              onFileSelect={setSelectedFile}
+              onFileRemove={() => setSelectedFile(null)}
+            />
 
             {/* Step 2: Configuration */}
-            <Card className={`${currentStep >= 2 ? '' : 'opacity-50 pointer-events-none'}`}>
-              <CardContent className="p-8">
-                <div className="flex items-center mb-6">
-                  <div className={`rounded-lg p-2 mr-3 ${currentStep >= 2 ? 'bg-primary text-white' : 'bg-gray-400 text-white'}`}>
-                    <Settings className="w-5 h-5" />
-                  </div>
-                  <h2 className={`text-xl font-semibold ${currentStep >= 2 ? 'text-neutral dark:text-white' : 'text-gray-400'}`}>Configuration Settings</h2>
-                </div>
+            <ResponsiveConfigPanel 
+              apiProvider={apiProvider}
+              onApiProviderChange={setApiProvider}
+              flashcardCount={flashcardCount}
+              onFlashcardCountChange={setFlashcardCount}
+              subject={subject}
+              onSubjectChange={setSubject}
+              focusAreas={focusAreas}
+              onFocusAreasChange={setFocusAreas}
+              difficulty={difficulty}
+              onDifficultyChange={setDifficulty}
+              disabled={currentStep < 2}
+            />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-neutral dark:text-white">Subject Area</Label>
-                    <Select value={subject} onValueChange={(value: string) => setSubject(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="programming">Programming & Computer Science</SelectItem>
-                        <SelectItem value="mathematics">Mathematics & Statistics</SelectItem>
-                        <SelectItem value="science">Science & Engineering</SelectItem>
-                        <SelectItem value="medicine">Medicine & Health Sciences</SelectItem>
-                        <SelectItem value="business">Business & Economics</SelectItem>
-                        <SelectItem value="history">History & Social Studies</SelectItem>
-                        <SelectItem value="language">Language & Literature</SelectItem>
-                        <SelectItem value="law">Law & Legal Studies</SelectItem>
-                        <SelectItem value="psychology">Psychology & Behavioral Sciences</SelectItem>
-                        <SelectItem value="general">General Education</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-neutral dark:text-white">Number of Flashcards</Label>
-                    <Select value={flashcardCount.toString()} onValueChange={(value) => setFlashcardCount(parseInt(value))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="10">10 flashcards (Free)</SelectItem>
-                        <SelectItem value="25">25 flashcards (Free)</SelectItem>
-                        <SelectItem value="50">50 flashcards (Premium)</SelectItem>
-                        <SelectItem value="100">100 flashcards (Premium)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {flashcardCount <= 25 ? 'Free tier includes up to 25 flashcards' : 'Premium feature - upgrade for more flashcards'}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-neutral dark:text-white">AI Provider</Label>
-                    <Select value={apiProvider} onValueChange={(value: "openai" | "anthropic") => setApiProvider(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="anthropic">Anthropic Claude (Recommended)</SelectItem>
-                        <SelectItem value="openai">OpenAI GPT-4</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                      <Shield className="w-3 h-3 mr-1" />
-                      AI processing powered by secure system keys
-                    </p>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                    >
-                      <Settings className="w-4 h-4 mr-1" />
-                      Advanced Options
-                      <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-                    </Button>
-
-                    {showAdvanced && (
-                      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-4">
-                        <div>
-                          <Label className="text-sm font-medium text-neutral dark:text-white mb-3 block">Focus Areas</Label>
-                          <div className="space-y-3">
-                            {Object.entries(focusAreas).map(([key, value]) => (
-                              <div key={key} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={key}
-                                  checked={value}
-                                  onCheckedChange={(checked) => 
-                                    setFocusAreas(prev => ({ ...prev, [key]: !!checked }))
-                                  }
-                                />
-                                <Label htmlFor={key} className="text-sm text-gray-700 dark:text-gray-300">
-                                  {key === 'concepts' && 'Key concepts and theories'}
-                                  {key === 'definitions' && 'Definitions and terminology'}
-                                  {key === 'examples' && 'Examples and case studies'}
-                                  {key === 'procedures' && 'Procedures and methods'}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label className="text-sm font-medium text-neutral dark:text-white">Difficulty Level</Label>
-                          <Select value={difficulty} onValueChange={(value: "beginner" | "intermediate" | "advanced") => setDifficulty(value)}>
-                            <SelectTrigger className="mt-2">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="beginner">Beginner</SelectItem>
-                              <SelectItem value="intermediate">Intermediate</SelectItem>
-                              <SelectItem value="advanced">Advanced</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-8">
+            {/* Generate Button */}
+            {selectedFile && currentStep >= 2 && (
+              <Card>
+                <CardContent className="p-4 lg:p-8 text-center">
                   <Button 
-                    onClick={handleGenerate}
-                    disabled={!selectedFile || uploadMutation.isPending}
-                    className="w-full bg-primary text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                    onClick={handleUpload}
+                    disabled={uploadMutation.isPending || currentStep >= 3}
+                    size="lg"
+                    className="w-full sm:w-auto px-8 py-3 text-lg font-semibold"
                   >
                     {uploadMutation.isPending ? (
                       <>
-                        <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
+                        <LoaderPinwheel className="w-5 h-5 mr-2 animate-spin" />
                         Processing...
                       </>
                     ) : (
                       <>
-                        <Lightbulb className="w-4 h-4 mr-2" />
+                        <Check className="w-5 h-5 mr-2" />
                         Generate Flashcards
                       </>
                     )}
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Step 3: Processing Status */}
-            {currentStep >= 3 && jobStatus && (
-              <Card className="animate-slide-up">
-                <CardContent className="p-8">
-                  <div className="flex items-center mb-6">
-                    <div className="bg-accent text-white rounded-lg p-2 mr-3">
-                      <LoaderPinwheel className="w-5 h-5 animate-spin" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-neutral dark:text-white">Processing Your PDF</h2>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {jobStatus.currentTask || 'Processing...'}
-                      </span>
-                      <span className="text-sm font-medium text-primary">
-                        {safeProgress(jobStatus.progress)}%
-                      </span>
-                    </div>
-                    
-                    <Progress value={safeProgress(jobStatus.progress)} className="h-2" />
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                      <div className={`p-3 rounded-lg ${safeProgress(jobStatus.progress) >= 25 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                        <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${safeProgress(jobStatus.progress) >= 25 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                          {safeProgress(jobStatus.progress) >= 25 ? <Check className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                        </div>
-                        <p className="text-xs font-medium">Text Extraction</p>
-                      </div>
-                      
-                      <div className={`p-3 rounded-lg ${safeProgress(jobStatus.progress) >= 50 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                        <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${safeProgress(jobStatus.progress) >= 50 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                          {safeProgress(jobStatus.progress) >= 50 ? <Check className="w-4 h-4" /> : <Brain className="w-4 h-4" />}
-                        </div>
-                        <p className="text-xs font-medium">AI Analysis</p>
-                      </div>
-                      
-                      <div className={`p-3 rounded-lg ${safeProgress(jobStatus.progress) >= 75 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                        <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${safeProgress(jobStatus.progress) >= 75 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                          {safeProgress(jobStatus.progress) >= 75 ? <Check className="w-4 h-4" /> : <Lightbulb className="w-4 h-4" />}
-                        </div>
-                        <p className="text-xs font-medium">Flashcard Creation</p>
-                      </div>
-                      
-                      <div className={`p-3 rounded-lg ${safeProgress(jobStatus.progress) >= 100 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                        <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${safeProgress(jobStatus.progress) >= 100 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                          {safeProgress(jobStatus.progress) >= 100 ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-                        </div>
-                        <p className="text-xs font-medium">Anki Export</p>
-                      </div>
-                    </div>
-
-                    {jobStatus.status === 'failed' && jobStatus.errorMessage && (
-                      <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
-                        <div className="flex items-center">
-                          <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                          <p className="text-sm font-medium text-red-700 dark:text-red-300">Processing Failed</p>
-                        </div>
-                        <p className="text-sm text-red-600 dark:text-red-400 mt-1">{jobStatus.errorMessage}</p>
-                      </div>
-                    )}
-                  </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Step 4: Download and Preview */}
-            {currentStep >= 4 && jobStatus?.status === 'completed' && (
-              <Card className="animate-slide-up">
-                <CardContent className="p-8">
-                  <div className="flex items-center mb-6">
-                    <div className="bg-green-500 text-white rounded-lg p-2 mr-3">
-                      <CheckCircle className="w-5 h-5" />
+            {/* Step 3: Processing Status */}
+            {currentStep >= 3 && jobStatus && (
+              <Card>
+                <CardContent className="p-4 lg:p-8">
+                  <div className="text-center space-y-4">
+                    <div className="flex items-center justify-center space-x-3">
+                      {jobStatus.status === 'completed' ? (
+                        <Check className="w-6 h-6 text-green-500" />
+                      ) : (
+                        <LoaderPinwheel className="w-6 h-6 text-primary animate-spin" />
+                      )}
+                      <h3 className="text-lg font-semibold">
+                        {jobStatus.status === 'completed' ? 'Flashcards Ready!' : 'Processing...'}
+                      </h3>
                     </div>
-                    <h2 className="text-xl font-semibold text-neutral dark:text-white">Flashcards Ready!</h2>
-                  </div>
+                    
+                    <div className="space-y-2">
+                      <Progress value={jobStatus.progress} className="w-full" />
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        {jobStatus.currentTask}
+                      </p>
+                    </div>
 
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      {/* Cost Optimization Display */}
-                      {jobStatus.currentTask && jobStatus.currentTask.includes('cache') && (
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-                          <div className="flex items-center">
-                            <Zap className="w-5 h-5 text-blue-500 mr-3" />
-                            <div>
-                              <p className="font-medium text-blue-700 dark:text-blue-300">Cost Optimized</p>
-                              <p className="text-sm text-blue-600 dark:text-blue-400">
-                                Retrieved from cache - saved processing time and costs
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* OCR Indicator */}
-                      {jobStatus.currentTask && jobStatus.currentTask.includes('OCR') && (
-                        <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
-                          <div className="flex items-center">
-                            <FileText className="w-5 h-5 text-purple-500 mr-3" />
-                            <div>
-                              <p className="font-medium text-purple-700 dark:text-purple-300">OCR Processing</p>
-                              <p className="text-sm text-purple-600 dark:text-purple-400">
-                                Scanned PDF detected - text extracted using OCR
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                        <div className="flex items-center">
-                          <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                          <div>
-                            <p className="font-medium text-green-700 dark:text-green-300">Generation Complete</p>
-                            <p className="text-sm text-green-600 dark:text-green-400">
-                              Created {JSON.parse(jobStatus.flashcards || '[]').length} flashcards
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            onClick={() => setViewMode('edit')}
-                            variant="outline"
-                            className="flex items-center"
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Cards
-                          </Button>
-                          <Button 
-                            onClick={() => downloadMutation.mutate(currentJobId!)}
-                            disabled={downloadMutation.isPending}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            {downloadMutation.isPending ? (
-                              <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Download className="w-4 h-4 mr-2" />
-                            )}
+                    {jobStatus.status === 'completed' && (
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <Button onClick={() => setViewMode('edit')} variant="outline">
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Cards
+                        </Button>
+                        <Button onClick={() => setViewMode('study')}>
+                          <Play className="w-4 h-4 mr-2" />
+                          Study Now
+                        </Button>
+                        <Button variant="outline" asChild>
+                          <a href={`/api/download/${jobStatus.id}`} download>
+                            <Download className="w-4 h-4 mr-2" />
                             Download Anki
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Additional Export Formats */}
-                      <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Additional Export Formats</p>
-                        <div className="grid grid-cols-3 gap-3">
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(`/api/export/${currentJobId}/csv`, '_blank')}
-                            className="text-xs"
-                          >
-                            CSV Export
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(`/api/export/${currentJobId}/json`, '_blank')}
-                            className="text-xs"
-                          >
-                            JSON Export
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(`/api/export/${currentJobId}/quizlet`, '_blank')}
-                            className="text-xs"
-                          >
-                            Quizlet Import
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Flashcard Preview */}
-                    {previewFlashcards.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-neutral dark:text-white mb-4">Preview Flashcards</h3>
-                        <div className="space-y-3">
-                          {(showAllFlashcards ? JSON.parse(jobStatus.flashcards || '[]') : previewFlashcards).map((card: FlashcardPair, index: number) => (
-                            <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
-                              <div className="mb-3">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Question {index + 1}</span>
-                                  {card.topic && (
-                                    <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">
-                                      {card.topic}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-gray-900 dark:text-gray-100">{card.question}</p>
-                              </div>
-                              <div>
-                                <span className="text-sm font-medium text-green-600 dark:text-green-400 block mb-1">Answer</span>
-                                <div className="bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded font-mono text-sm whitespace-pre-wrap">
-                                  {card.answer}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        {!showAllFlashcards && JSON.parse(jobStatus.flashcards || '[]').length > 3 && (
-                          <Button 
-                            variant="outline" 
-                            onClick={() => setShowAllFlashcards(true)}
-                            className="mt-4 w-full"
-                          >
-                            Show All {JSON.parse(jobStatus.flashcards || '[]').length} Flashcards
-                          </Button>
-                        )}
+                          </a>
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -855,66 +342,29 @@ export default function Home() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Info Card */}
-            <Card>
-              <CardContent className="p-6">
+          <div className="space-y-4 lg:space-y-6">
+            {/* Pro Features Card */}
+            <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center mb-4">
-                  <Info className="w-5 h-5 text-blue-500 mr-2" />
-                  <h3 className="font-semibold text-neutral dark:text-white">How it works</h3>
+                  <Star className="w-5 h-5 text-purple-600 mr-2" />
+                  <h3 className="font-semibold text-purple-800 dark:text-purple-200">Pro Features</h3>
                 </div>
-                <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">1</div>
-                    <p>Upload any educational PDF (textbooks, notes, study guides)</p>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">2</div>
-                    <p>AI analyzes content and identifies key concepts in your subject area</p>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">3</div>
-                    <p>Smart flashcards are generated with definitions, examples, and explanations</p>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">4</div>
-                    <p>Download as Anki deck for spaced repetition learning</p>
-                  </div>
-                </div>
+                <ul className="space-y-2 text-sm text-purple-700 dark:text-purple-300">
+                  <li>• 100 uploads per month</li>
+                  <li>• Advanced AI processing</li>
+                  <li>• Multiple export formats</li>
+                  <li>• Priority support</li>
+                </ul>
+                <Button className="w-full mt-4" size="sm">
+                  Upgrade to Pro - $9.99/month
+                </Button>
               </CardContent>
             </Card>
 
-            {/* Tips Card */}
+            {/* Help Card */}
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <Lightbulb className="w-5 h-5 text-yellow-500 mr-2" />
-                  <h3 className="font-semibold text-neutral dark:text-white">Tips for better results</h3>
-                </div>
-                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                  <div className="flex items-center">
-                    <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                    <p>Choose the correct subject area for optimal results</p>
-                  </div>
-                  <div className="flex items-center">
-                    <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                    <p>Use PDFs with clear examples and explanations</p>
-                  </div>
-                  <div className="flex items-center">
-                    <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                    <p>Focus on concepts and definitions for core learning</p>
-                  </div>
-                  <div className="flex items-center">
-                    <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                    <p>Start with 25 flashcards to avoid overwhelm</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Support Card */}
-            <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center mb-4">
                   <HelpCircle className="w-5 h-5 text-gray-500 mr-2" />
                   <h3 className="font-semibold text-neutral dark:text-white">Need help?</h3>
