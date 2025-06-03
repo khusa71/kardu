@@ -14,6 +14,7 @@ import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FlashcardEditor } from "@/components/flashcard-editor";
 import { StudyMode } from "@/components/study-mode";
+import { AuthModal } from "@/components/auth-modal";
 import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw, Edit, Play, User, LogOut, Crown, Zap, Mail } from "lucide-react";
 import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 
@@ -912,6 +913,9 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* Authentication Modal */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }
