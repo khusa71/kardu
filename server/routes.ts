@@ -10,7 +10,7 @@ import { extractTextWithOCR } from "./ocr-service";
 import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
-import { persistentStorage } from "./persistent-storage";
+import { objectStorage } from "./object-storage-service";
 import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
@@ -188,16 +188,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Anki deck not ready" });
       }
 
-      const filePath = persistentStorage.getFilePath(job.ankiStorageKey);
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: "Anki deck file not found" });
-      }
-
       res.setHeader('Content-Disposition', `attachment; filename="StudyCards_${jobId}.apkg"`);
       res.setHeader('Content-Type', 'application/vnd.anki');
       
-      const fileStream = fs.createReadStream(filePath);
-      fileStream.pipe(res);
+      const stream = await objectStorage.downloadFileStream(job.ankiStorageKey);
+      stream.pipe(res);
       
     } catch (error) {
       console.error("Download error:", error);
