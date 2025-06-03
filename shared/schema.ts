@@ -44,7 +44,8 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   userId: varchar("user_id").references(() => users.id),
   filename: text("filename").notNull(),
   fileSize: integer("file_size").notNull(),
-  filePath: text("file_path"), // Store original PDF file path
+  pdfStorageKey: text("pdf_storage_key"), // Object Storage key for original PDF
+  pdfDownloadUrl: text("pdf_download_url"), // Download URL for original PDF
   apiProvider: text("api_provider").notNull(), // 'openai' | 'anthropic'
   flashcardCount: integer("flashcard_count").notNull(),
   subject: text("subject"), // Store subject for better categorization
@@ -54,10 +55,14 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   progress: integer("progress").default(0), // 0-100
   currentTask: text("current_task"),
   flashcards: text("flashcards"), // JSON string of generated flashcards
-  ankiDeckPath: text("anki_deck_path"),
-  csvExportPath: text("csv_export_path"),
-  jsonExportPath: text("json_export_path"),
-  quizletExportPath: text("quizlet_export_path"),
+  ankiStorageKey: text("anki_storage_key"), // Object Storage key for Anki deck
+  ankiDownloadUrl: text("anki_download_url"), // Download URL for Anki deck
+  csvStorageKey: text("csv_storage_key"), // Object Storage key for CSV export
+  csvDownloadUrl: text("csv_download_url"), // Download URL for CSV export
+  jsonStorageKey: text("json_storage_key"), // Object Storage key for JSON export
+  jsonDownloadUrl: text("json_download_url"), // Download URL for JSON export
+  quizletStorageKey: text("quizlet_storage_key"), // Object Storage key for Quizlet export
+  quizletDownloadUrl: text("quizlet_download_url"), // Download URL for Quizlet export
   errorMessage: text("error_message"),
   processingTime: integer("processing_time"), // Time taken in seconds
   createdAt: timestamp("created_at").defaultNow(),
