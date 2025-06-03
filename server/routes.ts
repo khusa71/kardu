@@ -250,24 +250,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Original file no longer available" });
       }
 
-      const filePath = persistentStorage.getFilePath(job.pdfStorageKey);
-      if (!persistentStorage.fileExists(job.pdfStorageKey)) {
+      if (!(await objectStorage.fileExists(job.pdfStorageKey))) {
         return res.status(404).json({ message: "Original file no longer available" });
       }
 
       res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
       res.setHeader('Content-Type', 'application/pdf');
       
-      const fileStream = fs.createReadStream(filePath);
-      fileStream.pipe(res);
+      const stream = await objectStorage.downloadFileStream(job.pdfStorageKey);
+      stream.pipe(res);
     } catch (error) {
       console.error("PDF download error:", error);
       res.status(500).json({ message: "Download failed" });
     }
   });
 
-  // Universal storage download endpoint
-  app.get("/api/storage/download/:key(*)", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  // Object Storage download endpoint
+  app.get("/api/object-storage/download/:key(*)", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const storageKey = req.params.key;
       const userId = req.user!.uid;
@@ -278,15 +277,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      if (!persistentStorage.fileExists(storageKey)) {
+      if (!(await objectStorage.fileExists(storageKey))) {
         return res.status(404).json({ message: "File not found" });
       }
 
-      const filePath = persistentStorage.getFilePath(storageKey);
-      const stats = fs.statSync(filePath);
-      
       // Determine content type based on file extension
-      const ext = path.extname(filePath).toLowerCase();
+      const ext = path.extname(storageKey).toLowerCase();
       const contentTypes: Record<string, string> = {
         '.pdf': 'application/pdf',
         '.apkg': 'application/octet-stream',
@@ -296,16 +292,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const contentType = contentTypes[ext] || 'application/octet-stream';
-      const filename = path.basename(filePath);
+      const filename = path.basename(storageKey);
 
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', stats.size);
       
-      const fileStream = fs.createReadStream(filePath);
-      fileStream.pipe(res);
+      const stream = await objectStorage.downloadFileStream(storageKey);
+      stream.pipe(res);
     } catch (error) {
-      console.error("Storage download error:", error);
+      console.error("Object Storage download error:", error);
       res.status(500).json({ message: "Download failed" });
     }
   });
@@ -533,10 +528,10 @@ async function processFlashcardJob(
     const currentJob = await storage.getFlashcardJob(jobId);
     if (!currentJob) throw new Error("Job not found");
 
-    // Store files in persistent storage
-    const storedPdf = await persistentStorage.storePDF(userId, jobId, pdfPath, currentJob.filename);
-    const storedAnki = await persistentStorage.storeAnkiDeck(userId, jobId, ankiDeckPath);
-    const exportFiles = await persistentStorage.generateAndStoreExports(userId, jobId, flashcards);
+    // Store files in Object Storage
+    const storedPdf = await objectStorage.uploadPDF(userId, jobId, pdfPath, currentJob.filename);
+    const storedAnki = await objectStorage.uploadAnkiDeck(userId, jobId, ankiDeckPath);
+    const exportFiles = await objectStorage.generateAndUploadExports(userId, jobId, flashcards);
 
     // Complete the job
     await storage.updateFlashcardJob(jobId, {
