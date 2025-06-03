@@ -96,7 +96,7 @@ export default function Home() {
           description: "Please sign in to continue.",
           variant: "destructive",
         });
-        window.location.href = "/api/login";
+        setShowAuthModal(true);
       } else {
         toast({
           title: "Upload failed",
@@ -237,8 +237,20 @@ export default function Home() {
     }
   }
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account.",
+      });
+    } catch (error) {
+      toast({
+        title: "Sign out failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStepIndicatorClass = (step: number) => {
@@ -355,7 +367,7 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => window.location.href = "/api/login"}>
+                  <Button variant="outline" size="sm" onClick={() => setShowAuthModal(true)}>
                     <User className="w-4 h-4 mr-2" />
                     Sign In
                   </Button>
