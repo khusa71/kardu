@@ -110,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Upload PDF and start processing (with auth and rate limiting)
-  app.post("/api/upload", isAuthenticated, checkUploadLimits, upload.single("pdf"), async (req: any, res) => {
+  app.post("/api/upload", verifyFirebaseToken, checkUploadLimits, upload.single("pdf"), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No PDF file uploaded" });
@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's job history
-  app.get("/api/user/jobs", isAuthenticated, async (req: any, res) => {
+  app.get("/api/user/jobs", verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user.claims.sub;
       const jobs = await storage.getUserJobs(userId);
