@@ -35,7 +35,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         apiProvider,
         flashcardCount,
-        apiKey,
         focusAreas,
         difficulty,
       } = req.body;
@@ -55,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const job = await storage.createFlashcardJob(jobData);
 
       // Start processing asynchronously
-      processFlashcardJob(job.id, req.file.path, apiKey, focusAreas, difficulty);
+      processFlashcardJob(job.id, req.file.path, apiProvider, focusAreas, difficulty);
 
       res.json({ jobId: job.id, status: "pending" });
     } catch (error) {
@@ -116,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 async function processFlashcardJob(
   jobId: number,
   pdfPath: string,
-  apiKey: string,
+  apiProvider: string,
   focusAreas: string,
   difficulty: string
 ) {
@@ -145,10 +144,19 @@ async function processFlashcardJob(
     const job = await storage.getFlashcardJob(jobId);
     if (!job) throw new Error("Job not found");
 
+    // Get system-managed API key based on provider
+    const systemApiKey = apiProvider === "openai" 
+      ? process.env.OPENAI_API_KEY 
+      : process.env.ANTHROPIC_API_KEY;
+    
+    if (!systemApiKey) {
+      throw new Error(`${apiProvider.toUpperCase()} API key not configured`);
+    }
+
     const flashcards = await generateFlashcards(
       extractedText,
       job.apiProvider as "openai" | "anthropic",
-      apiKey,
+      systemApiKey,
       job.flashcardCount,
       JSON.parse(focusAreas || "{}"),
       difficulty

@@ -19,10 +19,8 @@ export default function Home() {
   
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [apiProvider, setApiProvider] = useState<"openai" | "anthropic">("openai");
-  const [flashcardCount, setFlashcardCount] = useState(50);
-  const [apiKey, setApiKey] = useState("");
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiProvider, setApiProvider] = useState<"openai" | "anthropic">("anthropic");
+  const [flashcardCount, setFlashcardCount] = useState(25);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   
@@ -41,7 +39,7 @@ export default function Home() {
   const [showAllFlashcards, setShowAllFlashcards] = useState(false);
 
   // Poll for job status
-  const { data: jobStatus } = useQuery({
+  const { data: jobStatus } = useQuery<FlashcardJob>({
     queryKey: ['/api/jobs', currentJobId],
     enabled: !!currentJobId,
     refetchInterval: currentJobId ? 2000 : false,
@@ -144,10 +142,10 @@ export default function Home() {
 
   // Form submission
   const handleGenerate = useCallback(() => {
-    if (!selectedFile || !apiKey.trim()) {
+    if (!selectedFile) {
       toast({
-        title: "Missing information",
-        description: "Please select a file and enter your API key.",
+        title: "Please select a PDF file",
+        description: "Upload a Python PDF to generate flashcards.",
         variant: "destructive",
       });
       return;
@@ -157,12 +155,11 @@ export default function Home() {
     formData.append('pdf', selectedFile);
     formData.append('apiProvider', apiProvider);
     formData.append('flashcardCount', flashcardCount.toString());
-    formData.append('apiKey', apiKey);
     formData.append('focusAreas', JSON.stringify(focusAreas));
     formData.append('difficulty', difficulty);
 
     uploadMutation.mutate(formData);
-  }, [selectedFile, apiKey, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation]);
+  }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation]);
 
   // Update UI based on job status
   if (jobStatus) {
@@ -327,10 +324,14 @@ export default function Home() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="anthropic">Anthropic Claude (Recommended)</SelectItem>
                         <SelectItem value="openai">OpenAI GPT-4</SelectItem>
-                        <SelectItem value="anthropic">Anthropic Claude</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-gray-500 flex items-center">
+                      <Shield className="w-3 h-3 mr-1" />
+                      AI processing powered by secure system keys
+                    </p>
                   </div>
 
                   <div className="space-y-3">
@@ -340,36 +341,14 @@ export default function Home() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="25">25 flashcards</SelectItem>
-                        <SelectItem value="50">50 flashcards</SelectItem>
-                        <SelectItem value="100">100 flashcards</SelectItem>
+                        <SelectItem value="10">10 flashcards (Free)</SelectItem>
+                        <SelectItem value="25">25 flashcards (Free)</SelectItem>
+                        <SelectItem value="50">50 flashcards (Premium)</SelectItem>
+                        <SelectItem value="100">100 flashcards (Premium)</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div className="md:col-span-2 space-y-3">
-                    <Label className="text-sm font-medium text-neutral">API Key</Label>
-                    <div className="relative">
-                      <Input 
-                        type={showApiKey ? "text" : "password"}
-                        placeholder="Enter your API key"
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        className="pr-12"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-1 top-1 h-8 w-8 text-gray-400 hover:text-gray-600"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                      >
-                        {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 flex items-center">
-                      <Shield className="w-3 h-3 mr-1" />
-                      Your API key is processed securely and never stored
+                    <p className="text-xs text-gray-500">
+                      {flashcardCount <= 25 ? 'Free tier includes up to 25 flashcards' : 'Premium feature - upgrade for more flashcards'}
                     </p>
                   </div>
 
