@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.incrementUserUploads(userId);
 
       // Start processing asynchronously
-      processFlashcardJob(job.id, req.file.path, apiProvider, subject, focusAreas, difficulty, userId);
+      processFlashcardJob(job.id, req.file.path, apiProvider, subject, focusAreas, difficulty, userId, flashcardCount);
 
       res.json({ 
         jobId: job.id, 
@@ -427,7 +427,8 @@ async function processFlashcardJob(
   subject: string,
   focusAreas: string,
   difficulty: string,
-  userId: string
+  userId: string,
+  flashcardCount: string
 ) {
   try {
     // Update job status
@@ -500,9 +501,9 @@ async function processFlashcardJob(
 
       flashcards = await generateFlashcards(
         preprocessResult.filteredContent,
-        job.apiProvider as "openai" | "anthropic",
+        apiProvider as "openai" | "anthropic",
         systemApiKey,
-        job.flashcardCount,
+        parseInt(flashcardCount),
         subject,
         JSON.parse(focusAreas || "{}"),
         difficulty
@@ -534,11 +535,11 @@ async function processFlashcardJob(
     const ankiDeckPath = await generateAnkiDeck(jobId, flashcards);
 
     // Get job info for filename
-    const job = await storage.getFlashcardJob(jobId);
-    if (!job) throw new Error("Job not found");
+    const currentJob = await storage.getFlashcardJob(jobId);
+    if (!currentJob) throw new Error("Job not found");
 
     // Store files in persistent storage
-    const storedPdf = await persistentStorage.storePDF(userId, jobId, pdfPath, job.filename);
+    const storedPdf = await persistentStorage.storePDF(userId, jobId, pdfPath, currentJob.filename);
     const storedAnki = await persistentStorage.storeAnkiDeck(userId, jobId, ankiDeckPath);
     const exportFiles = await persistentStorage.generateAndStoreExports(userId, jobId, flashcards);
 
