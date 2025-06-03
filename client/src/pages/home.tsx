@@ -10,10 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Brain, FileText, Settings, Download, Upload, Eye, EyeOff, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Key, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw, Edit, Play, User, LogOut } from "lucide-react";
-import { FlashcardEditor } from "@/components/flashcard-editor";
-import { StudyMode } from "@/components/study-mode";
-import { AuthModal } from "@/components/auth-modal";
+import { Brain, FileText, Settings, Download, Upload, Eye, EyeOff, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Key, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw } from "lucide-react";
 import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 
 export default function Home() {
@@ -40,12 +37,6 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(1);
   const [previewFlashcards, setPreviewFlashcards] = useState<FlashcardPair[]>([]);
   const [showAllFlashcards, setShowAllFlashcards] = useState(false);
-  const [allFlashcards, setAllFlashcards] = useState<FlashcardPair[]>([]);
-  const [currentView, setCurrentView] = useState<'upload' | 'edit' | 'study'>('upload');
-  
-  // Auth state
-  const [user, setUser] = useState<any>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Poll for job status
   const { data: jobStatus } = useQuery<FlashcardJob>({
@@ -187,66 +178,6 @@ export default function Home() {
   const getProgressWidth = (step: number) => {
     return step < currentStep ? "100%" : "0%";
   };
-
-  // Update flashcards when job completes
-  if (jobStatus?.status === 'completed' && jobStatus.flashcards && allFlashcards.length === 0) {
-    try {
-      const flashcards = JSON.parse(jobStatus.flashcards);
-      setAllFlashcards(flashcards);
-    } catch (error) {
-      console.error('Error parsing flashcards:', error);
-    }
-  }
-
-  // View management
-  if (currentView === 'edit' && allFlashcards.length > 0) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Edit Your Flashcards</h2>
-              <Button variant="outline" onClick={() => setCurrentView('upload')}>
-                Back to Main
-              </Button>
-            </div>
-            <FlashcardEditor
-              flashcards={allFlashcards}
-              onFlashcardsChange={setAllFlashcards}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (currentView === 'study' && allFlashcards.length > 0) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Study Mode</h2>
-              <Button variant="outline" onClick={() => setCurrentView('upload')}>
-                Back to Main
-              </Button>
-            </div>
-            <StudyMode
-              flashcards={allFlashcards}
-              onExit={() => setCurrentView('upload')}
-              onComplete={(results) => {
-                toast({
-                  title: "Study session complete!",
-                  description: `Accuracy: ${Math.round(results.accuracy)}% • Time: ${Math.round(results.timeSpent)} minutes`,
-                });
-                setCurrentView('upload');
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -614,60 +545,30 @@ export default function Home() {
                       </div>
                     ))}
 
-                    <div className="space-y-4 mt-6">
-                      <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mt-6">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setShowAllFlashcards(true)}
+                      >
+                        View All {flashcardCount} Flashcards
+                      </Button>
+                      <div className="flex space-x-3">
                         <Button 
                           variant="outline"
-                          onClick={() => setShowAllFlashcards(true)}
+                          onClick={() => {
+                            setCurrentStep(2);
+                            setCurrentJobId(null);
+                          }}
                         >
-                          View All {flashcardCount} Flashcards
-                        </Button>
-                        <div className="flex space-x-3">
-                          <Button 
-                            variant="outline"
-                            onClick={() => {
-                              setCurrentStep(2);
-                              setCurrentJobId(null);
-                            }}
-                          >
-                            <RotateCcw className="w-4 h-4 mr-2" />
-                            Regenerate
-                          </Button>
-                          <Button 
-                            onClick={() => setCurrentStep(5)}
-                            className="bg-secondary text-white hover:bg-green-700"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Create Anki Deck
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* Advanced Feature Buttons */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <Button 
-                          onClick={() => setCurrentView('edit')}
-                          variant="outline"
-                          className="flex items-center justify-center"
-                        >
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Cards
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          Regenerate
                         </Button>
                         <Button 
-                          onClick={() => setCurrentView('study')}
-                          variant="outline"
-                          className="flex items-center justify-center"
+                          onClick={() => setCurrentStep(5)}
+                          className="bg-secondary text-white hover:bg-green-700"
                         >
-                          <Play className="w-4 h-4 mr-2" />
-                          Study Mode
-                        </Button>
-                        <Button 
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(`/api/export/${currentJobId}/csv`, '_blank')}
-                          className="flex items-center justify-center text-xs"
-                        >
-                          Export CSV
+                          <Download className="w-4 h-4 mr-2" />
+                          Create Anki Deck
                         </Button>
                       </div>
                     </div>
