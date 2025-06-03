@@ -44,20 +44,30 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   userId: varchar("user_id").references(() => users.id),
   filename: text("filename").notNull(),
   fileSize: integer("file_size").notNull(),
+  filePath: text("file_path"), // Store original PDF file path
   apiProvider: text("api_provider").notNull(), // 'openai' | 'anthropic'
   flashcardCount: integer("flashcard_count").notNull(),
+  subject: text("subject"), // Store subject for better categorization
+  difficulty: text("difficulty"), // Store difficulty level
+  focusAreas: text("focus_areas"), // Store focus areas as JSON
   status: text("status").notNull(), // 'pending' | 'processing' | 'completed' | 'failed'
   progress: integer("progress").default(0), // 0-100
   currentTask: text("current_task"),
   flashcards: text("flashcards"), // JSON string of generated flashcards
   ankiDeckPath: text("anki_deck_path"),
+  csvExportPath: text("csv_export_path"),
+  jsonExportPath: text("json_export_path"),
+  quizletExportPath: text("quizlet_export_path"),
   errorMessage: text("error_message"),
+  processingTime: integer("processing_time"), // Time taken in seconds
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertFlashcardJobSchema = createInsertSchema(flashcardJobs).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export type InsertFlashcardJob = z.infer<typeof insertFlashcardJobSchema>;

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import Home from "@/pages/home";
+import History from "@/pages/history";
 import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 

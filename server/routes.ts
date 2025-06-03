@@ -130,8 +130,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         filename: req.file.originalname,
         fileSize: req.file.size,
+        filePath: req.file.path, // Store original file path
         apiProvider,
         flashcardCount: parseInt(flashcardCount),
+        subject: subject || "general",
+        difficulty: difficulty || "intermediate",
+        focusAreas: JSON.stringify(focusAreas || {}),
         status: "pending" as const,
         progress: 0,
         currentTask: "Starting processing...",
@@ -197,6 +201,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       console.error("Download error:", error);
+      res.status(500).json({ message: "Download failed" });
+    }
+  });
+
+  // Get user's upload history
+  app.get("/api/history", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.uid;
+      const jobs = await storage.getUserJobs(userId);
+      
+      // Format the response with essential information
+      const formattedJobs = jobs.map(job => ({
+        id: job.id,
+        filename: job.filename,
+        fileSize: job.fileSize,
+        subject: job.subject,
+        difficulty: job.difficulty,
+        status: job.status,
+        progress: job.progress,
+        flashcardCount: job.flashcardCount,
+        apiProvider: job.apiProvider,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+        processingTime: job.processingTime,
+        hasFlashcards: !!job.flashcards,
+        hasAnkiDeck: !!job.ankiDeckPath,
+        hasCsvExport: !!job.csvExportPath,
+        hasJsonExport: !!job.jsonExportPath,
+        hasQuizletExport: !!job.quizletExportPath,
+        errorMessage: job.errorMessage
+      }));
+
+      res.json(formattedJobs);
+    } catch (error) {
+      console.error("History fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch upload history" });
+    }
+  });
+
+  // Download original PDF file
+  app.get("/api/download/pdf/:id", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const userId = req.user!.uid;
+      const job = await storage.getFlashcardJob(jobId);
+      
+      if (!job || job.userId !== userId) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      if (!job.filePath || !fs.existsSync(job.filePath)) {
+        return res.status(404).json({ message: "Original file no longer available" });
+      }
+
+      res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
+      res.setHeader('Content-Type', 'application/pdf');
+      
+      const fileStream = fs.createReadStream(job.filePath);
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error("PDF download error:", error);
       res.status(500).json({ message: "Download failed" });
     }
   });
