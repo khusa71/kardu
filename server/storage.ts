@@ -18,6 +18,15 @@ export interface IStorage {
   upgradeToPremium(userId: string): Promise<void>;
   resetMonthlyUploads(userId: string): Promise<void>;
   
+  // Stripe operations
+  updateStripeCustomerId(userId: string, customerId: string): Promise<User>;
+  updateUserSubscription(userId: string, subscriptionData: {
+    subscriptionId: string;
+    status: string;
+    periodEnd: Date;
+  }): Promise<User>;
+  cancelUserSubscription(userId: string): Promise<User>;
+  
   // Flashcard job operations
   createFlashcardJob(job: InsertFlashcardJob): Promise<FlashcardJob>;
   getFlashcardJob(id: number): Promise<FlashcardJob | undefined>;
@@ -140,12 +149,70 @@ export class DatabaseStorage implements IStorage {
   async resetMonthlyUploads(userId: string): Promise<void> {
     await db
       .update(users)
-      .set({ 
+      .set({
         monthlyUploads: 0,
-        lastUploadDate: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(users.id, userId));
+  }
+
+  // Stripe operations
+  async updateStripeCustomerId(userId: string, customerId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        stripeCustomerId: customerId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  }
+
+  async updateUserSubscription(userId: string, subscriptionData: {
+    subscriptionId: string;
+    status: string;
+    periodEnd: Date;
+  }): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        stripeSubscriptionId: subscriptionData.subscriptionId,
+        subscriptionStatus: subscriptionData.status,
+        subscriptionPeriodEnd: subscriptionData.periodEnd,
+        isPremium: subscriptionData.status === 'active',
+        monthlyLimit: subscriptionData.status === 'active' ? 100 : 3,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  }
+
+  async cancelUserSubscription(userId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        subscriptionStatus: 'canceled',
+        isPremium: false,
+        monthlyLimit: 3,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
   }
 
   // Flashcard job operations

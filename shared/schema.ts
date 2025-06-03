@@ -35,6 +35,11 @@ export const users = pgTable("users", {
   monthlyUploads: integer("monthly_uploads").default(0),
   monthlyLimit: integer("monthly_limit").default(3),
   lastUploadDate: timestamp("last_upload_date"),
+  // Stripe fields
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  subscriptionStatus: varchar("subscription_status"), // 'active' | 'canceled' | 'past_due' | null
+  subscriptionPeriodEnd: timestamp("subscription_period_end"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
