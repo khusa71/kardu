@@ -518,7 +518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateUserSubscription(customer.metadata.firebaseUID, {
               subscriptionId: subscription.id,
               status: subscription.status,
-              periodEnd: new Date(subscription.current_period_end * 1000),
+              periodEnd: new Date((subscription as any).current_period_end * 1000),
             });
           }
           break;

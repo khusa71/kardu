@@ -7,6 +7,7 @@ import { AuthProvider, useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import Home from "@/pages/home";
 import History from "@/pages/history";
 import Landing from "@/pages/landing";
+import Success from "@/pages/success";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
     <Switch>
       <Route path="/" component={user ? Home : Landing} />
       <Route path="/history" component={user ? History : Landing} />
+      <Route path="/success" component={Success} />
       <Route component={NotFound} />
     </Switch>
   );
