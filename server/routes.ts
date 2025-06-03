@@ -31,7 +31,7 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Firebase Auth routes
-  app.post('/api/auth/sync', verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/auth/sync', verifyFirebaseToken, async (req: any, res) => {
     try {
       const { uid, email, displayName, photoURL, emailVerified, provider } = req.body;
       
@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/auth/user', verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/auth/user', verifyFirebaseToken, async (req: any, res) => {
     try {
       const userId = req.user!.uid;
       const user = await storage.getUser(userId);
@@ -110,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Upload PDF and start processing (with auth and rate limiting)
-  app.post("/api/upload", verifyFirebaseToken, checkUploadLimits, upload.single("pdf"), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/upload", verifyFirebaseToken, checkUploadLimits, upload.single("pdf"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No PDF file uploaded" });
@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's job history
-  app.get("/api/user/jobs", verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/user/jobs", verifyFirebaseToken, async (req: any, res) => {
     try {
       const userId = req.user!.uid;
       const jobs = await storage.getUserJobs(userId);
@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upgrade to premium
-  app.post("/api/user/upgrade", verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/user/upgrade", verifyFirebaseToken, async (req: any, res) => {
     try {
       const userId = req.user!.uid;
       await storage.upgradeToPremium(userId);
