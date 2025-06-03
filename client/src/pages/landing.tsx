@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthModal } from "@/components/auth-modal";
 import { Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight } from "lucide-react";
 
 export default function Landing() {
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
@@ -19,7 +23,7 @@ export default function Landing() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Button onClick={() => window.location.href = "/api/login"} className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={() => setShowAuthModal(true)} className="bg-blue-600 hover:bg-blue-700">
                 Sign In
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -42,7 +46,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg" 
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => setShowAuthModal(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
             >
               <Brain className="w-5 h-5 mr-2" />
@@ -128,7 +132,7 @@ export default function Landing() {
                     <span>Built-in study mode</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6" variant="outline" onClick={() => window.location.href = "/api/login"}>
+                <Button className="w-full mt-6" variant="outline" onClick={() => setShowAuthModal(true)}>
                   Get Started Free
                 </Button>
               </CardContent>
@@ -170,7 +174,7 @@ export default function Landing() {
                     <span>Advanced study analytics</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6 bg-blue-600 hover:bg-blue-700" onClick={() => window.location.href = "/api/login"}>
+                <Button className="w-full mt-6 bg-blue-600 hover:bg-blue-700" onClick={() => setShowAuthModal(true)}>
                   Start Premium Trial
                 </Button>
               </CardContent>
@@ -187,7 +191,7 @@ export default function Landing() {
           <Button 
             size="lg" 
             className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3"
-            onClick={() => window.location.href = "/api/login"}
+            onClick={() => setShowAuthModal(true)}
           >
             <Brain className="w-5 h-5 mr-2" />
             Get Started Now - It's Free!
@@ -203,6 +207,9 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Authentication Modal */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }
