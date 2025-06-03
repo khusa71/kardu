@@ -212,27 +212,20 @@ export default function Home() {
     uploadMutation.mutate(formData);
   }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation, isAuthenticated, toast]);
 
-  // Check for existing auth token on load
+  // Handle authentication state changes
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      // Verify token and get user info
-      fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.user) {
-          setUser(data.user);
-        } else {
-          localStorage.removeItem('auth_token');
-        }
-      })
-      .catch(() => {
-        localStorage.removeItem('auth_token');
-      });
+    if (user && !(user as any).isEmailVerified) {
+      setShowEmailVerificationMessage(true);
+    } else {
+      setShowEmailVerificationMessage(false);
     }
-  }, []);
+
+    if (user && (user as any).monthlyUploads >= (user as any).monthlyLimit && (user as any).plan === 'free') {
+      setShowUpgradeBanner(true);
+    } else {
+      setShowUpgradeBanner(false);
+    }
+  }, [user]);
 
   // Update UI based on job status
   if (jobStatus) {
@@ -244,24 +237,8 @@ export default function Home() {
     }
   }
 
-  const handleAuthSuccess = (userData: any, token: string) => {
-    setUser(userData);
-    
-    // If user was trying to generate flashcards, continue with generation
-    if (selectedFile && currentStep === 2) {
-      setTimeout(() => {
-        handleGenerate();
-      }, 100);
-    }
-  };
-
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    setUser(null);
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+    window.location.href = "/api/logout";
   };
 
   const getStepIndicatorClass = (step: number) => {
@@ -304,11 +281,6 @@ export default function Home() {
             onFlashcardsChange={setEditableFlashcards}
           />
         </main>
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={handleAuthSuccess}
-        />
       </div>
     );
   }
@@ -341,11 +313,6 @@ export default function Home() {
             onExit={() => setViewMode('edit')}
           />
         </main>
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={handleAuthSuccess}
-        />
       </div>
     );
   }
@@ -369,17 +336,17 @@ export default function Home() {
               {user ? (
                 <div className="flex items-center space-x-3">
                   <div className="text-right">
-                    <div className="text-sm font-medium text-neutral dark:text-white">{user.email}</div>
+                    <div className="text-sm font-medium text-neutral dark:text-white">{(user as any).email}</div>
                     <div className="flex items-center text-xs text-gray-500">
-                      <Badge className={user.plan === 'pro' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}>
-                        {user.plan === 'pro' ? (
+                      <Badge className={(user as any).plan === 'pro' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}>
+                        {(user as any).plan === 'pro' ? (
                           <>
                             <Crown className="w-3 h-3 mr-1" />
                             Pro
                           </>
                         ) : 'Free'}
                       </Badge>
-                      <span className="ml-2">{user.monthly_uploads}/{user.monthly_limit} uploads</span>
+                      <span className="ml-2">{(user as any).monthlyUploads}/{(user as any).monthlyLimit} uploads</span>
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -388,7 +355,7 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => setShowAuthModal(true)}>
+                  <Button variant="outline" size="sm" onClick={() => window.location.href = "/api/login"}>
                     <User className="w-4 h-4 mr-2" />
                     Sign In
                   </Button>
@@ -946,13 +913,6 @@ export default function Home() {
           </div>
         </div>
       </main>
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={handleAuthSuccess}
-      />
     </div>
   );
 }
