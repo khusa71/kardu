@@ -154,6 +154,15 @@ export default function Home() {
     }
   }, [user]);
 
+  // Advance step when file is selected
+  useEffect(() => {
+    if (selectedFile && currentStep === 1) {
+      setCurrentStep(2);
+    } else if (!selectedFile && currentStep > 1) {
+      setCurrentStep(1);
+    }
+  }, [selectedFile, currentStep]);
+
   // Check if user can upload based on premium status or upload limit
   const canUpload = user && ((user as any).isPremium || (user as any).monthlyUploads < (user as any).monthlyLimit) && (user as any).isEmailVerified;
   const isGenerateDisabled = !selectedFile || !canUpload || uploadMutation.isPending;

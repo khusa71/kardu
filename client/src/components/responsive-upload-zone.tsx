@@ -23,15 +23,32 @@ export function ResponsiveUploadZone({
     setIsDragOver(false);
     
     const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].type === 'application/pdf') {
-      onFileSelect(files[0]);
+    if (files.length > 0) {
+      const file = files[0];
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          alert('File size must be less than 10MB');
+          return;
+        }
+        onFileSelect(file);
+      } else {
+        alert('Please select a PDF file');
+      }
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onFileSelect(file);
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          alert('File size must be less than 10MB');
+          return;
+        }
+        onFileSelect(file);
+      } else {
+        alert('Please select a PDF file');
+      }
     }
   };
 
