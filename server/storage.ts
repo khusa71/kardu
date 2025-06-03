@@ -21,6 +21,11 @@ export class MemStorage implements IStorage {
     const job: FlashcardJob = {
       ...insertJob,
       id,
+      progress: insertJob.progress ?? 0,
+      currentTask: insertJob.currentTask ?? null,
+      flashcards: insertJob.flashcards ?? null,
+      ankiDeckPath: insertJob.ankiDeckPath ?? null,
+      errorMessage: insertJob.errorMessage ?? null,
       createdAt: new Date(),
     };
     this.jobs.set(id, job);
