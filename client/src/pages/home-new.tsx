@@ -10,11 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw, Edit, Play, User, LogOut, TrendingUp } from "lucide-react";
+import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw } from "lucide-react";
 import type { FlashcardJob, FlashcardPair } from "@shared/schema";
-import { FlashcardEditor } from "@/components/flashcard-editor";
-import { StudyMode } from "@/components/study-mode";
-import { AuthModal } from "@/components/auth-modal";
 
 export default function Home() {
   const { toast } = useToast();
@@ -42,10 +39,6 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(1);
   const [previewFlashcards, setPreviewFlashcards] = useState<FlashcardPair[]>([]);
   const [showAllFlashcards, setShowAllFlashcards] = useState(false);
-  const [currentView, setCurrentView] = useState<'upload' | 'edit' | 'study'>('upload');
-  const [allFlashcards, setAllFlashcards] = useState<FlashcardPair[]>([]);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [user, setUser] = useState<any>(null);
 
   // Poll for job status
   const { data: jobStatus } = useQuery<FlashcardJob>({
@@ -175,9 +168,7 @@ export default function Home() {
   if (jobStatus) {
     if (jobStatus.status === 'completed' && currentStep < 4) {
       setCurrentStep(4);
-      const fullFlashcards = JSON.parse(jobStatus.flashcards || '[]');
-      setAllFlashcards(fullFlashcards);
-      setPreviewFlashcards(fullFlashcards.slice(0, 3));
+      setPreviewFlashcards(JSON.parse(jobStatus.flashcards || '[]').slice(0, 3));
     }
   }
 
@@ -216,85 +207,12 @@ export default function Home() {
                 <Shield className="w-3 h-3 mr-1 inline" />
                 Secure
               </div>
-              {user ? (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">{user.email}</span>
-                  <div className="text-xs text-gray-500">
-                    {user.monthly_uploads}/{user.monthly_limit} uploads
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      localStorage.removeItem('auth_token');
-                      setUser(null);
-                    }}
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAuthModal(true)}
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Sign In
-                </Button>
-              )}
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* View Management */}
-        {currentView === 'edit' && allFlashcards.length > 0 && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Edit Your Flashcards</h2>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentView('upload')}
-              >
-                Back to Main
-              </Button>
-            </div>
-            <FlashcardEditor
-              flashcards={allFlashcards}
-              onFlashcardsChange={setAllFlashcards}
-            />
-          </div>
-        )}
-
-        {currentView === 'study' && allFlashcards.length > 0 && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Study Mode</h2>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentView('upload')}
-              >
-                Back to Main
-              </Button>
-            </div>
-            <StudyMode
-              flashcards={allFlashcards}
-              onExit={() => setCurrentView('upload')}
-              onComplete={(results) => {
-                toast({
-                  title: "Study session complete!",
-                  description: `Accuracy: ${Math.round(results.accuracy)}% • Time: ${Math.round(results.timeSpent)} minutes`,
-                });
-                setCurrentView('upload');
-              }}
-            />
-          </div>
-        )}
-
-        {currentView === 'upload' && (
-          <div>
         {/* Progress Steps */}
         <div className="mb-12">
           <div className="flex items-center justify-center space-x-4 md:space-x-8">
@@ -618,87 +536,28 @@ export default function Home() {
                   </div>
 
                   <div className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                        <div className="flex items-center">
-                          <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                          <div>
-                            <p className="font-medium text-green-700 dark:text-green-300">Generation Complete</p>
-                            <p className="text-sm text-green-600 dark:text-green-400">
-                              Created {JSON.parse(jobStatus.flashcards || '[]').length} flashcards
-                              {jobStatus.currentTask?.includes('cache') && (
-                                <span className="ml-2 text-blue-600">• Cached for efficiency</span>
-                              )}
-                              {jobStatus.currentTask?.includes('OCR') && (
-                                <span className="ml-2 text-orange-600">• OCR processed</span>
-                              )}
-                              {jobStatus.currentTask?.includes('cost') && (
-                                <span className="ml-2 text-purple-600">• Cost optimized</span>
-                              )}
-                            </p>
-                          </div>
+                    <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                      <div className="flex items-center">
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                        <div>
+                          <p className="font-medium text-green-700 dark:text-green-300">Generation Complete</p>
+                          <p className="text-sm text-green-600 dark:text-green-400">
+                            Created {JSON.parse(jobStatus.flashcards || '[]').length} flashcards
+                          </p>
                         </div>
                       </div>
-
-                      {/* Action Buttons */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <Button 
-                          onClick={() => setCurrentView('edit')}
-                          variant="outline"
-                          className="flex items-center justify-center"
-                        >
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Cards
-                        </Button>
-                        <Button 
-                          onClick={() => setCurrentView('study')}
-                          variant="outline"
-                          className="flex items-center justify-center"
-                        >
-                          <Play className="w-4 h-4 mr-2" />
-                          Study Mode
-                        </Button>
-                        <Button 
-                          onClick={() => downloadMutation.mutate(currentJobId!)}
-                          disabled={downloadMutation.isPending}
-                          className="bg-green-600 hover:bg-green-700 text-white flex items-center justify-center"
-                        >
-                          {downloadMutation.isPending ? (
-                            <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Download className="w-4 h-4 mr-2" />
-                          )}
-                          Download
-                        </Button>
-                      </div>
-
-                      {/* Additional Export Options */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <Button 
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(`/api/export/${currentJobId}/csv`, '_blank')}
-                          className="text-xs"
-                        >
-                          CSV
-                        </Button>
-                        <Button 
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(`/api/export/${currentJobId}/json`, '_blank')}
-                          className="text-xs"
-                        >
-                          JSON
-                        </Button>
-                        <Button 
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(`/api/export/${currentJobId}/quizlet`, '_blank')}
-                          className="text-xs"
-                        >
-                          Quizlet
-                        </Button>
-                      </div>
+                      <Button 
+                        onClick={() => downloadMutation.mutate(currentJobId!)}
+                        disabled={downloadMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {downloadMutation.isPending ? (
+                          <LoaderPinwheel className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4 mr-2" />
+                        )}
+                        Download Anki Deck
+                      </Button>
                     </div>
 
                     {/* Flashcard Preview */}
@@ -822,19 +681,7 @@ export default function Home() {
             </Card>
           </div>
         </div>
-          </div>
-        )}
       </main>
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={(user, token) => {
-          setUser(user);
-          localStorage.setItem('auth_token', token);
-        }}
-      />
     </div>
   );
 }
