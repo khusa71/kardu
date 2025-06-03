@@ -35,6 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         apiProvider,
         flashcardCount,
+        subject,
         focusAreas,
         difficulty,
       } = req.body;
@@ -54,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const job = await storage.createFlashcardJob(jobData);
 
       // Start processing asynchronously
-      processFlashcardJob(job.id, req.file.path, apiProvider, focusAreas, difficulty);
+      processFlashcardJob(job.id, req.file.path, apiProvider, subject, focusAreas, difficulty);
 
       res.json({ jobId: job.id, status: "pending" });
     } catch (error) {
@@ -116,6 +117,7 @@ async function processFlashcardJob(
   jobId: number,
   pdfPath: string,
   apiProvider: string,
+  subject: string,
   focusAreas: string,
   difficulty: string
 ) {
@@ -158,6 +160,7 @@ async function processFlashcardJob(
       job.apiProvider as "openai" | "anthropic",
       systemApiKey,
       job.flashcardCount,
+      subject,
       JSON.parse(focusAreas || "{}"),
       difficulty
     );

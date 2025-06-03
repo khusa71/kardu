@@ -6,9 +6,10 @@ import type { FlashcardPair } from "@shared/schema";
 // the newest Anthropic model is "claude-sonnet-4-20250514" which was released May 14, 2025. Use this by default unless user has already selected claude-3-7-sonnet-20250219
 
 interface FocusAreas {
-  syntax?: boolean;
-  dataStructures?: boolean;
-  controlFlow?: boolean;
+  concepts?: boolean;
+  definitions?: boolean;
+  examples?: boolean;
+  procedures?: boolean;
 }
 
 export async function generateFlashcards(
@@ -16,6 +17,7 @@ export async function generateFlashcards(
   provider: "openai" | "anthropic",
   apiKey: string,
   count: number,
+  subject: string,
   focusAreas: FocusAreas,
   difficulty: string
 ): Promise<FlashcardPair[]> {
@@ -36,6 +38,7 @@ export async function generateFlashcards(
         provider,
         apiKey,
         currentChunkCount,
+        subject,
         focusAreas,
         difficulty
       );
@@ -56,10 +59,11 @@ async function generateFlashcardsForChunk(
   provider: "openai" | "anthropic",
   apiKey: string,
   count: number,
+  subject: string,
   focusAreas: FocusAreas,
   difficulty: string
 ): Promise<FlashcardPair[]> {
-  const prompt = createFlashcardPrompt(text, count, focusAreas, difficulty);
+  const prompt = createFlashcardPrompt(text, count, subject, focusAreas, difficulty);
   
   if (provider === "openai") {
     return generateWithOpenAI(prompt, apiKey);
@@ -151,6 +155,7 @@ async function generateWithAnthropic(prompt: string, apiKey: string): Promise<Fl
 function createFlashcardPrompt(
   text: string,
   count: number,
+  subject: string,
   focusAreas: FocusAreas,
   difficulty: string
 ): string {
@@ -158,18 +163,22 @@ function createFlashcardPrompt(
     .filter(([_, enabled]) => enabled)
     .map(([area, _]) => {
       switch (area) {
-        case 'syntax': return 'Python syntax and grammar';
-        case 'dataStructures': return 'Data structures (lists, dictionaries, sets, tuples)';
-        case 'controlFlow': return 'Control flow (loops, conditionals, exception handling)';
+        case 'concepts': return 'Key concepts and theories';
+        case 'definitions': return 'Definitions and terminology';
+        case 'examples': return 'Examples and case studies';
+        case 'procedures': return 'Procedures and methods';
         default: return area;
       }
     })
     .join(', ');
 
-  return `
-Analyze the following Python educational content and create exactly ${count} high-quality flashcards for ${difficulty} level learners.
+  const subjectContext = getSubjectContext(subject);
 
-Focus areas: ${focusAreasText || 'General Python syntax and programming concepts'}
+  return `
+Analyze the following ${subjectContext.name} educational content and create exactly ${count} high-quality flashcards for ${difficulty} level learners.
+
+Subject: ${subjectContext.name}
+Focus areas: ${focusAreasText || 'General concepts and knowledge'}
 
 Content to analyze:
 """
@@ -177,36 +186,158 @@ ${text}
 """
 
 Instructions:
-1. Create flashcards that test practical Python syntax knowledge
-2. Focus on code structure, proper syntax, and common patterns
-3. Include code examples in answers when appropriate
+1. Create flashcards that test ${subjectContext.testingFocus}
+2. Focus on ${subjectContext.contentFocus}
+3. ${subjectContext.answerStyle}
 4. Make questions specific and testable
 5. Ensure answers are concise but complete
-6. Use proper Python code formatting in answers
-7. Target ${difficulty} difficulty level
+6. Target ${difficulty} difficulty level
+7. Use appropriate formatting for ${subjectContext.name}
 
 Response format (JSON only):
 {
   "flashcards": [
     {
-      "question": "Clear, specific question about Python syntax or concept",
-      "answer": "Concise answer with code example if relevant",
-      "topic": "Brief topic category (e.g., 'Functions', 'Lists', 'Loops')",
+      "question": "Clear, specific question about the subject matter",
+      "answer": "Concise answer with examples if relevant",
+      "topic": "Brief topic category",
       "difficulty": "${difficulty}"
     }
   ]
 }
 
-Example flashcard:
-{
-  "question": "What is the correct syntax to define a function that takes two parameters and returns their sum?",
-  "answer": "def function_name(param1, param2):\n    return param1 + param2",
-  "topic": "Functions",
-  "difficulty": "${difficulty}"
+Example flashcard for ${subjectContext.name}:
+${subjectContext.example}
+
+Generate exactly ${count} flashcards. Focus on practical, testable knowledge in ${subjectContext.name}.
+`;
 }
 
-Generate exactly ${count} flashcards. Focus on practical, testable Python syntax knowledge.
-`;
+function getSubjectContext(subject: string) {
+  const contexts = {
+    programming: {
+      name: "Programming & Computer Science",
+      testingFocus: "practical coding knowledge and programming concepts",
+      contentFocus: "code structure, syntax, algorithms, and programming patterns",
+      answerStyle: "Include code examples in answers when appropriate",
+      example: `{
+  "question": "What is the correct syntax to define a function that takes two parameters and returns their sum?",
+  "answer": "def function_name(param1, param2):\\n    return param1 + param2",
+  "topic": "Functions",
+  "difficulty": "intermediate"
+}`
+    },
+    mathematics: {
+      name: "Mathematics & Statistics",
+      testingFocus: "mathematical concepts, formulas, and problem-solving techniques",
+      contentFocus: "theorems, definitions, formulas, and mathematical reasoning",
+      answerStyle: "Include mathematical notation and step-by-step explanations when relevant",
+      example: `{
+  "question": "What is the quadratic formula and when is it used?",
+  "answer": "x = (-b ± √(b² - 4ac)) / 2a\\nUsed to find the roots of quadratic equations ax² + bx + c = 0",
+  "topic": "Quadratic Equations",
+  "difficulty": "intermediate"
+}`
+    },
+    science: {
+      name: "Science & Engineering",
+      testingFocus: "scientific principles, processes, and engineering concepts",
+      contentFocus: "theories, laws, experimental procedures, and applications",
+      answerStyle: "Include scientific explanations and real-world applications",
+      example: `{
+  "question": "What is Newton's second law of motion?",
+  "answer": "F = ma\\nThe acceleration of an object is directly proportional to the net force acting on it and inversely proportional to its mass",
+  "topic": "Classical Mechanics",
+  "difficulty": "intermediate"
+}`
+    },
+    medicine: {
+      name: "Medicine & Health Sciences",
+      testingFocus: "medical knowledge, anatomy, diseases, and treatments",
+      contentFocus: "anatomical structures, physiological processes, pathology, and clinical applications",
+      answerStyle: "Include clinical relevance and medical terminology",
+      example: `{
+  "question": "What are the main functions of the liver?",
+  "answer": "1. Detoxification of blood\\n2. Protein synthesis\\n3. Bile production\\n4. Glucose metabolism\\n5. Storage of vitamins and minerals",
+  "topic": "Hepatology",
+  "difficulty": "intermediate"
+}`
+    },
+    business: {
+      name: "Business & Economics",
+      testingFocus: "business concepts, economic principles, and management strategies",
+      contentFocus: "theories, models, case studies, and practical applications",
+      answerStyle: "Include real-world business examples and economic implications",
+      example: `{
+  "question": "What is the difference between fixed costs and variable costs?",
+  "answer": "Fixed costs remain constant regardless of production volume (rent, salaries)\\nVariable costs change with production volume (materials, labor per unit)",
+  "topic": "Cost Analysis",
+  "difficulty": "intermediate"
+}`
+    },
+    history: {
+      name: "History & Social Studies",
+      testingFocus: "historical events, social movements, and cultural developments",
+      contentFocus: "dates, causes and effects, key figures, and historical context",
+      answerStyle: "Include historical context and significance",
+      example: `{
+  "question": "What were the main causes of World War I?",
+  "answer": "1. Militarism and arms race\\n2. Alliance system\\n3. Imperialism\\n4. Nationalism\\n5. Assassination of Archduke Franz Ferdinand (immediate trigger)",
+  "topic": "World War I",
+  "difficulty": "intermediate"
+}`
+    },
+    language: {
+      name: "Language & Literature",
+      testingFocus: "language skills, literary analysis, and linguistic concepts",
+      contentFocus: "grammar, vocabulary, literary devices, and cultural context",
+      answerStyle: "Include examples from literature and proper linguistic terminology",
+      example: `{
+  "question": "What is a metaphor and how does it differ from a simile?",
+  "answer": "A metaphor directly compares two things without using 'like' or 'as' (Life is a journey)\\nA simile uses 'like' or 'as' to compare (Life is like a journey)",
+  "topic": "Literary Devices",
+  "difficulty": "intermediate"
+}`
+    },
+    law: {
+      name: "Law & Legal Studies",
+      testingFocus: "legal principles, case law, and procedural knowledge",
+      contentFocus: "statutes, precedents, legal reasoning, and practical applications",
+      answerStyle: "Include legal terminology and cite relevant cases or statutes when appropriate",
+      example: `{
+  "question": "What is the doctrine of stare decisis?",
+  "answer": "The legal principle that courts should follow precedents set by previous decisions\\nLiterally means 'to stand by things decided'\\nProvides consistency and predictability in legal decisions",
+  "topic": "Legal Precedent",
+  "difficulty": "intermediate"
+}`
+    },
+    psychology: {
+      name: "Psychology & Behavioral Sciences",
+      testingFocus: "psychological theories, research methods, and behavioral patterns",
+      contentFocus: "theories, experiments, cognitive processes, and applications",
+      answerStyle: "Include research findings and psychological terminology",
+      example: `{
+  "question": "What is classical conditioning?",
+  "answer": "A learning process where a neutral stimulus becomes associated with a meaningful stimulus\\nExample: Pavlov's dogs learned to salivate at the sound of a bell paired with food",
+  "topic": "Learning Theory",
+  "difficulty": "intermediate"
+}`
+    },
+    general: {
+      name: "General Education",
+      testingFocus: "broad educational concepts and interdisciplinary knowledge",
+      contentFocus: "key facts, concepts, and connections across disciplines",
+      answerStyle: "Include clear explanations and relevant examples",
+      example: `{
+  "question": "What is the scientific method?",
+  "answer": "1. Observation\\n2. Question\\n3. Hypothesis\\n4. Experiment\\n5. Analysis\\n6. Conclusion\\nA systematic approach to understanding the natural world",
+  "topic": "Scientific Inquiry",
+  "difficulty": "intermediate"
+}`
+    }
+  };
+
+  return contexts[subject as keyof typeof contexts] || contexts.general;
 }
 
 function validateAndFormatFlashcards(flashcards: any[]): FlashcardPair[] {
