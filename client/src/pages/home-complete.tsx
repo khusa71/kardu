@@ -536,7 +536,7 @@ export default function Home() {
         )}
 
         {/* Step 3: Processing */}
-        {currentStep >= 3 && jobStatus && jobStatus.status !== 'completed' && (
+        {currentStep >= 3 && jobStatus && (jobStatus as any)?.status !== 'completed' && (
           <Card className="animate-slide-up">
             <CardContent className="p-8">
               <div className="flex items-center mb-6">
@@ -550,7 +550,7 @@ export default function Home() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {jobStatus.currentTask || 'Processing...'}
+                      {(jobStatus as any)?.currentTask || 'Processing...'}
                     </span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
                       {Math.round(getProgressPercentage())}%
@@ -564,16 +564,16 @@ export default function Home() {
                     <FileText className="w-6 h-6 text-blue-500 mx-auto mb-2" />
                     <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Text Extraction</p>
                     <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      {jobStatus.currentTask?.includes('OCR') ? 'OCR Processing' : 
-                       jobStatus.currentTask?.includes('extract') ? 'In Progress' : 'Completed'}
+                      {(jobStatus as any)?.currentTask?.includes('OCR') ? 'OCR Processing' : 
+                       (jobStatus as any)?.currentTask?.includes('extract') ? 'In Progress' : 'Completed'}
                     </p>
                   </div>
                   <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                     <Brain className="w-6 h-6 text-purple-500 mx-auto mb-2" />
                     <p className="text-sm font-medium text-purple-700 dark:text-purple-300">AI Analysis</p>
                     <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                      {jobStatus.currentTask?.includes('cache') ? 'Cache Hit' : 
-                       jobStatus.currentTask?.includes('AI') ? 'In Progress' : 
+                      {(jobStatus as any)?.currentTask?.includes('cache') ? 'Cache Hit' : 
+                       (jobStatus as any)?.currentTask?.includes('AI') ? 'In Progress' : 
                        getProgressPercentage() > 50 ? 'In Progress' : 'Waiting'}
                     </p>
                   </div>
@@ -586,13 +586,13 @@ export default function Home() {
                   </div>
                 </div>
 
-                {jobStatus.status === 'failed' && (
+                {(jobStatus as any)?.status === 'failed' && (
                   <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
                     <div className="flex items-center">
                       <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
                       <p className="text-sm font-medium text-red-700 dark:text-red-300">Processing Failed</p>
                     </div>
-                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">{jobStatus.errorMessage}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">{(jobStatus as any)?.errorMessage}</p>
                   </div>
                 )}
               </div>
@@ -601,7 +601,7 @@ export default function Home() {
         )}
 
         {/* Step 4: Download and Preview */}
-        {currentStep >= 4 && jobStatus?.status === 'completed' && (
+        {currentStep >= 4 && (jobStatus as any)?.status === 'completed' && (
           <Card className="animate-slide-up">
             <CardContent className="p-8">
               <div className="flex items-center mb-6">
@@ -619,14 +619,14 @@ export default function Home() {
                       <div>
                         <p className="font-medium text-green-700 dark:text-green-300">Generation Complete</p>
                         <p className="text-sm text-green-600 dark:text-green-400">
-                          Created {JSON.parse(jobStatus.flashcards || '[]').length} flashcards
-                          {jobStatus.currentTask?.includes('cache') && (
+                          Created {JSON.parse((jobStatus as any)?.flashcards || '[]').length} flashcards
+                          {(jobStatus as any)?.currentTask?.includes('cache') && (
                             <span className="ml-2 text-blue-600">• Cached for efficiency</span>
                           )}
-                          {jobStatus.currentTask?.includes('OCR') && (
+                          {(jobStatus as any)?.currentTask?.includes('OCR') && (
                             <span className="ml-2 text-orange-600">• OCR processed</span>
                           )}
-                          {jobStatus.currentTask?.includes('cost') && (
+                          {(jobStatus as any)?.currentTask?.includes('cost') && (
                             <span className="ml-2 text-purple-600">• Cost optimized</span>
                           )}
                         </p>
