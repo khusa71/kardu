@@ -1,0 +1,91 @@
+Please validate that the entire flashcard generation platform is functioning correctly across all key features, both backend and frontend. Test the following:
+
+PDF Upload Handling
+
+Upload both text-based and scanned PDFs
+
+Verify OCR activates for scanned files (check confidence score)
+
+Confirm headers/footers/page numbers are removed
+
+Flashcard Generation
+
+Ensure AI model (OpenAI/Anthropic) generates subject-relevant flashcards
+
+Validate cards include concepts, definitions, examples, and procedures
+
+Confirm difficulty tagging (Beginner/Intermediate/Advanced) works
+
+Cost Optimization
+
+Upload the same file twice and check for cache hit
+
+Ensure logs or UI show estimated tokens and cost saved
+
+Verify smart chunking and token minimization are effective
+
+Flashcard Editor & Study Mode
+
+Test flashcard preview, drag-and-drop, and real-time editing
+
+Launch study mode, mark progress (New/Learning/Known), and verify analytics
+
+Confirm spaced repetition algorithm and custom session sizing work
+
+Export Functionality
+
+Download flashcards in Anki (.apkg), CSV, JSON, and Quizlet format
+
+Verify data is intact in each export
+
+User Authentication & Quota System
+
+Register/login/logout workflows
+
+Check upload quota enforcement for free/pro accounts
+
+Test upgrade flow and plan management
+
+User Feedback & Real-Time Status
+
+When generating flashcards, ensure visual feedback appears:
+
+Loading spinners
+
+Status messages (“Extracting…”, “Generating…”)
+
+Button disables to prevent repeat clicks
+
+Verify proper handling of failures and error messages
+
+Mobile UX & PWA Support
+
+Confirm responsive design on mobile/tablet/desktop
+
+Test installability as a Progressive Web App
+
+Toggle dark/light themes and confirm UI consistency
+
+Analytics & Monitoring
+
+Confirm visibility into:
+
+OCR usage
+
+Token savings
+
+Upload history
+
+Study performance
+
+Quota tracking
+
+Security & Stability
+
+Handle corrupted PDF uploads gracefully
+
+Verify temp files are cleaned up
+
+Ensure JWT/session auth behaves correctly
+
+Log and report any broken features or missing UI feedback. If all pass, confirm that the system provides a seamless and cost-optimized learning experience from PDF to interactive study.
