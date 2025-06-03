@@ -28,13 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Upload PDF and start processing
   app.post("/api/upload", upload.single("pdf"), async (req, res) => {
     try {
-      console.log("Upload request received:");
-      console.log("File:", req.file);
-      console.log("Body:", req.body);
-      console.log("Headers:", req.headers);
-      
       if (!req.file) {
-        console.log("No file detected in request");
         return res.status(400).json({ message: "No PDF file uploaded" });
       }
 

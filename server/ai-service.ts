@@ -94,7 +94,15 @@ async function generateWithOpenAI(prompt: string, apiKey: string): Promise<Flash
       throw new Error("No content received from OpenAI");
     }
 
-    const result = JSON.parse(content);
+    // Clean the response text to handle markdown code blocks
+    let cleanedText = content.trim();
+    if (cleanedText.startsWith('```json')) {
+      cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    const result = JSON.parse(cleanedText);
     return validateAndFormatFlashcards(result.flashcards || []);
   } catch (error) {
     console.error("OpenAI API error:", error);
@@ -124,7 +132,15 @@ async function generateWithAnthropic(prompt: string, apiKey: string): Promise<Fl
       throw new Error("Unexpected response format from Anthropic");
     }
 
-    const result = JSON.parse(content.text);
+    // Clean the response text to handle markdown code blocks
+    let cleanedText = content.text.trim();
+    if (cleanedText.startsWith('```json')) {
+      cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    const result = JSON.parse(cleanedText);
     return validateAndFormatFlashcards(result.flashcards || []);
   } catch (error) {
     console.error("Anthropic API error:", error);
