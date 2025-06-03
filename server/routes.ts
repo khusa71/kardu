@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.incrementUserUploads(userId);
 
       // Start processing asynchronously
-      processFlashcardJob(job.id, req.file.path, apiProvider, subject, focusAreas, difficulty);
+      processFlashcardJob(job.id, req.file.path, apiProvider, subject, focusAreas, difficulty, userId);
 
       res.json({ 
         jobId: job.id, 
@@ -532,6 +532,10 @@ async function processFlashcardJob(
     });
 
     const ankiDeckPath = await generateAnkiDeck(jobId, flashcards);
+
+    // Get job info for filename
+    const job = await storage.getFlashcardJob(jobId);
+    if (!job) throw new Error("Job not found");
 
     // Store files in persistent storage
     const storedPdf = await persistentStorage.storePDF(userId, jobId, pdfPath, job.filename);
