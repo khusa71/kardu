@@ -184,11 +184,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const jobId = parseInt(req.params.id);
       const job = await storage.getFlashcardJob(jobId);
       
-      if (!job || !job.ankiDeckPath) {
+      if (!job || !job.ankiStorageKey) {
         return res.status(404).json({ message: "Anki deck not ready" });
       }
 
-      const filePath = job.ankiDeckPath;
+      const filePath = persistentStorage.getFilePath(job.ankiStorageKey);
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ message: "Anki deck file not found" });
       }
@@ -226,10 +226,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: job.updatedAt,
         processingTime: job.processingTime,
         hasFlashcards: !!job.flashcards,
-        hasAnkiDeck: !!job.ankiDeckPath,
-        hasCsvExport: !!job.csvExportPath,
-        hasJsonExport: !!job.jsonExportPath,
-        hasQuizletExport: !!job.quizletExportPath,
+        hasAnkiDeck: !!job.ankiStorageKey,
+        hasCsvExport: !!job.csvStorageKey,
+        hasJsonExport: !!job.jsonStorageKey,
+        hasQuizletExport: !!job.quizletStorageKey,
         errorMessage: job.errorMessage
       }));
 
@@ -251,14 +251,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "File not found" });
       }
 
-      if (!job.filePath || !fs.existsSync(job.filePath)) {
+      if (!job.pdfStorageKey) {
+        return res.status(404).json({ message: "Original file no longer available" });
+      }
+
+      const filePath = persistentStorage.getFilePath(job.pdfStorageKey);
+      if (!persistentStorage.fileExists(job.pdfStorageKey)) {
         return res.status(404).json({ message: "Original file no longer available" });
       }
 
       res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
       res.setHeader('Content-Type', 'application/pdf');
       
-      const fileStream = fs.createReadStream(job.filePath);
+      const fileStream = fs.createReadStream(filePath);
       fileStream.pipe(res);
     } catch (error) {
       console.error("PDF download error:", error);
@@ -266,7 +271,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export flashcards in multiple formats
+  // Universal storage download endpoint
+  app.get("/api/storage/download/:key(*)", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const storageKey = req.params.key;
+      const userId = req.user!.uid;
+      
+      // Verify that the file belongs to the user
+      const userPrefix = `users/${userId}/`;
+      if (!storageKey.startsWith(userPrefix)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (!persistentStorage.fileExists(storageKey)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      const filePath = persistentStorage.getFilePath(storageKey);
+      const stats = fs.statSync(filePath);
+      
+      // Determine content type based on file extension
+      const ext = path.extname(filePath).toLowerCase();
+      const contentTypes: Record<string, string> = {
+        '.pdf': 'application/pdf',
+        '.apkg': 'application/octet-stream',
+        '.csv': 'text/csv',
+        '.json': 'application/json',
+        '.txt': 'text/plain'
+      };
+
+      const contentType = contentTypes[ext] || 'application/octet-stream';
+      const filename = path.basename(filePath);
+
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', stats.size);
+      
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error("Storage download error:", error);
+      res.status(500).json({ message: "Download failed" });
+    }
+  });
+
+  // Export flashcards in multiple formats (legacy endpoint)
   app.get("/api/export/:id/:format", async (req, res) => {
     try {
       const jobId = parseInt(req.params.id);
@@ -377,7 +426,8 @@ async function processFlashcardJob(
   apiProvider: string,
   subject: string,
   focusAreas: string,
-  difficulty: string
+  difficulty: string,
+  userId: string
 ) {
   try {
     // Update job status
@@ -483,12 +533,26 @@ async function processFlashcardJob(
 
     const ankiDeckPath = await generateAnkiDeck(jobId, flashcards);
 
+    // Store files in persistent storage
+    const storedPdf = await persistentStorage.storePDF(userId, jobId, pdfPath, job.filename);
+    const storedAnki = await persistentStorage.storeAnkiDeck(userId, jobId, ankiDeckPath);
+    const exportFiles = await persistentStorage.generateAndStoreExports(userId, jobId, flashcards);
+
     // Complete the job
     await storage.updateFlashcardJob(jobId, {
       status: "completed",
       progress: 100,
-      currentTask: "Anki deck ready for download",
-      ankiDeckPath,
+      currentTask: "All files ready for download",
+      pdfStorageKey: storedPdf.key,
+      pdfDownloadUrl: storedPdf.url,
+      ankiStorageKey: storedAnki.key,
+      ankiDownloadUrl: storedAnki.url,
+      csvStorageKey: exportFiles.csv?.key,
+      csvDownloadUrl: exportFiles.csv?.url,
+      jsonStorageKey: exportFiles.json?.key,
+      jsonDownloadUrl: exportFiles.json?.url,
+      quizletStorageKey: exportFiles.quizlet?.key,
+      quizletDownloadUrl: exportFiles.quizlet?.url,
     });
 
     // Clean up uploaded PDF
