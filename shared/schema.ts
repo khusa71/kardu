@@ -23,15 +23,15 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for Replit Auth
+// User storage table for Firebase Auth
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
+  id: varchar("id").primaryKey().notNull(), // Firebase UID
+  email: varchar("email").unique().notNull(),
+  displayName: varchar("display_name"),
+  photoURL: varchar("photo_url"),
+  provider: varchar("provider").notNull(), // 'google' | 'email'
   isEmailVerified: boolean("is_email_verified").default(false),
-  plan: text("plan").default("free"), // 'free' | 'premium'
+  isPremium: boolean("is_premium").default(false),
   monthlyUploads: integer("monthly_uploads").default(0),
   monthlyLimit: integer("monthly_limit").default(3),
   lastUploadDate: timestamp("last_upload_date"),
