@@ -10,12 +10,13 @@ import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations
+  // User operations for Firebase Auth
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   incrementUserUploads(userId: string): Promise<void>;
   checkUploadLimit(userId: string): Promise<{ canUpload: boolean; uploadsRemaining: number }>;
   upgradeToPremium(userId: string): Promise<void>;
+  resetMonthlyUploads(userId: string): Promise<void>;
   
   // Flashcard job operations
   createFlashcardJob(job: InsertFlashcardJob): Promise<FlashcardJob>;
@@ -101,9 +102,20 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(users)
       .set({
-        plan: "premium",
+        isPremium: true,
         monthlyLimit: 100,
         updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async resetMonthlyUploads(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        monthlyUploads: 0,
+        lastUploadDate: new Date(),
+        updatedAt: new Date()
       })
       .where(eq(users.id, userId));
   }
