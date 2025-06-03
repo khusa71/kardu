@@ -271,6 +271,47 @@ export default function Home() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
+        {/* Email Verification Alert */}
+        {user && !isEmailVerified && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="w-5 h-5 text-blue-600" />
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Email verification required
+                  </h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Please verify your email address to generate flashcards. Check your inbox and spam folder.
+                  </p>
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await sendVerificationEmail();
+                    toast({
+                      title: "Verification email sent",
+                      description: "Please check your inbox and spam folder.",
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "Failed to send email",
+                      description: "Please try again later.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="ml-4"
+              >
+                Resend Email
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Responsive Progress Steps */}
         <ResponsiveProgressStepper currentStep={currentStep} />
 
@@ -329,7 +370,33 @@ export default function Home() {
                       <div className="text-sm text-yellow-800 dark:text-yellow-200">
                         <div className="font-medium mb-2">Generate button is disabled:</div>
                         {!user && <div>• Please sign in to continue</div>}
-                        {user && !isEmailVerified && <div>• Please verify your email address</div>}
+                        {user && !isEmailVerified && (
+                          <div className="space-y-2">
+                            <div>• Please verify your email address</div>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  await sendVerificationEmail();
+                                  toast({
+                                    title: "Verification email sent",
+                                    description: "Please check your inbox and spam folder.",
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    title: "Failed to send email",
+                                    description: "Please try again later.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                              className="text-xs"
+                            >
+                              Resend Verification Email
+                            </Button>
+                          </div>
+                        )}
                         {user && isEmailVerified && userUploads >= userLimit && !isPremium && (
                           <div>• Upload limit reached ({userUploads}/{userLimit}). Upgrade to Pro for more uploads.</div>
                         )}
