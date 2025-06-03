@@ -9,6 +9,7 @@ import { generateFlashcards } from "./ai-service";
 import { extractTextWithOCR } from "./ocr-service";
 import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
+import { exportService } from "./export-service";
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -99,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Anki deck file not found" });
       }
 
-      const filename = `Python_Syntax_Flashcards_${job.id}.apkg`;
+      const filename = `StudyCards_Flashcards_${job.id}.apkg`;
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.setHeader("Content-Type", "application/octet-stream");
       
@@ -108,6 +109,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Download error:", error);
       res.status(500).json({ message: "Download failed" });
+    }
+  });
+
+  // Export flashcards in multiple formats
+  app.get("/api/export/:id/:format", async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const format = req.params.format as 'csv' | 'json' | 'quizlet';
+      const job = await storage.getFlashcardJob(jobId);
+      
+      if (!job || job.status !== "completed" || !job.flashcards) {
+        return res.status(404).json({ message: "Flashcards not ready" });
+      }
+
+      const flashcards = JSON.parse(job.flashcards);
+      const outputDir = path.join("outputs", `job_${jobId}`);
+      
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+
+      let filePath: string;
+      let contentType: string;
+      let filename: string;
+
+      switch (format) {
+        case 'csv':
+          filePath = await exportService.exportToCSV(flashcards, outputDir);
+          contentType = 'text/csv';
+          filename = `StudyCards_${jobId}.csv`;
+          break;
+        case 'json':
+          filePath = await exportService.exportToJSON(flashcards, outputDir);
+          contentType = 'application/json';
+          filename = `StudyCards_${jobId}.json`;
+          break;
+        case 'quizlet':
+          filePath = await exportService.exportToQuizlet(flashcards, outputDir);
+          contentType = 'text/plain';
+          filename = `StudyCards_${jobId}_quizlet.txt`;
+          break;
+        default:
+          return res.status(400).json({ message: "Unsupported format" });
+      }
+
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Type', contentType);
+      
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+      
+    } catch (error) {
+      console.error("Export error:", error);
+      res.status(500).json({ message: "Export failed" });
+    }
+  });
+
+  // Get flashcard statistics
+  app.get("/api/stats/:id", async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const job = await storage.getFlashcardJob(jobId);
+      
+      if (!job || job.status !== "completed" || !job.flashcards) {
+        return res.status(404).json({ message: "Flashcards not ready" });
+      }
+
+      const flashcards = JSON.parse(job.flashcards);
+      const stats = exportService.generateStudyStats(flashcards);
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Stats error:", error);
+      res.status(500).json({ message: "Failed to generate stats" });
     }
   });
 
@@ -152,11 +227,14 @@ async function processFlashcardJob(
     const contentHash = cacheService.generateContentHash(extractedText, subject, difficulty, focusAreas || "{}");
     const cachedFlashcards = await cacheService.getCachedFlashcards(contentHash);
     
+    let flashcards;
+    
     if (cachedFlashcards) {
+      flashcards = cachedFlashcards;
       await storage.updateFlashcardJob(jobId, {
         progress: 80,
         currentTask: "Retrieved from cache (cost-optimized)",
-        flashcards: JSON.stringify(cachedFlashcards),
+        flashcards: JSON.stringify(flashcards),
       });
     } else {
       // Preprocess content for cost optimization
@@ -190,7 +268,7 @@ async function processFlashcardJob(
         throw new Error(`${apiProvider.toUpperCase()} API key not configured`);
       }
 
-      const flashcards = await generateFlashcards(
+      flashcards = await generateFlashcards(
         preprocessResult.filteredContent,
         job.apiProvider as "openai" | "anthropic",
         systemApiKey,
@@ -209,13 +287,13 @@ async function processFlashcardJob(
         difficulty,
         focusAreas || "{}"
       );
-    }
 
-    await storage.updateFlashcardJob(jobId, {
-      progress: 75,
-      currentTask: "Creating flashcard pairs",
-      flashcards: JSON.stringify(flashcards),
-    });
+      await storage.updateFlashcardJob(jobId, {
+        progress: 75,
+        currentTask: "Creating flashcard pairs",
+        flashcards: JSON.stringify(flashcards),
+      });
+    }
 
     // Generate Anki deck using Python
     await storage.updateFlashcardJob(jobId, {

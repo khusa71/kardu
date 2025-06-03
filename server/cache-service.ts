@@ -120,11 +120,13 @@ export class CacheService {
     const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
 
     // Clean memory cache
-    for (const [hash, cached] of this.memoryCache.entries()) {
+    const entriesToDelete: string[] = [];
+    this.memoryCache.forEach((cached, hash) => {
       if (now - cached.timestamp > maxAge) {
-        this.memoryCache.delete(hash);
+        entriesToDelete.push(hash);
       }
-    }
+    });
+    entriesToDelete.forEach(hash => this.memoryCache.delete(hash));
 
     // File cache cleanup would require scanning directory
     console.log('Cache cleanup completed');
