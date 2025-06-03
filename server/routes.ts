@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's job history
-  app.get("/api/user/jobs", verifyFirebaseToken, async (req: any, res) => {
+  app.get("/api/user/jobs", verifyFirebaseToken as any, async (req: any, res) => {
     try {
       const userId = req.user!.uid;
       const jobs = await storage.getUserJobs(userId);
@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upgrade to premium
-  app.post("/api/user/upgrade", verifyFirebaseToken, async (req: any, res) => {
+  app.post("/api/user/upgrade", verifyFirebaseToken as any, async (req: any, res) => {
     try {
       const userId = req.user!.uid;
       await storage.upgradeToPremium(userId);
