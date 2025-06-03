@@ -154,6 +154,10 @@ export default function Home() {
     }
   }, [user]);
 
+  // Check if user can upload based on premium status or upload limit
+  const canUpload = user && ((user as any).isPremium || (user as any).monthlyUploads < (user as any).monthlyLimit) && (user as any).isEmailVerified;
+  const isGenerateDisabled = !selectedFile || !canUpload || uploadMutation.isPending;
+
   // Update UI based on job status
   if (jobStatus) {
     if (jobStatus.status === 'completed' && currentStep < 4) {
@@ -274,7 +278,7 @@ export default function Home() {
                 <CardContent className="p-4 lg:p-8 text-center">
                   <Button 
                     onClick={handleUpload}
-                    disabled={uploadMutation.isPending || currentStep >= 3}
+                    disabled={isGenerateDisabled || currentStep >= 3}
                     size="lg"
                     className="w-full sm:w-auto px-8 py-3 text-lg font-semibold"
                   >
@@ -343,24 +347,60 @@ export default function Home() {
 
           {/* Sidebar */}
           <div className="space-y-4 lg:space-y-6">
-            {/* Pro Features Card */}
-            <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center mb-4">
-                  <Star className="w-5 h-5 text-purple-600 mr-2" />
-                  <h3 className="font-semibold text-purple-800 dark:text-purple-200">Pro Features</h3>
-                </div>
-                <ul className="space-y-2 text-sm text-purple-700 dark:text-purple-300">
-                  <li>• 100 uploads per month</li>
-                  <li>• Advanced AI processing</li>
-                  <li>• Multiple export formats</li>
-                  <li>• Priority support</li>
-                </ul>
-                <Button className="w-full mt-4" size="sm">
-                  Upgrade to Pro - $9.99/month
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Subscription Status Card */}
+            {user && (user as any).isPremium ? (
+              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center mb-4">
+                    <Star className="w-5 h-5 text-green-600 mr-2" />
+                    <h3 className="font-semibold text-green-800 dark:text-green-200">Pro User</h3>
+                    <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">Active</Badge>
+                  </div>
+                  <ul className="space-y-2 text-sm text-green-700 dark:text-green-300">
+                    <li>• 100 uploads per month</li>
+                    <li>• Advanced AI processing</li>
+                    <li>• Multiple export formats</li>
+                    <li>• Priority support</li>
+                  </ul>
+                  <div className="mt-4 text-sm text-green-600 dark:text-green-400">
+                    {(user as any).monthlyUploads}/{(user as any).monthlyLimit} uploads used this month
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center mb-4">
+                    <Star className="w-5 h-5 text-purple-600 mr-2" />
+                    <h3 className="font-semibold text-purple-800 dark:text-purple-200">Free Plan</h3>
+                  </div>
+                  <ul className="space-y-2 text-sm text-purple-700 dark:text-purple-300">
+                    <li>• 3 uploads per month</li>
+                    <li>• Basic AI processing</li>
+                    <li>• Standard export formats</li>
+                    <li>• Community support</li>
+                  </ul>
+                  {user ? (
+                    <div className="mt-4 space-y-2">
+                      <div className="text-sm text-purple-600 dark:text-purple-400">
+                        {(user as any).monthlyUploads || 0}/{(user as any).monthlyLimit || 3} uploads used
+                      </div>
+                      <Button 
+                        className="w-full" 
+                        size="sm"
+                        onClick={() => window.open('/api/create-checkout-session', '_blank')}
+                      >
+                        Upgrade to Pro - $9.99/month
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button className="w-full mt-4" size="sm" onClick={() => setShowAuthModal(true)}>
+                      Sign in to upgrade
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Help Card */}
             <Card>

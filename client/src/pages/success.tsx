@@ -144,9 +144,13 @@ export default function Success() {
                           await refreshUserData();
                           setHasTimedOut(false);
                           toast({
-                            title: "Subscription activated!",
-                            description: "Welcome to StudyCards Pro!",
+                            title: "Welcome to StudyCards Pro!",
+                            description: "Your subscription is now active. You can now upload up to 100 PDFs per month!",
                           });
+                          // Redirect to home page after success
+                          setTimeout(() => {
+                            window.location.href = '/';
+                          }, 2000);
                           return;
                         }
                       } catch (error) {

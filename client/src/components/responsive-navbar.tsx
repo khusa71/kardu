@@ -53,7 +53,7 @@ export function ResponsiveNavbar({ onAuthModalOpen, onLogout }: ResponsiveNavbar
                   History
                 </Button>
                 <PremiumStatus />
-                <UpgradeButton size="sm" />
+                {!(user as any)?.isPremium && <UpgradeButton size="sm" />}
                 <div className="text-right">
                   <div className="text-sm font-medium text-neutral dark:text-white max-w-32 truncate">
                     {user.email}
@@ -109,9 +109,11 @@ export function ResponsiveNavbar({ onAuthModalOpen, onLogout }: ResponsiveNavbar
                     </div>
 
                     {/* Upgrade Section */}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                      <UpgradeButton className="w-full" />
-                    </div>
+                    {!(user as any)?.isPremium && (
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <UpgradeButton className="w-full" />
+                      </div>
+                    )}
 
                     {/* Logout */}
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-auto">
