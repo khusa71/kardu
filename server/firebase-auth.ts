@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { auth } from 'firebase-admin';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import admin from 'firebase-admin';
+import { initializeApp, getApps } from 'firebase-admin/app';
 
 // Initialize Firebase Admin (if not already initialized)
 if (getApps().length === 0) {
-  // In production, you would use a service account key
   // For development, we'll use the project ID from environment
-  initializeApp({
+  // In production, you would use a service account key
+  admin.initializeApp({
     projectId: process.env.VITE_FIREBASE_PROJECT_ID,
   });
 }
@@ -29,7 +29,7 @@ export const verifyFirebaseToken = async (req: AuthenticatedRequest, res: Respon
     const idToken = authHeader.split('Bearer ')[1];
     
     try {
-      const decodedToken = await auth().verifyIdToken(idToken);
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
       req.user = {
         uid: decodedToken.uid,
         email: decodedToken.email,

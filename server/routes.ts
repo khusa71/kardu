@@ -10,7 +10,7 @@ import { extractTextWithOCR } from "./ocr-service";
 import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -30,13 +30,31 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Firebase Auth routes
+  app.post('/api/auth/sync', verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const { uid, email, displayName, photoURL, emailVerified, provider } = req.body;
+      
+      const userData = await storage.upsertUser({
+        id: uid,
+        email,
+        displayName,
+        photoURL,
+        provider,
+        isEmailVerified: emailVerified,
+        updatedAt: new Date()
+      });
+      
+      res.json(userData);
+    } catch (error) {
+      console.error("Error syncing user:", error);
+      res.status(500).json({ message: "Failed to sync user" });
+    }
+  });
+
+  app.get('/api/auth/user', verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.uid;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -53,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check upload limits middleware
   const checkUploadLimits = async (req: any, res: any, next: any) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user!.uid;
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
@@ -76,7 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!canUpload) {
         return res.status(429).json({ 
           message: "You've reached your monthly limit. Upgrade to generate more flashcards.",
-          plan: user.plan,
+          isPremium: user.isPremium,
           monthlyUploads: user.monthlyUploads,
           monthlyLimit: user.monthlyLimit,
           requiresUpgrade: true
