@@ -147,7 +147,7 @@ export default function Home() {
     if (!selectedFile) {
       toast({
         title: "Please select a PDF file",
-        description: "Upload a Python PDF to generate flashcards.",
+        description: "Upload an educational PDF to generate flashcards.",
         variant: "destructive",
       });
       return;
