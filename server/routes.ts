@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import path from "path";
@@ -14,6 +14,7 @@ import { objectStorage } from "./object-storage-service";
 import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
+import Stripe from "stripe";
 
 // Configure multer for file uploads (memory storage to avoid local files)
 const upload = multer({
@@ -30,7 +31,15 @@ const upload = multer({
   },
 });
 
+// Initialize Stripe
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Raw body middleware for Stripe webhooks
+  app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
   // Firebase Auth routes
   app.post('/api/auth/sync', verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
@@ -398,7 +407,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upgrade to premium
+  // Stripe checkout session creation
+  app.post("/api/create-checkout-session", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.uid;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.isPremium) {
+        return res.status(400).json({ message: "User is already premium" });
+      }
+
+      // Create or get Stripe customer
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: {
+            firebaseUID: userId,
+          },
+        });
+        customerId = customer.id;
+        await storage.updateStripeCustomerId(userId, customerId);
+      }
+
+      // Create checkout session
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'StudyCards Pro',
+                description: '100 uploads per month + advanced features',
+              },
+              unit_amount: 999, // $9.99 in cents
+              recurring: {
+                interval: 'month',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.headers.origin}/`,
+        metadata: {
+          firebaseUID: userId,
+        },
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Checkout session error:", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  // Stripe webhook handler
+  app.post("/api/stripe-webhook", async (req, res) => {
+    const sig = req.headers['stripe-signature'] as string;
+    
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error("Missing STRIPE_WEBHOOK_SECRET");
+      return res.status(400).send("Missing webhook secret");
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err: any) {
+      console.error("Webhook signature verification failed:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session;
+          const firebaseUID = session.metadata?.firebaseUID;
+          
+          if (!firebaseUID) {
+            console.error("No Firebase UID in session metadata");
+            break;
+          }
+
+          // Get subscription details
+          if (session.subscription) {
+            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+            await storage.updateUserSubscription(firebaseUID, {
+              subscriptionId: subscription.id,
+              status: subscription.status,
+              periodEnd: new Date((subscription as any).current_period_end * 1000),
+            });
+          }
+          break;
+        }
+
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object as Stripe.Subscription;
+          const customer = await stripe.customers.retrieve(subscription.customer as string);
+          
+          if ('metadata' in customer && customer.metadata?.firebaseUID) {
+            await storage.updateUserSubscription(customer.metadata.firebaseUID, {
+              subscriptionId: subscription.id,
+              status: subscription.status,
+              periodEnd: new Date(subscription.current_period_end * 1000),
+            });
+          }
+          break;
+        }
+
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object as Stripe.Subscription;
+          const customer = await stripe.customers.retrieve(subscription.customer as string);
+          
+          if ('metadata' in customer && customer.metadata?.firebaseUID) {
+            await storage.cancelUserSubscription(customer.metadata.firebaseUID);
+          }
+          break;
+        }
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Webhook processing error:", error);
+      res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
+  // Legacy upgrade endpoint (for testing)
   app.post("/api/user/upgrade", verifyFirebaseToken as any, async (req: any, res) => {
     try {
       const userId = req.user!.uid;

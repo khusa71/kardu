@@ -60,27 +60,8 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
       return user;
-    } catch (error: any) {
-      // Handle email uniqueness constraint violation
-      if (error.code === '23505' && error.constraint === 'users_email_unique') {
-        // Try to find existing user with this email and update their Firebase UID
-        const existingUser = await db.select().from(users).where(eq(users.email, userData.email!));
-        if (existingUser.length > 0) {
-          const [updatedUser] = await db
-            .update(users)
-            .set({
-              id: userData.id,
-              displayName: userData.displayName,
-              photoURL: userData.photoURL,
-              provider: userData.provider,
-              isEmailVerified: userData.isEmailVerified,
-              updatedAt: new Date(),
-            })
-            .where(eq(users.email, userData.email!))
-            .returning();
-          return updatedUser;
-        }
-      }
+    } catch (error) {
+      console.error("Error upserting user:", error);
       throw error;
     }
   }
