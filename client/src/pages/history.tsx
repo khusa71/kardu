@@ -53,7 +53,7 @@ export default function History() {
   const [currentFlashcards, setCurrentFlashcards] = useState<FlashcardPair[]>([]);
 
   // Fetch user's upload history
-  const { data: jobs = [], isLoading, error } = useQuery({
+  const { data: jobs = [], isLoading, error } = useQuery<HistoryJob[]>({
     queryKey: ["/api/history"],
     enabled: !!user && !authLoading,
   });
@@ -77,7 +77,7 @@ export default function History() {
       link.href = downloadUrl;
       
       // Set filename based on format
-      const job = jobs.find((j: HistoryJob) => j.id === jobId);
+      const job = jobs.find((j) => j.id === jobId);
       const baseName = job?.filename.replace('.pdf', '') || `StudyCards_${jobId}`;
       const extensions = { anki: '.apkg', csv: '.csv', json: '.json', quizlet: '.txt', pdf: '.pdf' };
       link.download = `${baseName}${extensions[format]}`;

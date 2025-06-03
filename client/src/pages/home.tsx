@@ -351,6 +351,15 @@ export default function Home() {
             <div className="flex items-center space-x-4">
               {user ? (
                 <div className="flex items-center space-x-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => window.location.href = "/history"}
+                    className="flex items-center"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    History
+                  </Button>
                   <div className="text-right">
                     <div className="text-sm font-medium text-neutral dark:text-white">{(user as any).email}</div>
                     <div className="flex items-center text-xs text-gray-500">

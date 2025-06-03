@@ -23,6 +23,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={user ? Home : Landing} />
+      <Route path="/history" component={user ? History : Landing} />
       <Route component={NotFound} />
     </Switch>
   );
