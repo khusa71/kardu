@@ -19,7 +19,7 @@ export default function Success() {
       setIsChecking(true);
       setHasTimedOut(false);
       
-      // Wait for webhook processing
+      // First, try waiting for webhook processing
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       // Refresh user data from server
@@ -35,7 +35,40 @@ export default function Success() {
         return;
       }
       
-      // If not premium after multiple retries, show timeout
+      // If not premium after initial check, try manual verification
+      if (retryCount === 0) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        
+        if (sessionId) {
+          try {
+            const response = await fetch('/api/verify-subscription', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ sessionId }),
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              if (result.isPremium) {
+                await refreshUserData();
+                setIsChecking(false);
+                toast({
+                  title: "Subscription activated!",
+                  description: "Welcome to StudyCards Pro!",
+                });
+                return;
+              }
+            }
+          } catch (verifyError) {
+            console.error('Manual verification failed:', verifyError);
+          }
+        }
+      }
+      
+      // If still not premium after multiple retries, show timeout
       if (retryCount >= 2) {
         setHasTimedOut(true);
         setIsChecking(false);

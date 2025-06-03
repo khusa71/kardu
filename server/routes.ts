@@ -511,7 +511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateUserSubscription(firebaseUID, {
               subscriptionId: subscription.id,
               status: subscription.status,
-              periodEnd: new Date(subscription.current_period_end * 1000),
+              periodEnd: new Date((subscription as any).current_period_end * 1000),
             });
             
             console.log(`Successfully updated subscription for user ${firebaseUID}`);
@@ -526,8 +526,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const invoice = event.data.object as Stripe.Invoice;
           console.log(`Processing invoice.paid: ${invoice.id}`);
           
-          if (invoice.subscription) {
-            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+          if ((invoice as any).subscription) {
+            const subscription = await stripe.subscriptions.retrieve((invoice as any).subscription as string);
             const customer = await stripe.customers.retrieve(subscription.customer as string);
             
             if ('metadata' in customer && customer.metadata?.firebaseUID) {
@@ -536,7 +536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await storage.updateUserSubscription(customer.metadata.firebaseUID, {
                 subscriptionId: subscription.id,
                 status: subscription.status,
-                periodEnd: new Date(subscription.current_period_end * 1000),
+                periodEnd: new Date((subscription as any).current_period_end * 1000),
               });
               
               console.log(`Successfully updated subscription from invoice for user ${customer.metadata.firebaseUID}`);
@@ -557,7 +557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateUserSubscription(customer.metadata.firebaseUID, {
               subscriptionId: subscription.id,
               status: subscription.status,
-              periodEnd: new Date(subscription.current_period_end * 1000),
+              periodEnd: new Date((subscription as any).current_period_end * 1000),
             });
             
             console.log(`Successfully created subscription for user ${customer.metadata.firebaseUID}`);
@@ -575,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateUserSubscription(customer.metadata.firebaseUID, {
               subscriptionId: subscription.id,
               status: subscription.status,
-              periodEnd: new Date(subscription.current_period_end * 1000),
+              periodEnd: new Date((subscription as any).current_period_end * 1000),
             });
             
             console.log(`Successfully updated subscription for user ${customer.metadata.firebaseUID}`);
@@ -605,6 +605,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Webhook processing error:", error);
       console.error("Event data:", JSON.stringify(event, null, 2));
       res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
+  // Manual subscription verification endpoint (fallback for webhook failures)
+  app.post("/api/verify-subscription", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.uid;
+      const { sessionId } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID required" });
+      }
+
+      // Retrieve the checkout session from Stripe
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      if (session.metadata?.firebaseUID !== userId) {
+        return res.status(403).json({ message: "Session does not belong to this user" });
+      }
+
+      if (session.payment_status !== 'paid') {
+        return res.status(400).json({ message: "Payment not completed" });
+      }
+
+      // Get subscription details and update user
+      if (session.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+        
+        await storage.updateUserSubscription(userId, {
+          subscriptionId: subscription.id,
+          status: subscription.status,
+          periodEnd: new Date((subscription as any).current_period_end * 1000),
+        });
+
+        console.log(`Manual subscription verification successful for user ${userId}`);
+        
+        const updatedUser = await storage.getUser(userId);
+        res.json({ 
+          message: "Subscription verified and activated", 
+          isPremium: true,
+          user: updatedUser 
+        });
+      } else {
+        res.status(400).json({ message: "No subscription found for this session" });
+      }
+    } catch (error) {
+      console.error("Manual subscription verification error:", error);
+      res.status(500).json({ message: "Failed to verify subscription" });
     }
   });
 
