@@ -26,6 +26,7 @@ export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = fal
   const [editingCard, setEditingCard] = useState<EditingCard | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
 
   const handleEdit = useCallback((index: number) => {
     setEditingCard({ index, card: { ...flashcards[index] } });
@@ -67,7 +68,6 @@ export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = fal
   // Preview Mode Component
   if (previewMode) {
     const currentCard = flashcards[currentPreviewIndex];
-    const [showAnswer, setShowAnswer] = useState(false);
 
     return (
       <div className="max-w-2xl mx-auto">
