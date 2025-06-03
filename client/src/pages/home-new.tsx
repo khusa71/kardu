@@ -294,7 +294,9 @@ export default function Home() {
         )}
 
         {currentView === 'upload' && (
-          <>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
         {/* Progress Steps */}
         <div className="mb-12">
           <div className="flex items-center justify-center space-x-4 md:space-x-8">
@@ -747,6 +749,7 @@ export default function Home() {
           </div>
 
           {/* Sidebar */}
+          <div className="lg:col-span-1">
           <div className="space-y-6">
             {/* Info Card */}
             <Card>
@@ -821,8 +824,9 @@ export default function Home() {
               </CardContent>
             </Card>
           </div>
-        </div>
-          </>
+          </div>
+          </div>
+          </div>
         )}
       </main>
 
