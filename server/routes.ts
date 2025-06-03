@@ -15,9 +15,9 @@ import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } f
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
 
-// Configure multer for file uploads
+// Configure multer for file uploads (memory storage to avoid local files)
 const upload = multer({
-  dest: "uploads/",
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.incrementUserUploads(userId);
 
       // Start processing asynchronously
-      processFlashcardJob(job.id, req.file.path, apiProvider, subject, focusAreas, difficulty, userId, flashcardCount);
+      processFlashcardJob(job.id, req.file.buffer, req.file.originalname, apiProvider, subject, focusAreas, difficulty, userId, flashcardCount);
 
       res.json({ 
         jobId: job.id, 
@@ -412,7 +412,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 // Background processing function
 async function processFlashcardJob(
   jobId: number,
-  pdfPath: string,
+  pdfBuffer: Buffer,
+  originalFilename: string,
   apiProvider: string,
   subject: string,
   focusAreas: string,
@@ -420,6 +421,8 @@ async function processFlashcardJob(
   userId: string,
   flashcardCount: string
 ) {
+  let tempPdfPath: string | null = null;
+  
   try {
     // Update job status
     await storage.updateFlashcardJob(jobId, {
@@ -428,8 +431,12 @@ async function processFlashcardJob(
       currentTask: "Extracting text from PDF...",
     });
 
+    // Create temporary file for OCR processing
+    tempPdfPath = path.join("/tmp", `temp_${jobId}_${Date.now()}.pdf`);
+    fs.writeFileSync(tempPdfPath, pdfBuffer);
+
     // Extract text from PDF with OCR support
-    const ocrResult = await extractTextWithOCR(pdfPath);
+    const ocrResult = await extractTextWithOCR(tempPdfPath);
     const extractedText = ocrResult.text;
     
     if (ocrResult.isScanned) {
@@ -529,7 +536,7 @@ async function processFlashcardJob(
     if (!currentJob) throw new Error("Job not found");
 
     // Store files in Object Storage
-    const storedPdf = await objectStorage.uploadPDF(userId, jobId, pdfPath, currentJob.filename);
+    const storedPdf = await objectStorage.uploadPDF(userId, jobId, tempPdfPath, originalFilename);
     const storedAnki = await objectStorage.uploadAnkiDeck(userId, jobId, ankiDeckPath);
     const exportFiles = await objectStorage.generateAndUploadExports(userId, jobId, flashcards);
 
@@ -550,8 +557,13 @@ async function processFlashcardJob(
       quizletDownloadUrl: exportFiles.quizlet?.url,
     });
 
-    // Clean up uploaded PDF
-    fs.unlinkSync(pdfPath);
+    // Clean up temporary files
+    if (tempPdfPath && fs.existsSync(tempPdfPath)) {
+      fs.unlinkSync(tempPdfPath);
+    }
+    if (fs.existsSync(ankiDeckPath)) {
+      fs.unlinkSync(ankiDeckPath);
+    }
   } catch (error) {
     console.error("Processing error:", error);
     await storage.updateFlashcardJob(jobId, {
@@ -559,9 +571,9 @@ async function processFlashcardJob(
       errorMessage: error instanceof Error ? error.message : "Unknown error occurred",
     });
     
-    // Clean up uploaded PDF
-    if (fs.existsSync(pdfPath)) {
-      fs.unlinkSync(pdfPath);
+    // Clean up temporary files
+    if (tempPdfPath && fs.existsSync(tempPdfPath)) {
+      fs.unlinkSync(tempPdfPath);
     }
   }
 }
@@ -595,7 +607,7 @@ function extractTextFromPDF(pdfPath: string): Promise<string> {
 // Generate Anki deck using Python subprocess
 function generateAnkiDeck(jobId: number, flashcards: any[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const outputPath = path.join("outputs", `deck_${jobId}.apkg`);
+    const outputPath = path.join("/tmp", `deck_${jobId}_${Date.now()}.apkg`);
     const flashcardsJson = JSON.stringify(flashcards);
     
     const pythonProcess = spawn("python3", [
