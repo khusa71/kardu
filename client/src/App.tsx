@@ -11,15 +11,17 @@ import NotFound from "@/pages/not-found";
 function Router() {
   const { user, loading } = useFirebaseAuth();
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <Switch>
-      {loading || !user ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-        </>
-      )}
+      <Route path="/" component={user ? Home : Landing} />
       <Route component={NotFound} />
     </Switch>
   );
