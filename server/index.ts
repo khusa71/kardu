@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import fs from "fs";
+import path from "path";
 
 const app = express();
 app.use(express.json());
@@ -36,7 +38,38 @@ app.use((req, res, next) => {
   next();
 });
 
+// Cleanup function to remove temporary files
+function cleanupTempFiles() {
+  try {
+    const tempDir = "/tmp";
+    const files = fs.readdirSync(tempDir);
+    
+    // Remove old temporary PDF and Anki files
+    files.forEach(file => {
+      if (file.match(/^(temp_|deck_)\d+/) && file.endsWith('.pdf') || file.endsWith('.apkg')) {
+        const filePath = path.join(tempDir, file);
+        const stats = fs.statSync(filePath);
+        const age = Date.now() - stats.mtime.getTime();
+        
+        // Remove files older than 1 hour
+        if (age > 3600000) {
+          fs.unlinkSync(filePath);
+          log(`Cleaned up old temp file: ${file}`);
+        }
+      }
+    });
+  } catch (error) {
+    log(`Temp cleanup error: ${error}`);
+  }
+}
+
 (async () => {
+  // Clean up any existing temporary files on startup
+  cleanupTempFiles();
+  
+  // Run cleanup every hour
+  setInterval(cleanupTempFiles, 3600000);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -13,9 +13,11 @@ export class ObjectStorageService {
   private client: Client;
 
   constructor() {
+    const bucketId = 'replit-objstore-aa9525cc-430e-468b-9c6d-17c18a898fdd';
     this.client = new Client({
-      bucketId: 'replit-objstore-aa9525cc-430e-468b-9c6d-17c18a898fdd'
+      bucketId
     });
+    console.log(`✅ Object Storage initialized with bucket: ${bucketId}`);
   }
 
   // Generate a unique storage key for user files

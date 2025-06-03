@@ -305,53 +305,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export flashcards in multiple formats (legacy endpoint)
-  app.get("/api/export/:id/:format", async (req, res) => {
+  // Export flashcards in multiple formats (redirects to Object Storage)
+  app.get("/api/export/:id/:format", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.id);
       const format = req.params.format as 'csv' | 'json' | 'quizlet';
+      const userId = req.user!.uid;
       const job = await storage.getFlashcardJob(jobId);
       
-      if (!job || !job.flashcards) {
+      if (!job || job.userId !== userId) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      if (!job.flashcards) {
         return res.status(404).json({ message: "Flashcards not ready" });
       }
 
-      const flashcards = JSON.parse(job.flashcards);
-      const outputDir = path.join("outputs", `job_${jobId}`);
-      
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-
-      let filePath: string;
-      let contentType: string;
+      // Get the appropriate storage key based on format
+      let storageKey: string | undefined;
       let filename: string;
+      let contentType: string;
 
       switch (format) {
         case 'csv':
-          filePath = await exportService.exportToCSV(flashcards, outputDir);
-          contentType = 'text/csv';
+          storageKey = job.csvStorageKey ?? undefined;
           filename = `StudyCards_${jobId}.csv`;
+          contentType = 'text/csv';
           break;
         case 'json':
-          filePath = await exportService.exportToJSON(flashcards, outputDir);
-          contentType = 'application/json';
+          storageKey = job.jsonStorageKey ?? undefined;
           filename = `StudyCards_${jobId}.json`;
+          contentType = 'application/json';
           break;
         case 'quizlet':
-          filePath = await exportService.exportToQuizlet(flashcards, outputDir);
-          contentType = 'text/plain';
+          storageKey = job.quizletStorageKey ?? undefined;
           filename = `StudyCards_${jobId}_quizlet.txt`;
+          contentType = 'text/plain';
           break;
         default:
           return res.status(400).json({ message: "Unsupported format" });
       }
 
+      if (!storageKey) {
+        return res.status(404).json({ message: "Export file not available" });
+      }
+
+      if (!(await objectStorage.fileExists(storageKey))) {
+        return res.status(404).json({ message: "Export file not found" });
+      }
+
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Type', contentType);
       
-      const fileStream = fs.createReadStream(filePath);
-      fileStream.pipe(res);
+      const stream = await objectStorage.downloadFileStream(storageKey);
+      stream.pipe(res);
       
     } catch (error) {
       console.error("Export error:", error);
