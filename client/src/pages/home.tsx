@@ -16,6 +16,8 @@ import { FlashcardEditor } from "@/components/flashcard-editor";
 import { StudyMode } from "@/components/study-mode";
 import { AuthModal } from "@/components/auth-modal";
 import { Brain, FileText, Settings, Download, Upload, ChevronDown, CheckCircle, Clock, LoaderPinwheel, Check, Lightbulb, Star, HelpCircle, ExternalLink, Shield, ShieldCheck, Info, AlertCircle, RotateCcw, Edit, Play, User, LogOut, Crown, Zap, Mail } from "lucide-react";
+import { UpgradeButton } from "@/components/upgrade-button";
+import { PremiumStatus } from "@/components/premium-status";
 import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 
 export default function Home() {
@@ -360,19 +362,10 @@ export default function Home() {
                     <FileText className="w-4 h-4 mr-2" />
                     History
                   </Button>
+                  <PremiumStatus />
+                  <UpgradeButton size="sm" />
                   <div className="text-right">
                     <div className="text-sm font-medium text-neutral dark:text-white">{(user as any).email}</div>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <Badge className={(user as any).plan === 'pro' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}>
-                        {(user as any).plan === 'pro' ? (
-                          <>
-                            <Crown className="w-3 h-3 mr-1" />
-                            Pro
-                          </>
-                        ) : 'Free'}
-                      </Badge>
-                      <span className="ml-2">{(user as any).monthlyUploads}/{(user as any).monthlyLimit} uploads</span>
-                    </div>
                   </div>
                   <Button variant="ghost" size="sm" onClick={handleLogout}>
                     <LogOut className="w-4 h-4" />
