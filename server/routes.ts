@@ -6,6 +6,9 @@ import fs from "fs";
 import { spawn } from "child_process";
 import { storage } from "./storage";
 import { generateFlashcards } from "./ai-service";
+import { extractTextWithOCR } from "./ocr-service";
+import { cacheService } from "./cache-service";
+import { preprocessingService } from "./preprocessing-service";
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -129,41 +132,84 @@ async function processFlashcardJob(
       currentTask: "Extracting text from PDF...",
     });
 
-    // Extract text from PDF using Python
-    const extractedText = await extractTextFromPDF(pdfPath);
+    // Extract text from PDF with OCR support
+    const ocrResult = await extractTextWithOCR(pdfPath);
+    const extractedText = ocrResult.text;
     
-    await storage.updateFlashcardJob(jobId, {
-      progress: 25,
-      currentTask: "Text extraction completed",
-    });
-
-    // Generate flashcards using AI
-    await storage.updateFlashcardJob(jobId, {
-      progress: 30,
-      currentTask: "Analyzing content with AI...",
-    });
-
-    const job = await storage.getFlashcardJob(jobId);
-    if (!job) throw new Error("Job not found");
-
-    // Get system-managed API key based on provider
-    const systemApiKey = apiProvider === "openai" 
-      ? process.env.OPENAI_API_KEY 
-      : process.env.ANTHROPIC_API_KEY;
-    
-    if (!systemApiKey) {
-      throw new Error(`${apiProvider.toUpperCase()} API key not configured`);
+    if (ocrResult.isScanned) {
+      await storage.updateFlashcardJob(jobId, {
+        progress: 25,
+        currentTask: `OCR processing completed (${Math.round(ocrResult.confidence * 100)}% confidence)`,
+      });
+    } else {
+      await storage.updateFlashcardJob(jobId, {
+        progress: 25,
+        currentTask: "Text extraction completed",
+      });
     }
 
-    const flashcards = await generateFlashcards(
-      extractedText,
-      job.apiProvider as "openai" | "anthropic",
-      systemApiKey,
-      job.flashcardCount,
-      subject,
-      JSON.parse(focusAreas || "{}"),
-      difficulty
-    );
+    // Check cache first to avoid unnecessary API calls
+    const contentHash = cacheService.generateContentHash(extractedText, subject, difficulty, focusAreas || "{}");
+    const cachedFlashcards = await cacheService.getCachedFlashcards(contentHash);
+    
+    if (cachedFlashcards) {
+      await storage.updateFlashcardJob(jobId, {
+        progress: 80,
+        currentTask: "Retrieved from cache (cost-optimized)",
+        flashcards: JSON.stringify(cachedFlashcards),
+      });
+    } else {
+      // Preprocess content for cost optimization
+      await storage.updateFlashcardJob(jobId, {
+        progress: 30,
+        currentTask: "Preprocessing content for cost optimization...",
+      });
+
+      const preprocessResult = preprocessingService.preprocessContent(extractedText, subject);
+      
+      await storage.updateFlashcardJob(jobId, {
+        progress: 35,
+        currentTask: `Content optimized (Est. cost: $${preprocessResult.estimatedCost.toFixed(3)})`,
+      });
+
+      // Generate flashcards using AI with optimized content
+      await storage.updateFlashcardJob(jobId, {
+        progress: 40,
+        currentTask: "Analyzing content with AI...",
+      });
+
+      const job = await storage.getFlashcardJob(jobId);
+      if (!job) throw new Error("Job not found");
+
+      // Get system-managed API key based on provider
+      const systemApiKey = apiProvider === "openai" 
+        ? process.env.OPENAI_API_KEY 
+        : process.env.ANTHROPIC_API_KEY;
+      
+      if (!systemApiKey) {
+        throw new Error(`${apiProvider.toUpperCase()} API key not configured`);
+      }
+
+      const flashcards = await generateFlashcards(
+        preprocessResult.filteredContent,
+        job.apiProvider as "openai" | "anthropic",
+        systemApiKey,
+        job.flashcardCount,
+        subject,
+        JSON.parse(focusAreas || "{}"),
+        difficulty
+      );
+
+      // Cache the results for future use
+      await cacheService.cacheFlashcards(
+        contentHash,
+        extractedText,
+        subject,
+        flashcards,
+        difficulty,
+        focusAreas || "{}"
+      );
+    }
 
     await storage.updateFlashcardJob(jobId, {
       progress: 75,
