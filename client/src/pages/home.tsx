@@ -20,7 +20,7 @@ import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 export default function Home() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, logout, sendVerificationEmail, refreshUserData } = useFirebaseAuth();
   
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -50,6 +50,7 @@ export default function Home() {
   // User status states
   const [showEmailVerificationMessage, setShowEmailVerificationMessage] = useState(false);
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Poll for job status
   const { data: jobStatus } = useQuery<FlashcardJob>({
@@ -88,7 +89,7 @@ export default function Home() {
           description: "You've reached your monthly limit. Upgrade to generate more flashcards.",
           variant: "destructive",
         });
-      } else if (isUnauthorizedError(error)) {
+      } else if (error.message?.includes('401')) {
         toast({
           title: "Authentication required",
           description: "Please sign in to continue.",
@@ -189,14 +190,13 @@ export default function Home() {
     }
 
     // Check if user is authenticated
-    if (!isAuthenticated) {
+    if (!user) {
       toast({
         title: "Authentication required",
         description: "Please sign in to continue generating flashcards.",
         variant: "destructive",
       });
-      // Redirect to Replit Auth login
-      window.location.href = "/api/login";
+      setShowAuthModal(true);
       return;
     }
 
@@ -209,7 +209,7 @@ export default function Home() {
     formData.append('difficulty', difficulty);
 
     uploadMutation.mutate(formData);
-  }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation, isAuthenticated, toast]);
+  }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation, user, toast]);
 
   // Handle authentication state changes
   useEffect(() => {
