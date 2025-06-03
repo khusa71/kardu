@@ -411,6 +411,43 @@ export default function Home() {
               </Card>
             )}
 
+            {/* Configuration Summary */}
+            {currentStep >= 3 && (
+              <Card>
+                <CardContent className="p-4 lg:p-6">
+                  <h3 className="text-lg font-semibold mb-3">Generation Settings Applied</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Cards Requested:</span>
+                      <Badge variant="outline" className="ml-2">{flashcardCount}</Badge>
+                    </div>
+                    <div>
+                      <span className="font-medium">AI Provider:</span>
+                      <Badge variant="outline" className="ml-2">{apiProvider === 'openai' ? 'OpenAI (GPT-4)' : 'Anthropic (Claude)'}</Badge>
+                    </div>
+                    <div>
+                      <span className="font-medium">Subject:</span>
+                      <Badge variant="outline" className="ml-2">{subject}</Badge>
+                    </div>
+                    <div>
+                      <span className="font-medium">Difficulty:</span>
+                      <Badge variant="outline" className="ml-2">{difficulty}</Badge>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <span className="font-medium text-sm">Focus Areas:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {Object.entries(focusAreas).filter(([_, enabled]) => enabled).map(([area, _]) => (
+                        <Badge key={area} variant="secondary" className="text-xs">
+                          {area.charAt(0).toUpperCase() + area.slice(1)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Step 3: Processing Status */}
             {currentStep >= 3 && jobStatus && (
               <Card>

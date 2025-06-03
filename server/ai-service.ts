@@ -50,8 +50,16 @@ export async function generateFlashcards(
     }
   }
   
-  // Ensure we don't exceed the requested count
-  return allFlashcards.slice(0, count);
+  // Ensure we have exactly the requested count
+  const finalFlashcards = allFlashcards.slice(0, count);
+  
+  // Ensure we have exactly the requested count and add metadata
+  return finalFlashcards.map(card => ({
+    question: card.question,
+    answer: card.answer,
+    topic: card.topic || subject,
+    difficulty: difficulty as "beginner" | "intermediate" | "advanced"
+  }));
 }
 
 async function generateFlashcardsForChunk(
@@ -81,7 +89,7 @@ async function generateWithOpenAI(prompt: string, apiKey: string): Promise<Flash
       messages: [
         {
           role: "system",
-          content: "You are an expert Python instructor creating educational flashcards. Generate high-quality question-answer pairs focused specifically on Python syntax, code structure, and programming concepts. Always respond with valid JSON in the exact format requested."
+          content: "You are an expert educational content creator specializing in creating precise, subject-specific flashcards. You must follow the exact count, difficulty level, and subject requirements provided. Always respond with valid JSON containing exactly the requested number of flashcards."
         },
         {
           role: "user",
@@ -175,41 +183,45 @@ function createFlashcardPrompt(
   const subjectContext = getSubjectContext(subject);
 
   return `
-Analyze the following ${subjectContext.name} educational content and create exactly ${count} high-quality flashcards for ${difficulty} level learners.
-
-Subject: ${subjectContext.name}
-Focus areas: ${focusAreasText || 'General concepts and knowledge'}
+STRICT REQUIREMENTS:
+- Generate EXACTLY ${count} flashcards, no more, no less
+- Subject: ${subjectContext.name}
+- Difficulty: ${difficulty} level
+- Focus areas: ${focusAreasText || 'General concepts and knowledge'}
 
 Content to analyze:
 """
 ${text}
 """
 
-Instructions:
+DIFFICULTY LEVEL GUIDELINES:
+${difficulty === 'beginner' ? 
+  '- Use simple, clear language and basic concepts\n- Focus on definitions and fundamental principles\n- Avoid complex terminology' :
+  difficulty === 'intermediate' ?
+  '- Include moderate complexity and some technical terms\n- Combine multiple concepts in questions\n- Require some analysis and application' :
+  '- Use advanced terminology and complex concepts\n- Require synthesis and critical thinking\n- Include edge cases and nuanced scenarios'
+}
+
+SUBJECT-SPECIFIC FOCUS (${subjectContext.name}):
 1. Create flashcards that test ${subjectContext.testingFocus}
 2. Focus on ${subjectContext.contentFocus}
 3. ${subjectContext.answerStyle}
-4. Make questions specific and testable
-5. Ensure answers are concise but complete
-6. Target ${difficulty} difficulty level
-7. Use appropriate formatting for ${subjectContext.name}
+4. Use ${subjectContext.name}-specific terminology and examples
+5. Ensure practical applicability in ${subjectContext.name}
 
-Response format (JSON only):
+CRITICAL: Return EXACTLY ${count} flashcards in valid JSON format:
 {
   "flashcards": [
     {
-      "question": "Clear, specific question about the subject matter",
-      "answer": "Concise answer with examples if relevant",
-      "topic": "Brief topic category",
+      "question": "Specific ${difficulty}-level question about ${subjectContext.name}",
+      "answer": "Complete answer with ${subjectContext.name} context",
+      "topic": "${subjectContext.name} topic area",
       "difficulty": "${difficulty}"
     }
   ]
 }
 
-Example flashcard for ${subjectContext.name}:
-${subjectContext.example}
-
-Generate exactly ${count} flashcards. Focus on practical, testable knowledge in ${subjectContext.name}.
+COUNT VERIFICATION: The JSON response must contain exactly ${count} flashcard objects.
 `;
 }
 
