@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { logApiKeyStatus } from "./api-key-validator";
 import fs from "fs";
 import path from "path";
 
@@ -66,6 +67,9 @@ function cleanupTempFiles() {
 (async () => {
   // Clean up any existing temporary files on startup
   cleanupTempFiles();
+  
+  // Log API key configuration status
+  logApiKeyStatus();
   
   // Run cleanup every hour
   setInterval(cleanupTempFiles, 3600000);

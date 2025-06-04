@@ -126,6 +126,32 @@ export default function History() {
     }
   };
 
+  const handleDeleteJob = async (jobId: number, filename: string) => {
+    if (!confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await apiRequest("DELETE", `/api/jobs/${jobId}`);
+      const result = await response.json();
+      
+      toast({
+        title: "Job deleted successfully",
+        description: `Deleted ${result.deletedFiles} of ${result.totalFiles} associated files.`,
+      });
+      
+      // Refresh the jobs list
+      window.location.reload();
+      
+    } catch (error: any) {
+      toast({
+        title: "Failed to delete job",
+        description: error.message || "An error occurred while deleting the job.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
@@ -426,6 +452,17 @@ export default function History() {
                           </Button>
                         </>
                       )}
+
+                      {/* Delete button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteJob(job.id, job.filename)}
+                        className="flex items-center text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

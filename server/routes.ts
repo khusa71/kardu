@@ -136,19 +136,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         difficulty,
       } = req.body;
 
+      // Get available provider with fallback
+      const validation = (req as any).apiKeyValidation;
+      const selectedProvider = getAvailableProvider(apiProvider, validation);
+      
+      if (!selectedProvider) {
+        return res.status(503).json({ 
+          message: "AI services are temporarily unavailable",
+          error: "no_available_providers",
+          requestedProvider: apiProvider,
+          availableProviders: validation.availableProviders
+        });
+      }
+
       // Validate input
       const jobData = {
         userId,
         filename: req.file.originalname,
         fileSize: req.file.size,
-        apiProvider,
+        apiProvider: selectedProvider, // Use the validated provider
         flashcardCount: parseInt(flashcardCount),
         subject: subject || "general",
         difficulty: difficulty || "intermediate",
         focusAreas: JSON.stringify(focusAreas || {}),
         status: "pending" as const,
         progress: 0,
-        currentTask: "Starting processing...",
+        currentTask: selectedProvider !== apiProvider 
+          ? `Starting processing with ${selectedProvider} (fallback from ${apiProvider})...`
+          : "Starting processing...",
       };
 
       // Create job record
@@ -157,8 +172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Increment user upload count
       await storage.incrementUserUploads(userId);
 
-      // Start processing asynchronously
-      processFlashcardJob(job.id, req.file.buffer, req.file.originalname, apiProvider, subject, focusAreas, difficulty, userId, flashcardCount);
+      // Start processing asynchronously with selected provider
+      processFlashcardJob(job.id, req.file.buffer, req.file.originalname, selectedProvider, subject, focusAreas, difficulty, userId, flashcardCount);
 
       res.json({ 
         jobId: job.id, 
@@ -185,6 +200,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Job status error:", error);
       res.status(500).json({ message: "Failed to get job status" });
+    }
+  });
+
+  // Delete job and associated files
+  app.delete("/api/jobs/:id", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const userId = req.user!.uid;
+      
+      // Get job to verify ownership and get file keys
+      const job = await storage.getFlashcardJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      
+      // Verify user owns this job
+      if (job.userId !== userId) {
+        return res.status(403).json({ message: "Access denied. You can only delete your own jobs." });
+      }
+      
+      // Delete files from object storage
+      const filesToDelete = [
+        job.pdfStorageKey,
+        job.ankiStorageKey,
+        job.csvStorageKey,
+        job.jsonStorageKey,
+        job.quizletStorageKey
+      ].filter(Boolean); // Remove null/undefined values
+      
+      let deletedFiles = 0;
+      for (const fileKey of filesToDelete) {
+        try {
+          const deleted = await objectStorage.deleteFile(fileKey as string);
+          if (deleted) deletedFiles++;
+        } catch (error) {
+          console.error(`Failed to delete file ${fileKey}:`, error);
+          // Continue with other files even if one fails
+        }
+      }
+      
+      // Delete job from database
+      const deleted = await storage.deleteFlashcardJob(jobId);
+      
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete job from database" });
+      }
+      
+      res.json({ 
+        message: "Job deleted successfully",
+        deletedFiles,
+        totalFiles: filesToDelete.length
+      });
+      
+    } catch (error) {
+      console.error("Job deletion error:", error);
+      res.status(500).json({ message: "Failed to delete job" });
     }
   });
 
