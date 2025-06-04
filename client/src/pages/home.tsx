@@ -336,6 +336,10 @@ export default function Home() {
               onFileRemove={(index: number) => {
                 setSelectedFiles(files => files.filter((_, i) => i !== index));
               }}
+              onFileReuse={(job) => {
+                setCurrentJobId(job.id);
+                setCurrentStep(3);
+              }}
               isPremium={isPremium}
               maxFiles={isPremium ? 10 : 1}
             />
@@ -627,6 +631,18 @@ export default function Home() {
 
       {/* Authentication Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      
+      {/* My Files Modal */}
+      <MyFilesModal 
+        isOpen={showMyFilesModal} 
+        onClose={() => setShowMyFilesModal(false)}
+        onFileSelect={(job) => {
+          // Handle file selection for regeneration
+          setCurrentJobId(job.id);
+          setCurrentStep(3);
+          setShowMyFilesModal(false);
+        }}
+      />
     </div>
   );
 }
