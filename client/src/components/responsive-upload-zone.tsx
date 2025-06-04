@@ -9,6 +9,8 @@ interface ResponsiveUploadZoneProps {
   onFilesSelect: (files: File[]) => void;
   onFileRemove: (index: number) => void;
   onFileReuse?: (file: any) => void;
+  onStorageFileSelect?: (job: any) => void;
+  selectedStorageFile?: any;
   disabled?: boolean;
   isPremium?: boolean;
   maxFiles?: number;
@@ -19,6 +21,8 @@ export function ResponsiveUploadZone({
   onFilesSelect, 
   onFileRemove, 
   onFileReuse,
+  onStorageFileSelect,
+  selectedStorageFile,
   disabled = false,
   isPremium = false,
   maxFiles = 1
@@ -150,12 +154,12 @@ export function ResponsiveUploadZone({
           </div>
         </div>
 
-        {/* File Preview - Multiple Files */}
-        {selectedFiles.length > 0 && (
+        {/* File Preview - Multiple Files and Storage Files */}
+        {(selectedFiles.length > 0 || selectedStorageFile) && (
           <div className="mt-4 lg:mt-6 space-y-2">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-neutral dark:text-white">
-                Selected Files ({selectedFiles.length}/{maxFiles})
+                Selected Files ({selectedFiles.length + (selectedStorageFile ? 1 : 0)}/{maxFiles})
               </span>
               {!isPremium && selectedFiles.length >= 1 && (
                 <span className="text-xs text-blue-600 dark:text-blue-400">
@@ -163,6 +167,38 @@ export function ResponsiveUploadZone({
                 </span>
               )}
             </div>
+            
+            {/* Show selected storage file */}
+            {selectedStorageFile && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm text-neutral dark:text-white truncate">
+                        {selectedStorageFile.filename}
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                        From your files • {selectedStorageFile.subject || 'No subject'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStorageFileSelect?.(null);
+                    }}
+                    className="text-gray-400 hover:text-red-500 flex-shrink-0 ml-2"
+                  >
+                    ×
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {/* Show newly uploaded files */}
             {selectedFiles.map((file, index) => (
               <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <div className="flex items-center justify-between">
@@ -198,9 +234,9 @@ export function ResponsiveUploadZone({
         <MyFilesModal
           isOpen={showMyFiles}
           onClose={() => setShowMyFiles(false)}
-          onFileSelect={(file) => {
-            if (onFileReuse) {
-              onFileReuse(file);
+          onFileSelect={(job) => {
+            if (onStorageFileSelect) {
+              onStorageFileSelect(job);
               setShowMyFiles(false);
             }
           }}

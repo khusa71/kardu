@@ -114,13 +114,67 @@ export default function Upload() {
     },
   });
 
+  // Map AI provider tiers to actual providers
+  const getActualProvider = (tier: "basic" | "medium" | "advanced"): "openai" | "anthropic" => {
+    switch (tier) {
+      case "basic":
+        return "anthropic"; // Claude Instant
+      case "medium":
+        return "openai"; // GPT-4
+      case "advanced":
+        return "anthropic"; // Claude 3 Opus
+      default:
+        return "anthropic";
+    }
+  };
+
   // Handle file generation
   const handleGenerate = useCallback(() => {
-    if (selectedFiles.length === 0) {
+    if (selectedFiles.length === 0 && !selectedStorageFile) {
       toast({
         title: "No files selected",
-        description: "Please select at least one PDF file.",
+        description: "Please select at least one PDF file or choose from your files.",
         variant: "destructive",
+      });
+      return;
+    }
+
+    // Handle storage file regeneration
+    if (selectedStorageFile && selectedFiles.length === 0) {
+      // Use regeneration API for storage files
+      const regenerateData = {
+        customContext: customContext.trim() || undefined,
+        customFileName: customFileName.trim() || undefined,
+        customFlashcardSetName: customFlashcardSetName.trim() || undefined,
+        subject,
+        difficulty,
+        flashcardCount,
+        apiProvider: getActualProvider(apiProvider),
+        focusAreas
+      };
+
+      fetch(`/api/regenerate/${selectedStorageFile.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(regenerateData),
+      })
+      .then(response => response.json())
+      .then(data => {
+        setCurrentJobId(data.jobId || selectedStorageFile.id);
+        setCurrentStep(3);
+        toast({
+          title: "Regeneration started",
+          description: "Your flashcards are being regenerated...",
+        });
+      })
+      .catch(error => {
+        toast({
+          title: "Regeneration failed",
+          description: error.message || "Please try again later.",
+          variant: "destructive",
+        });
       });
       return;
     }
@@ -134,24 +188,33 @@ export default function Upload() {
     formData.append('subject', subject);
     formData.append('difficulty', difficulty);
     formData.append('flashcardCount', flashcardCount.toString());
-    formData.append('apiProvider', apiProvider);
+    formData.append('apiProvider', getActualProvider(apiProvider));
     formData.append('focusAreas', JSON.stringify(focusAreas));
     if (customContext.trim()) {
       formData.append('customContext', customContext);
     }
+    if (customFileName.trim()) {
+      formData.append('customFileName', customFileName);
+    }
+    if (customFlashcardSetName.trim()) {
+      formData.append('customFlashcardSetName', customFlashcardSetName);
+    }
 
     uploadMutation.mutate(formData);
-  }, [selectedFiles, subject, difficulty, flashcardCount, apiProvider, focusAreas, customContext, uploadMutation, toast]);
+  }, [selectedFiles, selectedStorageFile, subject, difficulty, flashcardCount, apiProvider, focusAreas, customContext, customFileName, customFlashcardSetName, uploadMutation, toast]);
 
   // Reset form
   const resetForm = () => {
     setSelectedFiles([]);
+    setSelectedStorageFile(null);
     setCurrentStep(1);
     setCurrentJobId(null);
     setPreviewFlashcards([]);
     setShowAllFlashcards(false);
     setViewMode('upload');
     setEditableFlashcards([]);
+    setCustomFileName("");
+    setCustomFlashcardSetName("");
   };
 
   // Monitor job completion and load flashcards
@@ -175,12 +238,12 @@ export default function Upload() {
 
   // Advance step when files are selected
   useEffect(() => {
-    if (selectedFiles.length > 0 && currentStep === 1) {
+    if ((selectedFiles.length > 0 || selectedStorageFile) && currentStep === 1) {
       setCurrentStep(2);
-    } else if (selectedFiles.length === 0 && currentStep > 1) {
+    } else if (selectedFiles.length === 0 && !selectedStorageFile && currentStep > 1) {
       setCurrentStep(1);
     }
-  }, [selectedFiles, currentStep]);
+  }, [selectedFiles, selectedStorageFile, currentStep]);
 
   // Check if user can upload based on premium status or upload limit
   const userUploads = (user as any)?.monthlyUploads || 0;
@@ -189,7 +252,7 @@ export default function Upload() {
   const isEmailVerified = (user as any)?.isEmailVerified || false;
   
   const canUpload = user && (isPremium || userUploads < userLimit) && isEmailVerified;
-  const isGenerateDisabled = selectedFiles.length === 0 || !canUpload || uploadMutation.isPending;
+  const isGenerateDisabled = (selectedFiles.length === 0 && !selectedStorageFile) || !canUpload || uploadMutation.isPending;
 
   // Handle edit mode
   if (viewMode === 'edit') {
