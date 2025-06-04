@@ -510,6 +510,11 @@ export default function Upload() {
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
                           <Button 
                             onClick={() => {
+                              // Debug logging
+                              console.log('Edit button clicked, jobStatus:', jobStatus);
+                              console.log('jobStatus.flashcards type:', typeof jobStatus?.flashcards);
+                              console.log('jobStatus.flashcards value:', jobStatus?.flashcards);
+                              
                               // Ensure flashcards are loaded before switching to edit mode
                               if (jobStatus?.flashcards) {
                                 let flashcards: FlashcardPair[] = [];
@@ -524,6 +529,7 @@ export default function Upload() {
                                     flashcards = [];
                                   }
                                 }
+                                console.log('Setting editable flashcards:', flashcards);
                                 setEditableFlashcards(flashcards);
                               }
                               setViewMode('edit');
