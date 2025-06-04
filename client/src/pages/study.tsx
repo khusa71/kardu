@@ -79,17 +79,12 @@ export default function Study() {
 
   // Computed values - normalize flashcard data structure
   const flashcards: FlashcardPair[] = (() => {
-    console.log('JobData:', jobData);
-    console.log('Has flashcards:', jobData?.hasFlashcards);
-    console.log('Flashcards raw:', jobData?.flashcards);
-    
-    if (!jobData?.hasFlashcards || !jobData?.flashcards) {
+    if (!jobData?.flashcards) {
       return [];
     }
     
     try {
       const parsed = JSON.parse(jobData.flashcards);
-      console.log('Parsed flashcards:', parsed);
       
       const normalized = parsed.map((card: any) => ({
         question: card.question || card.front || '',
@@ -98,7 +93,6 @@ export default function Study() {
         difficulty: card.difficulty || 'beginner'
       }));
       
-      console.log('Normalized flashcards:', normalized);
       return normalized;
     } catch (error) {
       console.error('Error parsing flashcards:', error);
