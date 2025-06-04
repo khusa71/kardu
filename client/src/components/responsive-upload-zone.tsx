@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, CheckCircle } from "lucide-react";
+import { Upload, FileText, CheckCircle, FolderOpen } from "lucide-react";
+import { MyFilesModal } from "./my-files-modal";
 
 interface ResponsiveUploadZoneProps {
   selectedFiles: File[];
   onFilesSelect: (files: File[]) => void;
   onFileRemove: (index: number) => void;
+  onFileReuse?: (file: any) => void;
   disabled?: boolean;
   isPremium?: boolean;
   maxFiles?: number;
@@ -16,11 +18,13 @@ export function ResponsiveUploadZone({
   selectedFiles, 
   onFilesSelect, 
   onFileRemove, 
+  onFileReuse,
   disabled = false,
   isPremium = false,
   maxFiles = 1
 }: ResponsiveUploadZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showMyFiles, setShowMyFiles] = useState(false);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
