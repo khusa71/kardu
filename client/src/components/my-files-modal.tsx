@@ -28,7 +28,7 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
 
   const regenerateMutation = useMutation({
     mutationFn: async (jobId: number) => {
-      return apiRequest("POST", `/api/regenerate/${jobId}`, JSON.stringify({}));
+      return apiRequest("POST", `/api/regenerate/${jobId}`, {});
     },
     onSuccess: () => {
       toast({
