@@ -178,7 +178,7 @@ export default function Upload() {
         subject,
         difficulty,
         flashcardCount,
-        apiProvider: getActualProvider(apiProvider),
+        apiProvider: apiProvider,
         focusAreas
       };
 
@@ -217,7 +217,7 @@ export default function Upload() {
     formData.append('subject', subject);
     formData.append('difficulty', difficulty);
     formData.append('flashcardCount', flashcardCount.toString());
-    formData.append('apiProvider', getActualProvider(apiProvider));
+    formData.append('apiProvider', apiProvider);
     formData.append('focusAreas', JSON.stringify(focusAreas));
     if (customContext.trim()) {
       formData.append('customContext', customContext);
