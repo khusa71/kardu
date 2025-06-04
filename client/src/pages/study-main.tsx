@@ -55,7 +55,7 @@ export default function StudyMain() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Fetch flashcard decks
-  const { data: decks = [], isLoading: isLoadingDecks } = useQuery({
+  const { data: decks = [], isLoading: isLoadingDecks } = useQuery<FlashcardDeck[]>({
     queryKey: ["/api/decks"],
     enabled: !!user,
   });
@@ -67,7 +67,18 @@ export default function StudyMain() {
       const jobData = await response.json();
       
       if (jobData.flashcards) {
-        const flashcards = JSON.parse(jobData.flashcards);
+        const rawFlashcards = JSON.parse(jobData.flashcards);
+        
+        // Map the database format to frontend format
+        const flashcards = rawFlashcards.map((card: any) => ({
+          id: card.id,
+          front: card.question || card.front || "No question available",
+          back: card.answer || card.back || "No answer available", 
+          subject: card.topic || card.subject || deck.subject,
+          difficulty: card.difficulty || deck.difficulty,
+          tags: card.tags || []
+        }));
+        
         setCurrentFlashcards(flashcards);
         setSelectedDeck(deck);
         setStudyMode('study');
