@@ -41,8 +41,11 @@ export function securityMiddleware(req: SecureRequest, res: Response, next: Next
     }
   }
   
+  // Check if we're behind a proxy that adds HSTS
+  const isBehindProxy = !!(req.header('x-forwarded-proto') || req.header('via') || req.header('x-cloud-trace-context'));
+  
   // Set comprehensive security headers
-  setSecurityHeaders(res, req.nonce);
+  setSecurityHeaders(res, req.nonce, isBehindProxy);
   
   next();
 }
@@ -50,12 +53,11 @@ export function securityMiddleware(req: SecureRequest, res: Response, next: Next
 /**
  * Sets all required security headers with proper CSP
  */
-function setSecurityHeaders(res: Response, nonce: string) {
-  // Remove any existing HSTS headers to prevent duplicates
-  res.removeHeader('Strict-Transport-Security');
-  
-  // HSTS - Force HTTPS for 2 years
-  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+function setSecurityHeaders(res: Response, nonce: string, isBehindProxy?: boolean) {
+  // Skip HSTS if behind proxy (Google Frontend/Replit adds its own)
+  if (!isBehindProxy) {
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  }
   
   // Prevent MIME sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
