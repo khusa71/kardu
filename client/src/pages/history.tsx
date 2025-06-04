@@ -118,7 +118,18 @@ export default function History() {
       
       if (jobData.flashcards) {
         const flashcards = JSON.parse(jobData.flashcards);
-        setCurrentFlashcards(flashcards);
+        
+        // Transform data structure if needed (question/answer vs front/back)
+        const normalizedFlashcards = flashcards.map((card: any) => ({
+          id: card.id || Math.random(),
+          front: card.front || card.question || '',
+          back: card.back || card.answer || '',
+          subject: card.subject || card.topic || '',
+          difficulty: card.difficulty || 'beginner',
+          tags: card.tags || []
+        }));
+        
+        setCurrentFlashcards(normalizedFlashcards);
         setSelectedJob(job);
         setViewMode('view');
       } else if (jobData.status === 'completed' && !jobData.flashcards) {

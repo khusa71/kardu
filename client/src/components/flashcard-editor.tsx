@@ -88,13 +88,19 @@ export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = fal
   };
 
   // Markdown renderer
-  const MarkdownRenderer = ({ content }: { content: string }) => (
-    <div className="prose dark:prose-invert max-w-none">
-      <ReactMarkdown>
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
+  const MarkdownRenderer = ({ content }: { content: string }) => {
+    if (!content || content.trim() === '') {
+      return <div className="text-gray-500 italic">No content available</div>;
+    }
+    
+    return (
+      <div className="prose dark:prose-invert max-w-none">
+        <ReactMarkdown>
+          {content}
+        </ReactMarkdown>
+      </div>
+    );
+  };
 
   // Preview Mode Component
   if (previewMode) {
@@ -383,14 +389,14 @@ export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = fal
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Question</h4>
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                    <MarkdownRenderer content={card.front} />
+                    <MarkdownRenderer content={card.front || 'No question content'} />
                   </div>
                 </div>
                 
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Answer</h4>
                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                    <MarkdownRenderer content={card.back} />
+                    <MarkdownRenderer content={card.back || 'No answer content'} />
                   </div>
                 </div>
               </div>
