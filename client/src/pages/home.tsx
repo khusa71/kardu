@@ -409,7 +409,7 @@ export default function Home() {
                         {user && isEmailVerified && userUploads >= userLimit && !isPremium && (
                           <div>• Upload limit reached ({userUploads}/{userLimit}). Upgrade to Pro for more uploads.</div>
                         )}
-                        {user && isEmailVerified && !selectedFile && <div>• Please select a PDF file</div>}
+                        {user && isEmailVerified && selectedFiles.length === 0 && <div>• Please select PDF files</div>}
                         <div className="mt-2 text-xs opacity-75">
                           Debug: uploads={userUploads}, limit={userLimit}, premium={isPremium ? 'yes' : 'no'}, verified={isEmailVerified ? 'yes' : 'no'}
                         </div>
