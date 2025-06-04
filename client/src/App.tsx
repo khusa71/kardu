@@ -9,6 +9,8 @@ import History from "@/pages/history";
 import Landing from "@/pages/landing";
 import Success from "@/pages/success";
 import NotFound from "@/pages/not-found";
+import Study from "@/pages/study";
+import Admin from "@/pages/admin";
 
 function Router() {
   const { user, loading } = useFirebaseAuth();
@@ -25,6 +27,8 @@ function Router() {
     <Switch>
       <Route path="/" component={user ? Home : Landing} />
       <Route path="/history" component={user ? History : Landing} />
+      <Route path="/study/:jobId" component={user ? Study : Landing} />
+      <Route path="/admin" component={user ? Admin : Landing} />
       <Route path="/success" component={Success} />
       <Route component={NotFound} />
     </Switch>

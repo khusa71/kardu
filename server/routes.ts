@@ -689,6 +689,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin metrics endpoint
+  app.get("/api/admin/metrics", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.uid;
+      const user = await storage.getUser(userId);
+      
+      // Check if user is admin (using email-based check)
+      const isAdmin = user?.email === 'admin@example.com' || user?.email === 'your-admin-email@domain.com';
+      
+      if (!isAdmin) {
+        return res.status(403).json({ error: "Access denied. Admin privileges required." });
+      }
+
+      // Get all users count
+      const totalUsersResult = await db.select({ count: sql<number>`count(*)` }).from(users);
+      const totalUsers = totalUsersResult[0]?.count || 0;
+
+      // Get total jobs count
+      const totalJobsResult = await db.select({ count: sql<number>`count(*)` }).from(flashcardJobs);
+      const totalJobs = totalJobsResult[0]?.count || 0;
+
+      // Get recent activity (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentUsersResult = await db.select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(sql`${users.createdAt} >= ${thirtyDaysAgo}`);
+      
+      const recentJobsResult = await db.select({ count: sql<number>`count(*)` })
+        .from(flashcardJobs)
+        .where(sql`${flashcardJobs.createdAt} >= ${thirtyDaysAgo}`);
+
+      // Get API provider usage (simplified calculation)
+      const openaiJobsResult = await db.select({ count: sql<number>`count(*)` })
+        .from(flashcardJobs)
+        .where(eq(flashcardJobs.apiProvider, 'openai'));
+      
+      const anthropicJobsResult = await db.select({ count: sql<number>`count(*)` })
+        .from(flashcardJobs)
+        .where(eq(flashcardJobs.apiProvider, 'anthropic'));
+
+      const openaiJobs = openaiJobsResult[0]?.count || 0;
+      const anthropicJobs = anthropicJobsResult[0]?.count || 0;
+
+      // Calculate estimated storage (simplified)
+      const storageResult = await db.select({ 
+        totalSize: sql<number>`sum(${flashcardJobs.fileSize})` 
+      }).from(flashcardJobs);
+      
+      const totalBytes = storageResult[0]?.totalSize || 0;
+      const storageUsed = formatBytes(totalBytes);
+
+      const metrics = {
+        totalUsers,
+        totalJobs,
+        storageUsed,
+        apiCalls: {
+          openai: openaiJobs * 2, // Estimated API calls per job
+          anthropic: anthropicJobs * 2,
+          total: (openaiJobs + anthropicJobs) * 2
+        },
+        recentActivity: {
+          period: "Last 30 days",
+          newUsers: recentUsersResult[0]?.count || 0,
+          jobsGenerated: recentJobsResult[0]?.count || 0
+        }
+      };
+
+      res.json(metrics);
+    } catch (error) {
+      console.error("Admin metrics error:", error);
+      res.status(500).json({ error: "Failed to fetch admin metrics" });
+    }
+  });
+
   // Stripe webhook handler with enhanced validation and logging
   app.post("/api/stripe-webhook", async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
