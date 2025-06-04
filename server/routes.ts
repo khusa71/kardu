@@ -217,7 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Enforce AI model access based on user tier
-      const enforcedProvider = enforceAIModelAccess(user.isPremium, apiProvider);
+      const enforcedProvider = enforceAIModelAccess(Boolean(user.isPremium), apiProvider);
       
       // Get available provider with fallback
       const validation = (req as any).apiKeyValidation;
@@ -1471,13 +1471,20 @@ async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: stri
       currentTask: "Regenerating flashcards with new context..."
     });
 
+    // Determine the correct API key for the provider
+    const apiProvider = job.apiProvider as "openai" | "anthropic";
+    const apiKey = apiProvider === "openai" 
+      ? process.env.OPENAI_API_KEY! 
+      : process.env.ANTHROPIC_API_KEY!;
+
     const flashcards = await generateFlashcards(
       extractedText,
-      job.subject || "General",
-      (job.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
+      apiProvider,
+      apiKey,
       job.flashcardCount,
-      (job.apiProvider as "openai" | "anthropic") || "anthropic",
+      job.subject || "General",
       focusAreas,
+      (job.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
       customContext
     );
 
