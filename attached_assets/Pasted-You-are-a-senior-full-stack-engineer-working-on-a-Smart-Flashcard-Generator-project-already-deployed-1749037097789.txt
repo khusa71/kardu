@@ -1,0 +1,68 @@
+You are a senior full-stack engineer working on a Smart Flashcard Generator project already deployed. We have completed the following tasks:
+
+✓ API Key Validation Middleware  
+✓ Job Deletion API with storage cleanup and auth  
+✓ Stripe Webhook Signature Validation with logging  
+
+We are currently implementing:
+→ AI Service Error Handling (retry + provider fallback)  
+→ WebSocket for Real-Time Updates  
+→ File Upload Validation Middleware  
+
+Your next tasks are to implement the following **newly identified issues**. Fix each in order, and show the complete fix (including both backend + frontend changes where needed):
+
+---
+
+### 1. 🗃️ Multiple File Upload with Role-Based Limits
+- Implement multi-file upload support on the frontend.
+- On backend, restrict:
+  - **Free users**: 1 file per upload, max 10MB  
+  - **Premium users**: Up to 10 files per upload, each ≤ 10MB
+- Add clear error messages for violations.
+- Ensure upload progress UI supports multiple files.
+
+---
+
+### 2. 📄 User-Provided Custom Context (Advanced Option)
+- Add new "Custom Context" textarea in advanced config panel.
+- Pass custom context to the flashcard generation prompt.
+- Include subject + difficulty + context in the prompt construction.
+- Ensure fallback if no custom context is provided.
+
+---
+
+### 3. 🎯 Emphasize Subject + Difficulty + Context as Differentiators
+- Ensure subject, difficulty, and context appear:
+  - In the flashcard metadata  
+  - In prompt construction logic  
+  - In study mode headers (UX)
+- These fields are our unique edge over generic PDF-to-chat apps.
+
+---
+
+### 4. 📥 Fix Export Buttons in Result View
+- Add missing download buttons for Anki, CSV, JSON, Quizlet
+  in the result view (not just history).
+- Ensure they only show if export exists.
+
+---
+
+### 5. 🧭 Smooth Navigation Across Pages
+- Add top navbar or sidebar with:
+  - Home
+  - Upload
+  - Study
+  - History
+  - Logout
+- Avoid relying on browser back/forward.
+- Persist navigation visibility post-login.
+
+---
+
+### Guidelines:
+- Use clean React + TypeScript code
+- Validate inputs on both client and server
+- Keep consistent UX and styling (Tailwind)
+- Add comments and explain logic briefly
+
+Start with **Task 1: Multiple File Upload with Tiered Limits**

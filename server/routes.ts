@@ -17,11 +17,12 @@ import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
 import Stripe from "stripe";
 
-// Configure multer for file uploads (memory storage to avoid local files)
+// Configure multer for multiple file uploads with role-based limits
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit per file
+    files: 10, // Maximum 10 files (will be restricted by user role)
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === "application/pdf") {
@@ -79,8 +80,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check upload limits middleware
-  const checkUploadLimits = async (req: any, res: any, next: any) => {
+  // Enhanced upload validation middleware with file count limits
+  const validateFileUploads = async (req: any, res: any, next: any) => {
     try {
       const userId = req.user!.uid;
       if (!userId) {
@@ -100,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check upload limits
+      // Check monthly upload limits
       const { canUpload, uploadsRemaining } = await storage.checkUploadLimit(userId);
       if (!canUpload) {
         return res.status(429).json({ 
@@ -112,19 +113,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Role-based file count validation
+      const files = req.files || [];
+      const fileCount = files.length;
+      
+      if (user.isPremium) {
+        // Premium users: up to 10 files
+        if (fileCount > 10) {
+          return res.status(400).json({
+            message: "Premium users can upload up to 10 files at once",
+            maxFiles: 10,
+            uploadedFiles: fileCount,
+            userType: "premium"
+          });
+        }
+      } else {
+        // Free users: only 1 file
+        if (fileCount > 1) {
+          return res.status(400).json({
+            message: "Free users can only upload 1 file at a time. Upgrade to Pro for bulk uploads.",
+            maxFiles: 1,
+            uploadedFiles: fileCount,
+            userType: "free",
+            requiresUpgrade: true
+          });
+        }
+      }
+
+      // Validate each file size (10MB max per file)
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      for (const file of files) {
+        if (file.size > maxFileSize) {
+          return res.status(400).json({
+            message: `File "${file.originalname}" exceeds 10MB limit`,
+            fileSize: file.size,
+            maxFileSize,
+            fileName: file.originalname
+          });
+        }
+      }
+
       req.uploadsRemaining = uploadsRemaining;
+      req.userType = user.isPremium ? "premium" : "free";
       next();
     } catch (error) {
-      console.error("Upload limit check error:", error);
-      res.status(500).json({ message: "Failed to check upload limits" });
+      console.error("File upload validation error:", error);
+      res.status(500).json({ message: "Failed to validate file uploads" });
     }
   };
 
-  // Upload PDF and start processing (with auth, rate limiting, and API key validation)
-  app.post("/api/upload", verifyFirebaseToken as any, checkUploadLimits as any, requireApiKeys, upload.single("pdf"), async (req: any, res) => {
+  // Upload PDF(s) and start processing (with auth, rate limiting, and API key validation)
+  app.post("/api/upload", verifyFirebaseToken as any, validateFileUploads as any, requireApiKeys, upload.array("pdfs", 10), async (req: any, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No PDF file uploaded" });
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No PDF files uploaded" });
       }
 
       const userId = req.user!.uid;
@@ -149,35 +192,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Validate input
-      const jobData = {
-        userId,
-        filename: req.file.originalname,
-        fileSize: req.file.size,
-        apiProvider: selectedProvider, // Use the validated provider
-        flashcardCount: parseInt(flashcardCount),
-        subject: subject || "general",
-        difficulty: difficulty || "intermediate",
-        focusAreas: JSON.stringify(focusAreas || {}),
-        status: "pending" as const,
-        progress: 0,
-        currentTask: selectedProvider !== apiProvider 
-          ? `Starting processing with ${selectedProvider} (fallback from ${apiProvider})...`
-          : "Starting processing...",
-      };
+      // Process multiple files - create a job for each file
+      const createdJobs = [];
+      
+      for (const file of files) {
+        // Validate input for each file
+        const jobData = {
+          userId,
+          filename: file.originalname,
+          fileSize: file.size,
+          apiProvider: selectedProvider,
+          flashcardCount: parseInt(flashcardCount),
+          subject: subject || "general",
+          difficulty: difficulty || "intermediate",
+          focusAreas: JSON.stringify(focusAreas || {}),
+          status: "pending" as const,
+          progress: 0,
+          currentTask: selectedProvider !== apiProvider 
+            ? `Starting processing with ${selectedProvider} (fallback from ${apiProvider})...`
+            : "Starting processing...",
+        };
 
-      // Create job record
-      const job = await storage.createFlashcardJob(jobData);
+        // Create job record
+        const job = await storage.createFlashcardJob(jobData);
+        createdJobs.push(job);
 
-      // Increment user upload count
+        // Start processing asynchronously with selected provider
+        processFlashcardJob(job.id, file.buffer, file.originalname, selectedProvider, subject, focusAreas, difficulty, userId, flashcardCount);
+      }
+
+      // Increment user upload count once for the batch
       await storage.incrementUserUploads(userId);
 
-      // Start processing asynchronously with selected provider
-      processFlashcardJob(job.id, req.file.buffer, req.file.originalname, selectedProvider, subject, focusAreas, difficulty, userId, flashcardCount);
-
       res.json({ 
-        jobId: job.id, 
-        status: "pending",
+        jobs: createdJobs.map(job => ({
+          jobId: job.id,
+          filename: job.filename,
+          status: job.status
+        })),
+        totalFiles: files.length,
+        userType: req.userType,
         uploadsRemaining: (req as any).uploadsRemaining - 1
       });
     } catch (error) {
