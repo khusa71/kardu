@@ -10,8 +10,8 @@ import { Settings, ChevronDown, Lightbulb, Info, Crown, Zap, LoaderPinwheel, Che
 import { useState } from "react";
 
 interface ResponsiveConfigPanelProps {
-  apiProvider: "basic" | "medium" | "advanced";
-  onApiProviderChange: (provider: "basic" | "medium" | "advanced") => void;
+  apiProvider: "basic" | "advanced";
+  onApiProviderChange: (provider: "basic" | "advanced") => void;
   flashcardCount: number;
   onFlashcardCountChange: (count: number) => void;
   subject: string;
@@ -177,7 +177,7 @@ export function ResponsiveConfigPanel({
 
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
-                AI Provider Tier
+                AI Quality Level
                 <Info className="w-3 h-3 text-gray-400" />
               </Label>
               <TooltipProvider>
@@ -189,31 +189,10 @@ export function ResponsiveConfigPanel({
                     <SelectItem value="basic" className="flex items-center">
                       <div className="flex items-center gap-2">
                         <Zap className="w-4 h-4 text-blue-500" />
-                        <span>Basic - GPT-3.5 / Claude Instant</span>
+                        <span>Basic (Fast & Cost-Efficient)</span>
                       </div>
                     </SelectItem>
                     
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <SelectItem 
-                          value="medium" 
-                          disabled={!isPremium}
-                          className={`flex items-center ${!isPremium ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Crown className="w-4 h-4 text-yellow-500" />
-                            <span>Medium - GPT-4 / Claude 2</span>
-                            {!isPremium && <span className="text-xs text-gray-400 ml-2">Premium</span>}
-                          </div>
-                        </SelectItem>
-                      </TooltipTrigger>
-                      {!isPremium && (
-                        <TooltipContent>
-                          <p>Upgrade to Premium to use this model</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <SelectItem 
@@ -223,14 +202,14 @@ export function ResponsiveConfigPanel({
                         >
                           <div className="flex items-center gap-2">
                             <Crown className="w-4 h-4 text-purple-500" />
-                            <span>Advanced - GPT-4o / Claude 3 Opus</span>
-                            {!isPremium && <span className="text-xs text-gray-400 ml-2">Premium</span>}
+                            <span>Advanced (High Accuracy)</span>
+                            {!isPremium && <span className="text-xs text-gray-400 ml-2">Premium Only</span>}
                           </div>
                         </SelectItem>
                       </TooltipTrigger>
                       {!isPremium && (
                         <TooltipContent>
-                          <p>Upgrade to Premium to use this model</p>
+                          <p>Upgrade to Premium to unlock higher-quality AI generation</p>
                         </TooltipContent>
                       )}
                     </Tooltip>

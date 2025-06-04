@@ -13,6 +13,30 @@ import { exportService } from "./export-service";
 import { objectStorage } from "./object-storage-service";
 import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
+
+// AI Model mapping for quality tiers
+const modelMap = {
+  basic: 'anthropic', // Claude 3.5 Haiku
+  advanced: 'openai'  // GPT-4o Mini
+} as const;
+
+// Enforce AI model selection based on user tier
+function enforceAIModelAccess(userIsPremium: boolean, requestedTier: string): "openai" | "anthropic" {
+  const tier = requestedTier as keyof typeof modelMap;
+  
+  // Free users can only use basic tier
+  if (!userIsPremium || tier === 'basic') {
+    return modelMap.basic;
+  }
+  
+  // Premium users can use advanced tier
+  if (userIsPremium && tier === 'advanced') {
+    return modelMap.advanced;
+  }
+  
+  // Default to basic for any invalid input
+  return modelMap.basic;
+}
 import { insertFlashcardJobSchema, users, flashcardJobs } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, and } from "drizzle-orm";
@@ -186,9 +210,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customContext,
       } = req.body;
 
+      // Get user for premium status check
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Enforce AI model access based on user tier
+      const enforcedProvider = enforceAIModelAccess(user.isPremium, apiProvider);
+      
       // Get available provider with fallback
       const validation = (req as any).apiKeyValidation;
-      const selectedProvider = getAvailableProvider(apiProvider, validation);
+      const selectedProvider = getAvailableProvider(enforcedProvider, validation);
       
       if (!selectedProvider) {
         return res.status(503).json({ 

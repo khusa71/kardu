@@ -26,7 +26,7 @@ export default function Upload() {
   // Form state - updated for multiple files
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedStorageFile, setSelectedStorageFile] = useState<any>(null);
-  const [apiProvider, setApiProvider] = useState<"basic" | "medium" | "advanced">("basic");
+  const [apiProvider, setApiProvider] = useState<"basic" | "advanced">("basic");
   const [flashcardCount, setFlashcardCount] = useState(5);
   const [customFileName, setCustomFileName] = useState<string>("");
   const [customFlashcardSetName, setCustomFlashcardSetName] = useState<string>("");
@@ -114,15 +114,13 @@ export default function Upload() {
     },
   });
 
-  // Map AI provider tiers to actual providers
-  const getActualProvider = (tier: "basic" | "medium" | "advanced"): "openai" | "anthropic" => {
+  // Map AI quality tiers to actual providers
+  const getActualProvider = (tier: "basic" | "advanced"): "openai" | "anthropic" => {
     switch (tier) {
       case "basic":
-        return "anthropic"; // Claude Instant
-      case "medium":
-        return "openai"; // GPT-4
+        return "anthropic"; // Claude 3.5 Haiku
       case "advanced":
-        return "anthropic"; // Claude 3 Opus
+        return "openai"; // GPT-4o Mini
       default:
         return "anthropic";
     }
