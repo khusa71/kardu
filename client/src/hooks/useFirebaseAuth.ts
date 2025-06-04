@@ -24,6 +24,7 @@ interface AuthUser {
   isPremium?: boolean;
   monthlyUploads?: number;
   monthlyLimit?: number;
+  getIdToken?: () => Promise<string>;
 }
 
 interface AuthContextType {
@@ -90,7 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isEmailVerified: backendUserData?.isEmailVerified || firebaseUser.emailVerified,
           isPremium: backendUserData?.isPremium || false,
           monthlyUploads: backendUserData?.monthlyUploads || 0,
-          monthlyLimit: backendUserData?.monthlyLimit || 3
+          monthlyLimit: backendUserData?.monthlyLimit || 3,
+          getIdToken: () => firebaseUser.getIdToken()
         });
       } else {
         setUser(null);

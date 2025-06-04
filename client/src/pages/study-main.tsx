@@ -83,7 +83,7 @@ export default function StudyMain() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await user?.getIdToken()}`
+            'Authorization': `Bearer ${await user?.getIdToken?.()}`
           },
           body: JSON.stringify({
             jobId: selectedJobId,

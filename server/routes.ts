@@ -44,6 +44,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 export async function registerRoutes(app: Express): Promise<Server> {
   // Raw body middleware for Stripe webhooks
   app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
+  
+  // JSON middleware for all other routes
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   // Firebase Auth routes
   app.post('/api/auth/sync', verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {

@@ -158,7 +158,10 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 try {
-                                  const token = await user?.getIdToken();
+                                  if (!user?.getIdToken) {
+                                    throw new Error('Authentication required');
+                                  }
+                                  const token = await user.getIdToken();
                                   const link = document.createElement('a');
                                   link.href = `/api/download/pdf/${job.id}`;
                                   link.setAttribute('download', job.filename);
