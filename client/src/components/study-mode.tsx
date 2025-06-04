@@ -246,8 +246,8 @@ export function StudyMode({ flashcards, onComplete, onExit }: StudyModeProps) {
             <Badge className={getStatusColor(currentCard.status)}>
               {currentCard.status}
             </Badge>
-            {currentCard.topic && (
-              <Badge variant="secondary">{currentCard.topic}</Badge>
+            {currentCard.subject && (
+              <Badge variant="secondary">{currentCard.subject}</Badge>
             )}
             {currentCard.difficulty && (
               <Badge className={getDifficultyColor(currentCard.difficulty)}>
@@ -259,7 +259,7 @@ export function StudyMode({ flashcards, onComplete, onExit }: StudyModeProps) {
         <CardContent className="text-center space-y-6">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Question:</h3>
-            <p className="text-base leading-relaxed">{currentCard.question}</p>
+            <p className="text-base leading-relaxed">{currentCard.front}</p>
           </div>
           
           {showAnswer ? (
@@ -267,7 +267,7 @@ export function StudyMode({ flashcards, onComplete, onExit }: StudyModeProps) {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-green-600">Answer:</h3>
                 <div className="text-base leading-relaxed whitespace-pre-wrap">
-                  {currentCard.answer}
+                  {currentCard.back}
                 </div>
               </div>
               
