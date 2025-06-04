@@ -4,17 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileText, CheckCircle } from "lucide-react";
 
 interface ResponsiveUploadZoneProps {
-  selectedFile: File | null;
-  onFileSelect: (file: File) => void;
-  onFileRemove: () => void;
+  selectedFiles: File[];
+  onFilesSelect: (files: File[]) => void;
+  onFileRemove: (index: number) => void;
   disabled?: boolean;
+  isPremium?: boolean;
+  maxFiles?: number;
 }
 
 export function ResponsiveUploadZone({ 
-  selectedFile, 
-  onFileSelect, 
+  selectedFiles, 
+  onFilesSelect, 
   onFileRemove, 
-  disabled = false 
+  disabled = false,
+  isPremium = false,
+  maxFiles = 1
 }: ResponsiveUploadZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -22,33 +26,44 @@ export function ResponsiveUploadZone({
     e.preventDefault();
     setIsDragOver(false);
     
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        if (file.size > 10 * 1024 * 1024) { // 10MB limit
-          alert('File size must be less than 10MB');
-          return;
-        }
-        onFileSelect(file);
-      } else {
-        alert('Please select a PDF file');
-      }
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    handleFileSelection(droppedFiles);
+  };
+  
+  const handleFileSelection = (newFiles: File[]) => {
+    // Filter PDF files only
+    const pdfFiles = newFiles.filter(file => 
+      file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    );
+    
+    if (pdfFiles.length === 0) {
+      alert('Please select PDF files only');
+      return;
     }
+    
+    // Check file size limit (10MB per file)
+    const oversizedFiles = pdfFiles.filter(file => file.size > 10 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      alert(`These files exceed 10MB limit: ${oversizedFiles.map(f => f.name).join(', ')}`);
+      return;
+    }
+    
+    // Check file count limits based on user type
+    const totalFiles = selectedFiles.length + pdfFiles.length;
+    if (totalFiles > maxFiles) {
+      const userType = isPremium ? 'Premium' : 'Free';
+      alert(`${userType} users can upload up to ${maxFiles} file${maxFiles > 1 ? 's' : ''} at once. ${isPremium ? '' : 'Upgrade to Pro for bulk uploads.'}`);
+      return;
+    }
+    
+    // Add new files to existing selection
+    onFilesSelect([...selectedFiles, ...pdfFiles]);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        if (file.size > 10 * 1024 * 1024) { // 10MB limit
-          alert('File size must be less than 10MB');
-          return;
-        }
-        onFileSelect(file);
-      } else {
-        alert('Please select a PDF file');
-      }
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      handleFileSelection(files);
     }
   };
 
@@ -57,9 +72,10 @@ export function ResponsiveUploadZone({
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.pdf';
+    input.multiple = maxFiles > 1;
     input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) onFileSelect(file);
+      const files = Array.from((e.target as HTMLInputElement).files || []);
+      if (files.length > 0) handleFileSelection(files);
     };
     input.click();
   };
@@ -119,33 +135,47 @@ export function ResponsiveUploadZone({
           </div>
         </div>
 
-        {/* File Preview */}
-        {selectedFile && (
-          <div className="mt-4 lg:mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                <FileText className="w-5 h-5 text-red-500 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-neutral dark:text-white truncate">
-                    {selectedFile.name}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
-                  </p>
+        {/* File Preview - Multiple Files */}
+        {selectedFiles.length > 0 && (
+          <div className="mt-4 lg:mt-6 space-y-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-neutral dark:text-white">
+                Selected Files ({selectedFiles.length}/{maxFiles})
+              </span>
+              {!isPremium && selectedFiles.length >= 1 && (
+                <span className="text-xs text-blue-600 dark:text-blue-400">
+                  Upgrade to Pro for bulk uploads
+                </span>
+              )}
+            </div>
+            {selectedFiles.map((file, index) => (
+              <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm text-neutral dark:text-white truncate">
+                        {file.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {(file.size / 1024 / 1024).toFixed(1)} MB
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFileRemove(index);
+                    }}
+                    className="text-gray-400 hover:text-red-500 flex-shrink-0 ml-2"
+                  >
+                    ×
+                  </Button>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onFileRemove();
-                }}
-                className="text-gray-400 hover:text-red-500 flex-shrink-0 ml-2"
-              >
-                ×
-              </Button>
-            </div>
+            ))}
           </div>
         )}
       </CardContent>

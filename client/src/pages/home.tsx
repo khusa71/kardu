@@ -351,7 +351,7 @@ export default function Home() {
             />
 
             {/* Generate Button */}
-            {selectedFile && currentStep >= 2 && (
+            {selectedFiles.length > 0 && currentStep >= 2 && (
               <Card>
                 <CardContent className="p-4 lg:p-8 text-center">
                   <Button 
