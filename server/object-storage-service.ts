@@ -238,9 +238,9 @@ export class ObjectStorageService {
   private generateCSVContent(flashcards: any[]): string {
     const header = 'Question,Answer,Topic,Difficulty\n';
     const rows = flashcards.map(card => {
-      const question = this.escapeCsv(card.question || '');
-      const answer = this.escapeCsv(card.answer || '');
-      const topic = this.escapeCsv(card.topic || '');
+      const question = this.escapeCsv(card.front || card.question || '');
+      const answer = this.escapeCsv(card.back || card.answer || '');
+      const topic = this.escapeCsv(card.subject || card.topic || '');
       const difficulty = this.escapeCsv(card.difficulty || '');
       return `"${question}","${answer}","${topic}","${difficulty}"`;
     }).join('\n');
@@ -251,8 +251,8 @@ export class ObjectStorageService {
   // Helper method to generate Quizlet content
   private generateQuizletContent(flashcards: any[]): string {
     return flashcards.map(card => {
-      const question = this.cleanForQuizlet(card.question || '');
-      const answer = this.cleanForQuizlet(card.answer || '');
+      const question = this.cleanForQuizlet(card.front || card.question || '');
+      const answer = this.cleanForQuizlet(card.back || card.answer || '');
       return `${question}\t${answer}`;
     }).join('\n');
   }

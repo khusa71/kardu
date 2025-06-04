@@ -320,13 +320,13 @@ export default function Study() {
                     }
                   }}
                 >
-                  {showAnswer ? currentCard?.answer || "" : currentCard?.question || ""}
+                  {showAnswer ? currentCard?.back || "" : currentCard?.front || ""}
                 </ReactMarkdown>
               </div>
               
-              {currentCard?.topic && (
+              {currentCard?.subject && (
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <Badge variant="secondary">{currentCard.topic}</Badge>
+                  <Badge variant="secondary">{currentCard.subject}</Badge>
                   {currentCard.difficulty && (
                     <Badge variant="outline">{currentCard.difficulty}</Badge>
                   )}

@@ -211,7 +211,7 @@ async function generateFlashcardsWithProvider(
   // Ensure we have exactly the requested count and add metadata
   const finalFlashcards = allFlashcards.slice(0, count);
   
-  return finalFlashcards.map(card => ({
+  return finalFlashcards.map((card: any) => ({
     front: card.question || card.front,
     back: card.answer || card.back,
     subject: card.topic || card.subject || subject,
