@@ -14,9 +14,9 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { tomorrow } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 interface FlashcardPair {
-  question: string;
-  answer: string;
-  topic?: string;
+  front: string;
+  back: string;
+  subject?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
 }
 

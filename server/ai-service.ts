@@ -212,9 +212,9 @@ async function generateFlashcardsWithProvider(
   const finalFlashcards = allFlashcards.slice(0, count);
   
   return finalFlashcards.map(card => ({
-    question: card.question,
-    answer: card.answer,
-    topic: card.topic || subject,
+    front: card.question || card.front,
+    back: card.answer || card.back,
+    subject: card.topic || card.subject || subject,
     difficulty: difficulty as "beginner" | "intermediate" | "advanced"
   }));
 }
@@ -519,16 +519,20 @@ function validateAndFormatFlashcards(flashcards: any[]): FlashcardPair[] {
   const validFlashcards: FlashcardPair[] = [];
   
   for (const card of flashcards) {
+    const front = card.question || card.front;
+    const back = card.answer || card.back;
+    
     if (
-      typeof card.question === 'string' &&
-      typeof card.answer === 'string' &&
-      card.question.trim() &&
-      card.answer.trim()
+      typeof front === 'string' &&
+      typeof back === 'string' &&
+      front.trim() &&
+      back.trim()
     ) {
       validFlashcards.push({
-        question: card.question.trim(),
-        answer: card.answer.trim(),
-        topic: typeof card.topic === 'string' ? card.topic.trim() : undefined,
+        front: front.trim(),
+        back: back.trim(),
+        subject: typeof card.topic === 'string' ? card.topic.trim() : 
+                typeof card.subject === 'string' ? card.subject.trim() : undefined,
         difficulty: typeof card.difficulty === 'string' ? 
           card.difficulty as 'beginner' | 'intermediate' | 'advanced' : 
           undefined
