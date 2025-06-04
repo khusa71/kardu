@@ -13,7 +13,9 @@ import { exportService } from "./export-service";
 import { objectStorage } from "./object-storage-service";
 import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
-import { insertFlashcardJobSchema } from "@shared/schema";
+import { insertFlashcardJobSchema, users, flashcardJobs } from "@shared/schema";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import Stripe from "stripe";
 

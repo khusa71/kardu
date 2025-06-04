@@ -1,0 +1,96 @@
+Despite the recent progress report, the following features are not visible or functioning on the frontend. Please verify each implementation end-to-end, ensure backend integration, and confirm it reflects on the UI.
+
+❌ Issue 1: Navigation Buttons Still Leading to 404
+Expected Behavior:
+
+All navbar links (Home, Upload, History, Study, Admin, Logout) should navigate correctly.
+
+Tasks:
+
+Audit react-router-dom route setup.
+
+Ensure all pages (/, /upload, /history, /study, /admin) are registered.
+
+Fix case sensitivity, typos, or folder structure errors.
+
+Ensure Navbar component is included in all layouts (except login if needed).
+
+Check Navbar button paths and Link components.
+
+❌ Issue 2: "My Files" Modal Not Working
+Expected Behavior:
+
+On Upload page, users should see a "Browse My Files" button/modal.
+
+Users can select from their previously uploaded PDFs to regenerate flashcards.
+
+Tasks:
+
+Frontend:
+
+Check if modal component is mounted in Upload page.
+
+Add button to trigger modal visibility.
+
+Ensure file list loads using /api/files.
+
+Backend:
+
+Confirm /api/files route returns files for req.user.id.
+
+Make sure it’s returning filenames, job IDs, and valid download URLs.
+
+Test end-to-end:
+
+Pick a file → flashcard config fills → regenerate job works.
+
+❌ Issue 3: Flashcard Preview & Study Mode UI Not Working as Intended
+Expected Behavior:
+
+Flashcards should show with:
+
+Markdown formatting
+
+Code syntax highlighting
+
+Navigation (Next/Prev)
+
+Progress indicators (e.g., 3 of 25)
+
+Buttons for "Easy", "Medium", "Hard"
+
+Tasks:
+
+Check study-mode.tsx and preview-mode.tsx components.
+
+Ensure markdown renderer (react-markdown) and syntax highlighter (react-syntax-highlighter) are used.
+
+Verify state handling for current card, total cards, review buttons, and styling.
+
+❌ Issue 4: Admin Page Inaccessible and No Backend Support
+Expected Behavior:
+
+/admin route should render an Admin Dashboard.
+
+Only users with admin role/email should see it.
+
+Admin user list and dashboard metrics must be visible.
+
+Tasks:
+
+Frontend:
+
+Add /admin route with protected access.
+
+If using hardcoded email for now (admin@example.com), check if currentUser.email logic is wired.
+
+Backend:
+
+Add GET /api/admin/metrics route with dummy data.
+
+Check if the database contains a users or roles table with admin flag or match by email.
+
+Create dummy admin user if needed.
+
+Add logic to restrict non-admins from accessing the page.
+

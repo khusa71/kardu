@@ -28,9 +28,9 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
 
   const navItems = [
     { path: "/", label: "Home", icon: Home },
-    { path: "/upload", label: "Upload", icon: Upload },
     { path: "/history", label: "History", icon: History },
-    { path: "/study", label: "Study", icon: BookOpen },
+    ...(user?.email === 'admin@example.com' || user?.email?.includes('admin') ? 
+      [{ path: "/admin", label: "Admin", icon: User }] : [])
   ];
 
   const isActive = (path: string) => {

@@ -64,15 +64,18 @@ export default function Study() {
   // Update study progress mutation
   const updateProgressMutation = useMutation({
     mutationFn: async ({ status, difficultyRating }: { status: string; difficultyRating?: string }) => {
-      return apiRequest(`/api/study-progress`, {
+      return fetch(`/api/study-progress`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           jobId: parseInt(jobId!),
           cardIndex: currentCardIndex,
           status,
           difficultyRating
         })
-      });
+      }).then(res => res.json());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/study-progress', jobId] });
