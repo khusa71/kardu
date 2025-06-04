@@ -188,7 +188,8 @@ async function generateFlashcardsWithProvider(
         currentChunkCount,
         subject,
         focusAreas,
-        difficulty
+        difficulty,
+        customContext
       );
       
       allFlashcards.push(...chunkFlashcards);
@@ -225,9 +226,10 @@ async function generateFlashcardsForChunk(
   count: number,
   subject: string,
   focusAreas: FocusAreas,
-  difficulty: string
+  difficulty: string,
+  customContext?: string
 ): Promise<FlashcardPair[]> {
-  const prompt = createFlashcardPrompt(text, count, subject, focusAreas, difficulty);
+  const prompt = createFlashcardPrompt(text, count, subject, focusAreas, difficulty, customContext);
   
   if (provider === "openai") {
     return generateWithOpenAI(prompt, apiKey);
@@ -315,7 +317,8 @@ function createFlashcardPrompt(
   count: number,
   subject: string,
   focusAreas: FocusAreas,
-  difficulty: string
+  difficulty: string,
+  customContext?: string
 ): string {
   const focusAreasText = Object.entries(focusAreas)
     .filter(([_, enabled]) => enabled)
@@ -330,14 +333,24 @@ function createFlashcardPrompt(
     })
     .join(', ');
 
-  const subjectContext = getSubjectContext(subject);
+  // Use custom context if provided, otherwise use subject-based context
+  const basePrompt = customContext && customContext.trim() 
+    ? `CUSTOM CONTEXT PROVIDED:
+${customContext}
+
+Apply the following requirements to the custom context above:`
+    : `SUBJECT CONTEXT:
+Subject: ${getSubjectContext(subject).name}
+Focus areas: ${focusAreasText || 'General concepts and knowledge'}
+
+Apply subject-specific requirements:`;
 
   return `
+${basePrompt}
+
 STRICT REQUIREMENTS:
 - Generate EXACTLY ${count} flashcards, no more, no less
-- Subject: ${subjectContext.name}
 - Difficulty: ${difficulty} level
-- Focus areas: ${focusAreasText || 'General concepts and knowledge'}
 
 Content to analyze:
 """

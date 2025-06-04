@@ -485,21 +485,58 @@ export default function Home() {
                     </div>
 
                     {jobStatus.status === 'completed' && (
-                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                        <Button onClick={() => setViewMode('edit')} variant="outline">
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Cards
-                        </Button>
-                        <Button onClick={() => setViewMode('study')}>
-                          <Play className="w-4 h-4 mr-2" />
-                          Study Now
-                        </Button>
-                        <Button variant="outline" asChild>
-                          <a href={`/api/download/${jobStatus.id}`} download>
-                            <Download className="w-4 h-4 mr-2" />
-                            Download Anki
-                          </a>
-                        </Button>
+                      <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <Button onClick={() => setViewMode('edit')} variant="outline">
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit Cards
+                          </Button>
+                          <Button onClick={() => setViewMode('study')}>
+                            <Play className="w-4 h-4 mr-2" />
+                            Study Now
+                          </Button>
+                        </div>
+                        
+                        {/* Export Buttons */}
+                        <div className="border-t pt-4">
+                          <h4 className="text-sm font-medium text-center mb-3 text-gray-600 dark:text-gray-300">
+                            Download Formats
+                          </h4>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {jobStatus.ankiDownloadUrl && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={jobStatus.ankiDownloadUrl} download>
+                                  <Download className="w-3 h-3 mr-1" />
+                                  Anki (.apkg)
+                                </a>
+                              </Button>
+                            )}
+                            {jobStatus.csvDownloadUrl && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={jobStatus.csvDownloadUrl} download>
+                                  <Download className="w-3 h-3 mr-1" />
+                                  CSV
+                                </a>
+                              </Button>
+                            )}
+                            {jobStatus.jsonDownloadUrl && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={jobStatus.jsonDownloadUrl} download>
+                                  <Download className="w-3 h-3 mr-1" />
+                                  JSON
+                                </a>
+                              </Button>
+                            )}
+                            {jobStatus.quizletDownloadUrl && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={jobStatus.quizletDownloadUrl} download>
+                                  <Download className="w-3 h-3 mr-1" />
+                                  Quizlet
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
