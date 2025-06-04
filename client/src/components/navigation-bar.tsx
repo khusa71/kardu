@@ -76,7 +76,7 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
             <div className="flex items-center space-x-2">
               <User className="w-4 h-4 text-gray-500" />
               <div className="text-sm">
-                <p className="text-gray-900 dark:text-white font-medium">
+                <p className="text-gray-900 dark:text-white font-medium max-w-24 truncate">
                   {user.email?.split('@')[0]}
                 </p>
                 <Badge variant={(user as any)?.isPremium ? "default" : "secondary"} className="text-xs">
