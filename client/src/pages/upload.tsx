@@ -508,7 +508,28 @@ export default function Upload() {
                     {jobStatus.status === 'completed' && (
                       <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                          <Button onClick={() => setViewMode('edit')} variant="outline">
+                          <Button 
+                            onClick={() => {
+                              // Ensure flashcards are loaded before switching to edit mode
+                              if (jobStatus?.flashcards) {
+                                let flashcards: FlashcardPair[] = [];
+                                if (Array.isArray(jobStatus.flashcards)) {
+                                  flashcards = jobStatus.flashcards;
+                                } else if (typeof jobStatus.flashcards === 'string') {
+                                  try {
+                                    const parsed = JSON.parse(jobStatus.flashcards);
+                                    flashcards = Array.isArray(parsed) ? parsed : [];
+                                  } catch (error) {
+                                    console.error('Failed to parse flashcards:', error);
+                                    flashcards = [];
+                                  }
+                                }
+                                setEditableFlashcards(flashcards);
+                              }
+                              setViewMode('edit');
+                            }} 
+                            variant="outline"
+                          >
                             <Edit className="w-4 h-4 mr-2" />
                             Edit Cards
                           </Button>
