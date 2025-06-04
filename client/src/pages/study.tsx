@@ -61,6 +61,65 @@ export default function Study() {
   const progress: StudyProgress[] = (progressData as any)?.progress || [];
   const stats: StudyStats = (progressData as any)?.stats || { total: flashcards.length, known: 0, reviewing: 0 };
 
+  // Error handling for missing data
+  if (!jobLoading && !jobData) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="flex items-center justify-center min-h-[80vh]">
+          <Card className="max-w-md">
+            <CardContent className="text-center p-8">
+              <div className="text-red-500 mb-4">
+                <XCircle className="w-16 h-16 mx-auto" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Flashcard Set Not Found</h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                The flashcard set you're looking for doesn't exist or has been removed.
+              </p>
+              <Button onClick={() => window.location.href = '/history'}>
+                <Home className="w-4 h-4 mr-2" />
+                Back to History
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!jobLoading && jobData && (!flashcards || flashcards.length === 0)) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="flex items-center justify-center min-h-[80vh]">
+          <Card className="max-w-md">
+            <CardContent className="text-center p-8">
+              <div className="text-yellow-500 mb-4">
+                <Clock className="w-16 h-16 mx-auto" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">No Flashcards Available</h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                This flashcard set is empty or still being processed. Please check back later or regenerate the flashcards.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => window.location.href = '/history'}>
+                  <Home className="w-4 h-4 mr-2" />
+                  Back to History
+                </Button>
+                {jobData.status === 'completed' && (
+                  <Button onClick={() => window.location.href = `/regenerate/${jobId}`}>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Regenerate
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   // Update study progress mutation
   const updateProgressMutation = useMutation({
     mutationFn: async ({ status, difficultyRating }: { status: string; difficultyRating?: string }) => {
