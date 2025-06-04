@@ -17,7 +17,7 @@ app.use((req, res, next) => {
   const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === 'true';
   const protocol = req.header('x-forwarded-proto') || 
                   req.header('x-scheme') || 
-                  (req.connection.encrypted ? 'https' : 'http');
+                  (req.secure ? 'https' : 'http');
   
   if (isProduction && protocol !== 'https') {
     const host = req.header('host') || req.header('x-forwarded-host');
