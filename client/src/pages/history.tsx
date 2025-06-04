@@ -321,20 +321,20 @@ export default function History() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {jobs.map((job: HistoryJob) => (
               <Card key={job.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center space-x-2">
-                        <FileText className="w-5 h-5" />
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
+                        <FileText className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                         <span className="truncate">{job.filename}</span>
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        <div className="flex items-center space-x-4 text-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm">
                           <span className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1" />
+                            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                             {formatDate(job.createdAt)}
                           </span>
                           <span>{formatFileSize(job.fileSize)}</span>
@@ -343,8 +343,8 @@ export default function History() {
                         </div>
                       </CardDescription>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={getStatusColor(job.status)}>
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <Badge className={`${getStatusColor(job.status)} text-xs`}>
                         {getStatusIcon(job.status)}
                         <span className="ml-1 capitalize">{job.status}</span>
                       </Badge>
@@ -386,83 +386,85 @@ export default function History() {
                     <Separator />
 
                     {/* Action buttons */}
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                       {job.hasFlashcards && (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewFlashcards(job)}
-                          className="flex items-center"
+                          className="flex items-center justify-center"
                         >
                           <Eye className="w-4 h-4 mr-2" />
                           View Flashcards
                         </Button>
                       )}
 
-                      {job.hasAnkiDeck && (
+                      <div className="flex flex-wrap gap-2">
+                        {job.hasAnkiDeck && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownload(job.id, 'anki')}
+                            className="flex items-center justify-center text-xs sm:text-sm"
+                          >
+                            <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                            Anki
+                          </Button>
+                        )}
+
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDownload(job.id, 'anki')}
-                          className="flex items-center"
+                          onClick={() => handleDownload(job.id, 'pdf')}
+                          className="flex items-center justify-center text-xs sm:text-sm"
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Anki Deck
+                          <FileDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                          PDF
                         </Button>
-                      )}
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownload(job.id, 'pdf')}
-                        className="flex items-center"
-                      >
-                        <FileDown className="w-4 h-4 mr-2" />
-                        Original PDF
-                      </Button>
+                        {job.hasFlashcards && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownload(job.id, 'csv')}
+                              className="flex items-center justify-center text-xs sm:text-sm"
+                            >
+                              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                              CSV
+                            </Button>
 
-                      {job.hasFlashcards && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownload(job.id, 'csv')}
-                            className="flex items-center"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            CSV
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownload(job.id, 'json')}
+                              className="flex items-center justify-center text-xs sm:text-sm"
+                            >
+                              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                              JSON
+                            </Button>
 
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownload(job.id, 'json')}
-                            className="flex items-center"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            JSON
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownload(job.id, 'quizlet')}
-                            className="flex items-center"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Quizlet
-                          </Button>
-                        </>
-                      )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownload(job.id, 'quizlet')}
+                              className="flex items-center justify-center text-xs sm:text-sm"
+                            >
+                              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                              Quizlet
+                            </Button>
+                          </>
+                        )}
+                      </div>
 
                       {/* Delete button */}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteJob(job.id, job.filename)}
-                        className="flex items-center text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+                        className="flex items-center text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 text-xs sm:text-sm mt-2 sm:mt-0"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                         Delete
                       </Button>
                     </div>
