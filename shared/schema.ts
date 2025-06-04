@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   provider: varchar("provider").notNull(), // 'google' | 'email'
   isEmailVerified: boolean("is_email_verified").default(false),
   isPremium: boolean("is_premium").default(false),
+  role: varchar("role").default("user"), // 'user' | 'admin' | 'moderator'
   monthlyUploads: integer("monthly_uploads").default(0),
   monthlyLimit: integer("monthly_limit").default(3),
   lastUploadDate: timestamp("last_upload_date"),

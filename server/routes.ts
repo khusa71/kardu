@@ -749,10 +749,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.uid;
       const user = await storage.getUser(userId);
       
-      // Check if user is admin (using email-based check)
-      const isAdmin = user?.email === 'admin@example.com' || user?.email === 'your-admin-email@domain.com';
-      
-      if (!isAdmin) {
+      // Check if user has admin role
+      if (!user || user.role !== 'admin') {
         return res.status(403).json({ error: "Access denied. Admin privileges required." });
       }
 

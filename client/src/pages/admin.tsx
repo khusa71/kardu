@@ -25,11 +25,16 @@ interface AdminMetrics {
 export default function Admin() {
   const { user } = useFirebaseAuth();
 
-  // Check if user is admin (using email-based check)
-  const isAdmin = user?.email === 'admin@example.com' || user?.email === 'your-admin-email@domain.com';
+  // Fetch user details to check admin role
+  const { data: userData } = useQuery({
+    queryKey: ['/api/auth/user'],
+    enabled: !!user,
+  });
+
+  const isAdmin = userData?.role === 'admin';
 
   // Fetch admin metrics
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isLoading, error: metricsError } = useQuery({
     queryKey: ['/api/admin/metrics'],
     enabled: isAdmin,
   });
