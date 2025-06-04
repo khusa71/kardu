@@ -60,7 +60,7 @@ export default function Study() {
   // Study progress mutation
   const updateProgressMutation = useMutation({
     mutationFn: (data: { jobId: number; cardIndex: number; status: string; difficultyRating?: string }) =>
-      apiRequest('/api/study-progress', { method: 'POST', body: data }),
+      apiRequest('POST', '/api/study-progress', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/study-progress', jobId] });
       toast({
