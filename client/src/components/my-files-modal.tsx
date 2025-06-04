@@ -117,7 +117,7 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>My Files</DialogTitle>
           <DialogDescription>
@@ -125,7 +125,7 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -146,8 +146,10 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
               {userJobs.map((job: FlashcardJob) => (
                 <Card 
                   key={job.id} 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedJob?.id === job.id ? 'ring-2 ring-primary' : ''
+                  className={`cursor-pointer transition-all hover:shadow-md border-2 ${
+                    selectedJob?.id === job.id 
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary ring-opacity-20' 
+                      : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
                   }`}
                   onClick={() => handleFileSelect(job)}
                 >
@@ -254,19 +256,21 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
           )}
         </div>
 
-        <div className="flex justify-between items-center pt-4 border-t">
+        <div className="flex justify-between items-center pt-4 border-t flex-shrink-0">
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            {selectedJob ? `Selected: ${selectedJob.filename}` : 'Select a file to proceed'}
+            {selectedJob ? `Selected: ${selectedJob.filename}` : 'Click on a file to select it'}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            {selectedJob && (
-              <Button onClick={handleConfirmSelection} disabled={!selectedJob}>
-                Select File
-              </Button>
-            )}
+            <Button 
+              onClick={handleConfirmSelection} 
+              disabled={!selectedJob}
+              className={selectedJob ? 'bg-primary hover:bg-primary/90' : ''}
+            >
+              {selectedJob ? 'Use This File' : 'Select a File'}
+            </Button>
           </div>
         </div>
       </DialogContent>
