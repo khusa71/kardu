@@ -51,6 +51,7 @@ export default function Home() {
   const [showEmailVerificationMessage, setShowEmailVerificationMessage] = useState(false);
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showMyFilesModal, setShowMyFilesModal] = useState(false);
 
   // Poll for job status
   const { data: jobStatus } = useQuery<FlashcardJob>({

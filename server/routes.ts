@@ -1333,7 +1333,7 @@ async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: stri
       job.subject || "General",
       (job.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
       job.flashcardCount,
-      (job.apiProvider as "openai" | "anthropic"),
+      ((job.apiProvider === "openai" || job.apiProvider === "anthropic") ? job.apiProvider : "anthropic"),
       focusAreas,
       customContext
     );

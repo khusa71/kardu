@@ -87,13 +87,24 @@ export function ResponsiveUploadZone({
   return (
     <Card className="animate-fade-in">
       <CardContent className="p-4 lg:p-8">
-        <div className="flex items-center mb-4 lg:mb-6">
-          <div className="bg-primary text-white rounded-lg p-2 mr-3">
-            <FileText className="w-4 h-4 lg:w-5 lg:h-5" />
+        <div className="flex items-center justify-between mb-4 lg:mb-6">
+          <div className="flex items-center">
+            <div className="bg-primary text-white rounded-lg p-2 mr-3">
+              <FileText className="w-4 h-4 lg:w-5 lg:h-5" />
+            </div>
+            <h2 className="text-lg lg:text-xl font-semibold text-neutral dark:text-white">
+              Upload Your Educational PDF
+            </h2>
           </div>
-          <h2 className="text-lg lg:text-xl font-semibold text-neutral dark:text-white">
-            Upload Your Educational PDF
-          </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMyFiles(true)}
+            className="flex items-center"
+          >
+            <FolderOpen className="w-4 h-4 mr-2" />
+            Browse My Files
+          </Button>
         </div>
         
         <div 

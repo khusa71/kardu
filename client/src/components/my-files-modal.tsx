@@ -19,7 +19,7 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
   const { toast } = useToast();
   const [selectedJob, setSelectedJob] = useState<FlashcardJob | null>(null);
 
-  const { data: userJobs = [], isLoading } = useQuery({
+  const { data: userJobs = [], isLoading } = useQuery<FlashcardJob[]>({
     queryKey: ["/api/history"],
     enabled: isOpen,
   });
@@ -54,8 +54,9 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
     regenerateMutation.mutate(jobId);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (date: string | Date | null) => {
+    if (!date) return 'Unknown date';
+    return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
