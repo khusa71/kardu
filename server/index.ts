@@ -17,6 +17,9 @@ app.disable('x-powered-by');
 // Apply comprehensive security middleware
 app.use(securityMiddleware);
 
+// Add HTML transformation middleware for nonce injection
+app.use(htmlTransformMiddleware);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

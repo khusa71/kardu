@@ -24,8 +24,9 @@ export function securityMiddleware(req: SecureRequest, res: Response, next: Next
     req.app.set('trust proxy', 1);
   }
   
-  // Remove X-Powered-By header
+  // Force removal of X-Powered-By header early
   res.removeHeader('X-Powered-By');
+  req.app.disable('x-powered-by');
   
   // Force HTTPS in production
   const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === 'true';
@@ -87,18 +88,43 @@ function setSecurityHeaders(res: Response, nonce: string) {
  * Builds a secure Content Security Policy with nonce support
  */
 function buildSecureCSP(nonce: string): string {
-  return [
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  // Base CSP directives
+  const baseDirectives = [
     `default-src 'self'`,
+    `object-src 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+    `frame-ancestors 'none'`,
+    `manifest-src 'self'`,
+    `media-src 'self' data: blob:`
+  ];
+  
+  // Production CSP - strict with nonces only
+  const productionDirectives = [
     `script-src 'self' 'nonce-${nonce}' https://js.stripe.com https://checkout.stripe.com`,
     `style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com`,
     `img-src 'self' data: blob: https: *.stripe.com`,
     `font-src 'self' data: https://fonts.gstatic.com`,
     `connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com wss: ws: https://kardu.io`,
     `frame-src https://js.stripe.com https://checkout.stripe.com`,
-    `object-src 'none'`,
-    `base-uri 'self'`,
-    `form-action 'self'`,
-    `frame-ancestors 'none'`,
+    `worker-src 'self' blob:`,
     `upgrade-insecure-requests`
-  ].join('; ');
+  ];
+  
+  // Development CSP - slightly relaxed for Vite HMR but still secure
+  const developmentDirectives = [
+    `script-src 'self' 'nonce-${nonce}' https://js.stripe.com https://checkout.stripe.com https://replit.com 'unsafe-eval'`,
+    `style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com 'unsafe-inline'`,
+    `img-src 'self' data: blob: https: *.stripe.com *.replit.com`,
+    `font-src 'self' data: https://fonts.gstatic.com`,
+    `connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com wss: ws: https://kardu.io https://*.replit.dev https://*.replit.app`,
+    `frame-src https://js.stripe.com https://checkout.stripe.com`,
+    `worker-src 'self' blob:`
+  ];
+  
+  const specificDirectives = isDevelopment ? developmentDirectives : productionDirectives;
+  
+  return [...baseDirectives, ...specificDirectives].join('; ');
 }
