@@ -272,6 +272,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Navigation Bar */}
+      <NavigationBar />
+      
       {/* Responsive Header */}
       <ResponsiveNavbar 
         onAuthModalOpen={() => setShowAuthModal(true)}

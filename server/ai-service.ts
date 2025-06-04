@@ -365,20 +365,20 @@ ${difficulty === 'beginner' ?
   '- Use advanced terminology and complex concepts\n- Require synthesis and critical thinking\n- Include edge cases and nuanced scenarios'
 }
 
-SUBJECT-SPECIFIC FOCUS (${subjectContext.name}):
-1. Create flashcards that test ${subjectContext.testingFocus}
-2. Focus on ${subjectContext.contentFocus}
-3. ${subjectContext.answerStyle}
-4. Use ${subjectContext.name}-specific terminology and examples
-5. Ensure practical applicability in ${subjectContext.name}
+SUBJECT-SPECIFIC FOCUS:
+1. Create flashcards that test understanding and application
+2. Focus on key concepts and practical knowledge
+3. Provide complete and accurate answers
+4. Use appropriate terminology and examples
+5. Ensure practical applicability
 
 CRITICAL: Return EXACTLY ${count} flashcards in valid JSON format:
 {
   "flashcards": [
     {
-      "question": "Specific ${difficulty}-level question about ${subjectContext.name}",
-      "answer": "Complete answer with ${subjectContext.name} context",
-      "topic": "${subjectContext.name} topic area",
+      "question": "Specific ${difficulty}-level question",
+      "answer": "Complete answer with proper context",
+      "topic": "topic area",
       "difficulty": "${difficulty}"
     }
   ]
