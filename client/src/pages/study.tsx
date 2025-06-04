@@ -78,14 +78,33 @@ export default function Study() {
   });
 
   // Computed values - normalize flashcard data structure
-  const flashcards: FlashcardPair[] = jobData?.hasFlashcards && jobData.flashcards 
-    ? JSON.parse(jobData.flashcards).map((card: any) => ({
+  const flashcards: FlashcardPair[] = (() => {
+    console.log('JobData:', jobData);
+    console.log('Has flashcards:', jobData?.hasFlashcards);
+    console.log('Flashcards raw:', jobData?.flashcards);
+    
+    if (!jobData?.hasFlashcards || !jobData?.flashcards) {
+      return [];
+    }
+    
+    try {
+      const parsed = JSON.parse(jobData.flashcards);
+      console.log('Parsed flashcards:', parsed);
+      
+      const normalized = parsed.map((card: any) => ({
         question: card.question || card.front || '',
         answer: card.answer || card.back || '',
         topic: card.topic || card.subject || '',
         difficulty: card.difficulty || 'beginner'
-      }))
-    : [];
+      }));
+      
+      console.log('Normalized flashcards:', normalized);
+      return normalized;
+    } catch (error) {
+      console.error('Error parsing flashcards:', error);
+      return [];
+    }
+  })();
   const progress: StudyProgress[] = (progressData as any)?.progress || [];
   const stats: StudyStats = (progressData as any)?.stats || { total: flashcards.length, known: 0, reviewing: 0 };
   const currentCard = flashcards[currentCardIndex];
