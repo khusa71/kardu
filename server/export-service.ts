@@ -13,7 +13,7 @@ export class ExportService {
     const csvContent = [
       'Question,Answer,Topic,Difficulty',
       ...flashcards.map(card => 
-        `"${this.escapeCsv(card.question)}","${this.escapeCsv(card.answer)}","${card.topic || ''}","${card.difficulty || ''}"`
+        `"${this.escapeCsv(card.front)}","${this.escapeCsv(card.back)}","${card.subject || ''}","${card.difficulty || ''}"`
       )
     ].join('\n');
 
@@ -31,11 +31,11 @@ export class ExportService {
         format: 'Kardu.io Export'
       },
       flashcards: flashcards.map(card => ({
-        question: card.question,
-        answer: card.answer,
-        topic: card.topic || '',
+        question: card.front,
+        answer: card.back,
+        subject: card.subject || '',
         difficulty: card.difficulty || 'intermediate',
-        tags: card.topic ? [card.topic] : []
+        tags: card.subject ? [card.subject] : []
       }))
     };
 
@@ -48,7 +48,7 @@ export class ExportService {
   async exportToQuizlet(flashcards: FlashcardPair[], outputPath: string): Promise<string> {
     // Quizlet import format: term[tab]definition[newline]
     const quizletContent = flashcards.map(card => 
-      `${this.cleanForQuizlet(card.question)}\t${this.cleanForQuizlet(card.answer)}`
+      `${this.cleanForQuizlet(card.front)}\t${this.cleanForQuizlet(card.back)}`
     ).join('\n');
 
     const filePath = path.join(outputPath, 'flashcards_quizlet.txt');
@@ -92,7 +92,7 @@ export class ExportService {
 
     flashcards.forEach(card => {
       // Count topics
-      const topic = card.topic || 'General';
+      const topic = card.subject || 'General';
       topics.set(topic, (topics.get(topic) || 0) + 1);
 
       // Count difficulties
@@ -104,8 +104,8 @@ export class ExportService {
       totalCards: flashcards.length,
       topicDistribution: Object.fromEntries(topics),
       difficultyDistribution: Object.fromEntries(difficulties),
-      averageQuestionLength: flashcards.reduce((sum, card) => sum + card.question.length, 0) / flashcards.length,
-      averageAnswerLength: flashcards.reduce((sum, card) => sum + card.answer.length, 0) / flashcards.length
+      averageQuestionLength: flashcards.reduce((sum, card) => sum + card.front.length, 0) / flashcards.length,
+      averageAnswerLength: flashcards.reduce((sum, card) => sum + card.back.length, 0) / flashcards.length
     };
   }
 
