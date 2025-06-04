@@ -251,7 +251,7 @@ export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = fal
                     onValueChange={(value) =>
                       setEditingCard({
                         ...editingCard,
-                        card: { ...editingCard.card, difficulty: value }
+                        card: { ...editingCard.card, difficulty: value as 'beginner' | 'intermediate' | 'advanced' }
                       })
                     }
                   >

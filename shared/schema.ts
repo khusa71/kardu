@@ -109,10 +109,12 @@ export type StudyProgress = typeof studyProgress.$inferSelect;
 export type InsertStudyProgress = z.infer<typeof insertStudyProgressSchema>;
 
 export interface FlashcardPair {
-  question: string;
-  answer: string;
-  topic?: string;
+  id?: number;
+  front: string;
+  back: string;
+  subject?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  tags?: string[];
 }
 
 export interface ProcessingUpdate {

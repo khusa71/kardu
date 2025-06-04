@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { FlashcardPair } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,14 +34,7 @@ interface FlashcardJob {
   flashcards: string | FlashcardPair[];
 }
 
-interface FlashcardPair {
-  id?: number;
-  front: string;
-  back: string;
-  subject?: string;
-  difficulty?: string;
-  tags?: string[];
-}
+
 
 interface StudyProgress {
   cardIndex: number;
