@@ -70,7 +70,12 @@ export default function Upload() {
       return response.json();
     },
     onSuccess: async (data) => {
-      setCurrentJobId(data.jobId);
+      // Handle multiple jobs response
+      if (data.jobs && data.jobs.length > 0) {
+        setCurrentJobId(data.jobs[0].jobId);
+      } else if (data.jobId) {
+        setCurrentJobId(data.jobId);
+      }
       setCurrentStep(3);
       
       // Refresh user data to update upload counter
