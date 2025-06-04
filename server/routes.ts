@@ -627,7 +627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status,
         difficultyRating,
         lastReviewedAt: new Date(),
-        nextReviewDate: getNextReviewDate(status, difficultyRating)
+        nextReviewDate: calculateNextReviewDate(status, difficultyRating)
       };
 
       const updatedProgress = await storage.updateStudyProgress(progressData);
@@ -680,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.incrementUserUploads(userId);
 
       // Start processing in background
-      processRegeneratedJob(newJob.id, originalJob.pdfStorageKey!, customContext);
+      processRegeneratedFlashcardJob(newJob.id, originalJob.pdfStorageKey!, customContext);
 
       res.json({ jobId: newJob.id, status: "started" });
     } catch (error) {
@@ -1146,7 +1146,7 @@ function generateAnkiDeck(jobId: number, flashcards: any[]): Promise<string> {
 }
 
 // Helper function to calculate next review date based on difficulty
-function getNextReviewDate(status: string, difficultyRating?: string): Date {
+function calculateNextReviewDate(status: string, difficultyRating?: string): Date {
   const now = new Date();
   const nextDate = new Date(now);
 
@@ -1253,9 +1253,9 @@ async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: stri
     const flashcards = await generateFlashcards(
       extractedText,
       job.subject || "General",
-      job.difficulty as any || "intermediate",
+      (job.difficulty as "beginner" | "intermediate" | "advanced") || "intermediate",
       job.flashcardCount,
-      job.apiProvider as any,
+      (job.apiProvider as "openai" | "anthropic"),
       focusAreas,
       customContext
     );
