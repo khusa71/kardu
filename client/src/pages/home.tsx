@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FlashcardEditor } from "@/components/flashcard-editor";
 import { StudyMode } from "@/components/study-mode";
 import { AuthModal } from "@/components/auth-modal";
+import { NavigationBar } from "@/components/navigation-bar";
 import { ResponsiveNavbar } from "@/components/responsive-navbar";
 import { ResponsiveProgressStepper } from "@/components/responsive-progress-stepper";
 import { ResponsiveUploadZone } from "@/components/responsive-upload-zone";
