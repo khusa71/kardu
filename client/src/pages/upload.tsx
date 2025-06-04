@@ -128,10 +128,41 @@ export default function Upload() {
 
   // Handle file generation
   const handleGenerate = useCallback(() => {
+    // Validate inputs
     if (selectedFiles.length === 0 && !selectedStorageFile) {
       toast({
         title: "No files selected",
         description: "Please select at least one PDF file or choose from your files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate flashcard count
+    if (flashcardCount < 1 || flashcardCount > 100) {
+      toast({
+        title: "Invalid flashcard count",
+        description: "Please select between 1 and 100 flashcards.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate subject
+    if (!subject.trim()) {
+      toast({
+        title: "Subject required",
+        description: "Please specify a subject for your flashcards.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate premium access for advanced models
+    if (apiProvider === 'advanced' && !isPremium) {
+      toast({
+        title: "Premium required",
+        description: "Advanced AI quality requires a Premium subscription.",
         variant: "destructive",
       });
       return;
@@ -180,7 +211,7 @@ export default function Upload() {
     // Create form data with all files and settings
     const formData = new FormData();
     selectedFiles.forEach((file, index) => {
-      formData.append(`files`, file);
+      formData.append(`pdfs`, file);
     });
     
     formData.append('subject', subject);

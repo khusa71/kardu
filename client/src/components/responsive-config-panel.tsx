@@ -122,15 +122,21 @@ export function ResponsiveConfigPanel({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="count" className="text-sm font-medium">Number of Cards</Label>
+              <Label htmlFor="count" className="text-sm font-medium">Number of Cards (1-100)</Label>
               <Input
                 id="count"
                 type="number"
-                min="5"
+                min="1"
                 max="100"
                 value={flashcardCount}
-                onChange={(e) => onFlashcardCountChange(Number(e.target.value))}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (value >= 1 && value <= 100) {
+                    onFlashcardCountChange(value);
+                  }
+                }}
                 className="h-10 lg:h-11 text-sm"
+                placeholder="Enter 1-100"
               />
             </div>
           </div>

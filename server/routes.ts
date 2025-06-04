@@ -210,10 +210,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customContext,
       } = req.body;
 
+      // Server-side input validation
+      const count = parseInt(flashcardCount);
+      if (isNaN(count) || count < 1 || count > 100) {
+        return res.status(400).json({ 
+          message: "Invalid flashcard count. Must be between 1 and 100.",
+          field: "flashcardCount",
+          value: flashcardCount
+        });
+      }
+
+      if (!subject || !subject.trim()) {
+        return res.status(400).json({ 
+          message: "Subject is required.",
+          field: "subject"
+        });
+      }
+
+      if (!['basic', 'advanced'].includes(apiProvider)) {
+        return res.status(400).json({ 
+          message: "Invalid AI quality level.",
+          field: "apiProvider",
+          value: apiProvider
+        });
+      }
+
+      if (!['beginner', 'intermediate', 'advanced'].includes(difficulty)) {
+        return res.status(400).json({ 
+          message: "Invalid difficulty level.",
+          field: "difficulty",
+          value: difficulty
+        });
+      }
+
       // Get user for premium status check
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
+      }
+
+      // Validate premium access for advanced models
+      if (apiProvider === 'advanced' && !user.isPremium) {
+        return res.status(403).json({ 
+          message: "Advanced AI quality requires a Premium subscription.",
+          field: "apiProvider",
+          requiresUpgrade: true
+        });
       }
 
       // Enforce AI model access based on user tier
