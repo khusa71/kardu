@@ -220,8 +220,22 @@ export default function Upload() {
   // Monitor job completion and load flashcards
   useEffect(() => {
     if (jobStatus?.status === 'completed' && jobStatus.flashcards && viewMode === 'upload') {
-      setPreviewFlashcards(jobStatus.flashcards.slice(0, 3));
-      setEditableFlashcards(jobStatus.flashcards);
+      let flashcards: FlashcardPair[] = [];
+      
+      if (Array.isArray(jobStatus.flashcards)) {
+        flashcards = jobStatus.flashcards;
+      } else if (typeof jobStatus.flashcards === 'string') {
+        try {
+          const parsed = JSON.parse(jobStatus.flashcards);
+          flashcards = Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          console.error('Failed to parse flashcards:', error);
+          flashcards = [];
+        }
+      }
+      
+      setPreviewFlashcards(flashcards.slice(0, 3));
+      setEditableFlashcards(flashcards);
     }
   }, [jobStatus, viewMode]);
 
@@ -262,7 +276,8 @@ export default function Upload() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <FlashcardEditor
             flashcards={editableFlashcards}
-            onSave={(updatedFlashcards) => {
+            onFlashcardsChange={setEditableFlashcards}
+            onSave={async (updatedFlashcards) => {
               setEditableFlashcards(updatedFlashcards);
               setViewMode('upload');
               toast({
@@ -270,8 +285,13 @@ export default function Upload() {
                 description: "Your changes have been saved.",
               });
             }}
-            onCancel={() => setViewMode('upload')}
+            jobId={currentJobId || undefined}
           />
+          <div className="mt-6 flex justify-center">
+            <Button onClick={() => setViewMode('upload')} variant="outline">
+              Back to Upload
+            </Button>
+          </div>
         </main>
       </div>
     );
@@ -286,7 +306,6 @@ export default function Upload() {
           <StudyMode
             flashcards={editableFlashcards}
             onExit={() => setViewMode('upload')}
-            jobId={currentJobId}
           />
         </main>
       </div>
@@ -391,10 +410,8 @@ export default function Upload() {
               onFileRemove={(index: number) => {
                 setSelectedFiles(files => files.filter((_, i) => i !== index));
               }}
-              onFileReuse={(job) => {
-                setCurrentJobId(job.id);
-                setCurrentStep(3);
-              }}
+              onStorageFileSelect={setSelectedStorageFile}
+              selectedStorageFile={selectedStorageFile}
               isPremium={isPremium}
               maxFiles={isPremium ? 10 : 1}
             />
@@ -413,6 +430,10 @@ export default function Upload() {
               onDifficultyChange={setDifficulty}
               customContext={customContext}
               onCustomContextChange={setCustomContext}
+              customFileName={customFileName}
+              onCustomFileNameChange={setCustomFileName}
+              customFlashcardSetName={customFlashcardSetName}
+              onCustomFlashcardSetNameChange={setCustomFlashcardSetName}
               disabled={currentStep < 2}
               onGenerate={handleGenerate}
               isGenerateDisabled={isGenerateDisabled}
