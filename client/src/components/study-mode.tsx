@@ -31,7 +31,7 @@ interface KarduResults {
 }
 
 export function StudyMode({ flashcards, onComplete, onExit }: StudyModeProps) {
-  const [studyCards, setStudyCards] = useState<StudyCard[]>(() => 
+  const [studyCards, setStudyCards] = useState<KarduCard[]>(() => 
     flashcards.map(card => ({
       ...card,
       status: 'new' as const,
@@ -55,7 +55,7 @@ export function StudyMode({ flashcards, onComplete, onExit }: StudyModeProps) {
   const progress = ((currentIndex) / totalCards) * 100;
 
   // Calculate spaced repetition intervals
-  const calculateNextInterval = (card: StudyCard, isCorrect: boolean): number => {
+  const calculateNextInterval = (card: KarduCard, isCorrect: boolean): number => {
     if (isCorrect) {
       // Increase interval using spaced repetition algorithm
       return Math.min(card.interval * 2.5, 180); // Max 6 months
@@ -68,7 +68,7 @@ export function StudyMode({ flashcards, onComplete, onExit }: StudyModeProps) {
   const handleResponse = useCallback((isCorrect: boolean) => {
     if (!currentCard) return;
 
-    const updatedCard: StudyCard = {
+    const updatedCard: KarduCard = {
       ...currentCard,
       status: isCorrect ? 
         (currentCard.reviewCount >= 2 ? 'known' : 'learning') : 
@@ -122,7 +122,7 @@ export function StudyMode({ flashcards, onComplete, onExit }: StudyModeProps) {
     const totalResponses = sessionStats.correct + sessionStats.incorrect;
     const accuracy = totalResponses > 0 ? (sessionStats.correct / totalResponses) * 100 : 0;
 
-    const results: StudyResults = {
+    const results: KarduResults = {
       totalCards,
       newCards: studyCards.filter(card => card.status === 'new').length,
       learningCards: studyCards.filter(card => card.status === 'learning').length,

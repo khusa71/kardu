@@ -79,7 +79,7 @@ export default function History() {
       
       // Set filename based on format
       const job = jobs.find((j) => j.id === jobId);
-      const baseName = job?.filename.replace('.pdf', '') || `StudyCards_${jobId}`;
+      const baseName = job?.filename.replace('.pdf', '') || `Kardu_${jobId}`;
       const extensions = { anki: '.apkg', csv: '.csv', json: '.json', quizlet: '.txt', pdf: '.pdf' };
       link.download = `${baseName}${extensions[format]}`;
       

@@ -60,7 +60,7 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
           <div className="flex items-center">
             <BookOpen className="w-8 h-8 text-primary mr-3" />
             <span className="text-xl font-bold text-gray-900 dark:text-white">
-              FlashCard AI
+              Kardu.io
             </span>
           </div>
 
