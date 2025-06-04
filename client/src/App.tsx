@@ -26,7 +26,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={user ? Home : Landing} />
+      <Route path="/upload" component={user ? Home : Landing} />
       <Route path="/history" component={user ? History : Landing} />
+      <Route path="/study" component={user ? History : Landing} />
       <Route path="/study/:jobId" component={user ? Study : Landing} />
       <Route path="/admin" component={user ? Admin : Landing} />
       <Route path="/success" component={Success} />
