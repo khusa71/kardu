@@ -15,7 +15,7 @@ import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } f
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
 import { insertFlashcardJobSchema, users, flashcardJobs } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { z } from "zod";
 import Stripe from "stripe";
 
@@ -940,6 +940,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual subscription verification endpoint (fallback for webhook failures)
+  app.put("/api/jobs/:id/flashcards", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const { flashcards } = req.body;
+      
+      if (!jobId || !flashcards) {
+        return res.status(400).json({ error: "Job ID and flashcards are required" });
+      }
+
+      // Verify job ownership
+      const [job] = await db.select()
+        .from(flashcardJobs)
+        .where(eq(flashcardJobs.id, jobId))
+        .limit(1);
+
+      if (!job || job.userId !== req.user!.uid) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Update flashcards
+      await db.update(flashcardJobs)
+        .set({
+          flashcards: JSON.stringify(flashcards),
+          updatedAt: new Date()
+        })
+        .where(eq(flashcardJobs.id, jobId));
+
+      res.json({ success: true, message: "Flashcards updated successfully" });
+    } catch (error) {
+      console.error("Error updating flashcards:", error);
+      res.status(500).json({ error: "Failed to update flashcards" });
+    }
+  });
+
   app.post("/api/verify-subscription", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.uid;

@@ -16,6 +16,7 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { tomorrow } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { BookOpen, ChevronLeft, ChevronRight, RotateCcw, CheckCircle, XCircle, Eye, EyeOff, Play, FileText, Edit3, Save, X, Grid, List } from "lucide-react";
+
 interface FlashcardJob {
   id: number;
   filename: string;
@@ -125,41 +126,20 @@ export default function StudyMain() {
   const navigateCard = (direction: 'next' | 'prev') => {
     if (direction === 'next' && currentCardIndex < currentFlashcards.length - 1) {
       setCurrentCardIndex(currentCardIndex + 1);
+      setShowAnswer(false);
     } else if (direction === 'prev' && currentCardIndex > 0) {
       setCurrentCardIndex(currentCardIndex - 1);
+      setShowAnswer(false);
     }
-    setShowAnswer(false);
   };
 
-  const markDifficulty = async (difficulty: 'easy' | 'medium' | 'hard') => {
+  const markDifficulty = (difficulty: 'easy' | 'medium' | 'hard') => {
     setStudyProgress(prev => ({
       ...prev,
       [currentCardIndex]: difficulty
     }));
     
-    // Save progress to database
-    if (selectedJobId && user?.getIdToken) {
-      try {
-        const token = await user.getIdToken();
-        await fetch('/api/study-progress', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            jobId: selectedJobId,
-            cardIndex: currentCardIndex,
-            difficultyRating: difficulty,
-            status: difficulty === 'easy' ? 'known' : difficulty === 'hard' ? 'unknown' : 'reviewing'
-          })
-        });
-      } catch (error) {
-        console.error('Failed to save study progress:', error);
-      }
-    }
-    
-    // Auto advance to next card
+    // Auto-advance to next card after a short delay
     if (currentCardIndex < currentFlashcards.length - 1) {
       setTimeout(() => {
         navigateCard('next');
@@ -200,7 +180,7 @@ export default function StudyMain() {
     <div className="prose dark:prose-invert max-w-none">
       <ReactMarkdown
         components={{
-          code({ node, className, children, ...props }) {
+          code({ className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');
             const isInline = !match;
             return isInline ? (
@@ -208,18 +188,11 @@ export default function StudyMain() {
                 {children}
               </code>
             ) : (
-              <SyntaxHighlighter
-                language={match[1]}
-                PreTag="div"
-                customStyle={{
-                  margin: 0,
-                  borderRadius: '0.375rem',
-                  fontSize: '0.875rem'
-                }}
-                {...props}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
+              <pre className="bg-gray-900 text-gray-100 rounded-md p-4 overflow-x-auto">
+                <code className={className} {...props}>
+                  {children}
+                </code>
+              </pre>
             );
           },
         }}
@@ -233,9 +206,12 @@ export default function StudyMain() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <NavigationBar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+            <span>Loading...</span>
+          </div>
+        </main>
       </div>
     );
   }
@@ -244,19 +220,19 @@ export default function StudyMain() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <NavigationBar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <Card className="max-w-md">
-            <CardContent className="text-center p-8">
-              <h2 className="text-xl font-semibold mb-4">Sign in required</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Please sign in to access your study materials.
-              </p>
-              <Link href="/">
-                <Button>Go to Home</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              Authentication Required
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Please sign in to access your study materials.
+            </p>
+            <Link href="/upload">
+              <Button>Sign In</Button>
+            </Link>
+          </div>
+        </main>
       </div>
     );
   }
@@ -695,21 +671,21 @@ export default function StudyMain() {
               </CardContent>
             </Card>
 
-            {/* Difficulty Rating (only when answer is shown) */}
+            {/* Difficulty Rating */}
             {showAnswer && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-center">How well did you know this?</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex justify-center gap-4">
+                  <div className="flex flex-col gap-3">
                     <Button
-                      variant={studyProgress[currentCardIndex] === 'hard' ? 'default' : 'outline'}
-                      onClick={() => markDifficulty('hard')}
-                      className="bg-red-500 hover:bg-red-600 text-white"
+                      variant={studyProgress[currentCardIndex] === 'easy' ? 'default' : 'outline'}
+                      onClick={() => markDifficulty('easy')}
+                      className="bg-green-500 hover:bg-green-600 text-white"
                     >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Hard
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Easy
                     </Button>
                     <Button
                       variant={studyProgress[currentCardIndex] === 'medium' ? 'default' : 'outline'}
@@ -719,43 +695,17 @@ export default function StudyMain() {
                       Medium
                     </Button>
                     <Button
-                      variant={studyProgress[currentCardIndex] === 'easy' ? 'default' : 'outline'}
-                      onClick={() => markDifficulty('easy')}
-                      className="bg-green-500 hover:bg-green-600 text-white"
+                      variant={studyProgress[currentCardIndex] === 'hard' ? 'default' : 'outline'}
+                      onClick={() => markDifficulty('hard')}
+                      className="bg-red-500 hover:bg-red-600 text-white"
                     >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Easy
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Hard
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             )}
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Study Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={resetProgress}
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Reset Progress
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => setViewMode('grid')}
-                >
-                  <Grid className="w-4 h-4 mr-2" />
-                  Back to Hub
-                </Button>
-              </CardContent>
-            </Card>
 
             {/* Card Overview */}
             <Card>
@@ -803,63 +753,6 @@ export default function StudyMain() {
             </Card>
           </div>
         </div>
-      </main>
-    </div>
-  );
-}}
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => navigateCard('prev')}
-              disabled={currentCardIndex === 0}
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-            
-            <div className="text-center">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Studied: {studiedCards} / {currentFlashcards.length}
-              </div>
-            </div>
-            
-            <Button
-              variant="outline"
-              onClick={() => navigateCard('next')}
-              disabled={currentCardIndex === currentFlashcards.length - 1}
-            >
-              Next
-              <ChevronRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Study Complete */}
-        {studiedCards === currentFlashcards.length && (
-          <Card className="mt-8 border-green-200 bg-green-50 dark:bg-green-900/20">
-            <CardContent className="text-center p-8">
-              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-semibold text-green-800 dark:text-green-200 mb-2">
-                Study Session Complete!
-              </h2>
-              <p className="text-green-700 dark:text-green-300 mb-6">
-                You've reviewed all {currentFlashcards.length} flashcards in this set.
-              </p>
-              <div className="space-x-4">
-                <Button onClick={resetProgress}>
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Study Again
-                </Button>
-                <Button variant="outline" onClick={() => {
-                  setSelectedJobId(null);
-                  setCurrentFlashcards([]);
-                }}>
-                  Choose Different Set
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </main>
     </div>
   );
