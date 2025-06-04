@@ -30,7 +30,7 @@ interface FlashcardJob {
   createdAt: string;
   updatedAt: string;
   processingTime: number;
-  flashcards: string;
+  flashcards: string | FlashcardPair[];
 }
 
 interface FlashcardPair {
@@ -74,9 +74,23 @@ export default function StudyMain() {
   });
 
   // Get completed jobs with flashcards
-  const completedJobs = userJobs.filter(job => 
-    job.status === 'completed' && job.flashcards && job.flashcards.length > 0
-  );
+  const completedJobs = userJobs.filter(job => {
+    // Check if job is completed and has flashcards
+    if (job.status !== 'completed') return false;
+    if (!job.flashcards) return false;
+    
+    // Handle both string and array formats
+    if (typeof job.flashcards === 'string') {
+      try {
+        const parsed = JSON.parse(job.flashcards);
+        return Array.isArray(parsed) && parsed.length > 0;
+      } catch {
+        return false;
+      }
+    }
+    
+    return Array.isArray(job.flashcards) && job.flashcards.length > 0;
+  });
 
   // Mutation for updating flashcards
   const updateFlashcardMutation = useMutation({
