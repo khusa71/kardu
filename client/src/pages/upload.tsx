@@ -524,30 +524,56 @@ export default function Upload() {
                         
                         {/* Download Options */}
                         <div className="flex flex-wrap gap-2 justify-center">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => window.open(`/api/export/${jobStatus.id}/anki`, '_blank')}
-                          >
-                            <Download className="w-4 h-4 mr-1" />
-                            Anki Deck
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => window.open(`/api/export/${jobStatus.id}/csv`, '_blank')}
-                          >
-                            <Download className="w-4 h-4 mr-1" />
-                            CSV
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => window.open(`/api/export/${jobStatus.id}/quizlet`, '_blank')}
-                          >
-                            <Download className="w-4 h-4 mr-1" />
-                            Quizlet
-                          </Button>
+                          {jobStatus.ankiDownloadUrl && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(jobStatus.ankiDownloadUrl, '_blank')}
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Anki Deck
+                            </Button>
+                          )}
+                          {jobStatus.csvDownloadUrl && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(jobStatus.csvDownloadUrl, '_blank')}
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              CSV
+                            </Button>
+                          )}
+                          {jobStatus.jsonDownloadUrl && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(jobStatus.jsonDownloadUrl, '_blank')}
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              JSON
+                            </Button>
+                          )}
+                          {jobStatus.quizletDownloadUrl && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(jobStatus.quizletDownloadUrl, '_blank')}
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Quizlet
+                            </Button>
+                          )}
+                          {jobStatus.pdfDownloadUrl && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(jobStatus.pdfDownloadUrl, '_blank')}
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Original PDF
+                            </Button>
+                          )}
                         </div>
                       </div>
                     )}
