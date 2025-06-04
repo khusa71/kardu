@@ -38,6 +38,8 @@ export default function Study() {
   const { jobId } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // State variables
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -45,7 +47,8 @@ export default function Study() {
   // Fetch flashcard job data
   const { data: jobData, isLoading: jobLoading } = useQuery({
     queryKey: ['/api/history'],
-    select: (data: any[]) => data.find(job => job.id === parseInt(jobId!))
+    select: (data: any[]) => data.find(job => job.id === parseInt(jobId!)),
+    enabled: !!jobId
   });
 
   // Fetch study progress
@@ -54,15 +57,96 @@ export default function Study() {
     enabled: !!jobId
   });
 
+  // Study progress mutation
+  const updateProgressMutation = useMutation({
+    mutationFn: (data: { jobId: number; cardIndex: number; status: string; difficultyRating?: string }) =>
+      apiRequest('/api/study-progress', { method: 'POST', body: data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/study-progress', jobId] });
+      toast({
+        title: "Progress Updated",
+        description: "Your study progress has been saved."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to save study progress",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Computed values
   const flashcards: FlashcardPair[] = jobData?.hasFlashcards && jobData.flashcards 
     ? JSON.parse(jobData.flashcards) 
     : [];
-
   const progress: StudyProgress[] = (progressData as any)?.progress || [];
   const stats: StudyStats = (progressData as any)?.stats || { total: flashcards.length, known: 0, reviewing: 0 };
+  const currentCard = flashcards[currentCardIndex];
+  const currentProgress = progress.find(p => p.cardIndex === currentCardIndex);
+  const progressPercentage = flashcards.length > 0 ? Math.round(((stats.known + stats.reviewing) / stats.total) * 100) : 0;
+
+  // Navigation functions
+  const handleNextCard = () => {
+    if (currentCardIndex < flashcards.length - 1) {
+      setCurrentCardIndex(currentCardIndex + 1);
+      setShowAnswer(false);
+      setIsFlipped(false);
+    }
+  };
+
+  const handlePreviousCard = () => {
+    if (currentCardIndex > 0) {
+      setCurrentCardIndex(currentCardIndex - 1);
+      setShowAnswer(false);
+      setIsFlipped(false);
+    }
+  };
+
+  const handleFlipCard = () => {
+    setIsFlipped(!isFlipped);
+    setShowAnswer(!showAnswer);
+  };
+
+  const handleMarkCardStatus = (status: string, difficultyRating?: string) => {
+    if (!jobId || currentCardIndex === undefined) return;
+    
+    updateProgressMutation.mutate({
+      jobId: parseInt(jobId),
+      cardIndex: currentCardIndex,
+      status,
+      difficultyRating
+    });
+    
+    // Auto-advance to next card after marking
+    setTimeout(() => {
+      if (currentCardIndex < flashcards.length - 1) {
+        handleNextCard();
+      }
+    }, 1000);
+  };
+
+  const handleResetStudy = () => {
+    setCurrentCardIndex(0);
+    setShowAnswer(false);
+    setIsFlipped(false);
+  };
+
+  // Loading states
+  if (jobLoading || progressLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="flex items-center justify-center min-h-[80vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   // Error handling for missing data
-  if (!jobLoading && !jobData) {
+  if (!jobData) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <NavigationBar />
@@ -87,7 +171,7 @@ export default function Study() {
     );
   }
 
-  if (!jobLoading && jobData && (!flashcards || flashcards.length === 0)) {
+  if (!flashcards || flashcards.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <NavigationBar />
@@ -113,109 +197,6 @@ export default function Study() {
                   </Button>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // Update study progress mutation
-  const updateProgressMutation = useMutation({
-    mutationFn: async ({ status, difficultyRating }: { status: string; difficultyRating?: string }) => {
-      return fetch(`/api/study-progress`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jobId: parseInt(jobId!),
-          cardIndex: currentCardIndex,
-          status,
-          difficultyRating
-        })
-      }).then(res => res.json());
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/study-progress', jobId] });
-      toast({
-        title: "Progress Updated",
-        description: "Your study progress has been saved."
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update progress. Please try again.",
-        variant: "destructive"
-      });
-    }
-  });
-
-  const currentCard = flashcards[currentCardIndex];
-  const currentProgress = progress.find(p => p.cardIndex === currentCardIndex);
-  const progressPercentage = flashcards.length > 0 ? Math.round(((stats.known + stats.reviewing) / stats.total) * 100) : 0;
-
-  const handleCardAction = (status: string, difficultyRating?: string) => {
-    updateProgressMutation.mutate({ status, difficultyRating });
-    
-    // Auto-advance to next card after marking
-    setTimeout(() => {
-      if (currentCardIndex < flashcards.length - 1) {
-        setCurrentCardIndex(prev => prev + 1);
-        setShowAnswer(false);
-        setIsFlipped(false);
-      }
-    }, 1000);
-  };
-
-  const flipCard = () => {
-    setIsFlipped(!isFlipped);
-    setShowAnswer(!showAnswer);
-  };
-
-  const navigateCard = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentCardIndex > 0) {
-      setCurrentCardIndex(prev => prev - 1);
-    } else if (direction === 'next' && currentCardIndex < flashcards.length - 1) {
-      setCurrentCardIndex(prev => prev + 1);
-    }
-    setShowAnswer(false);
-    setIsFlipped(false);
-  };
-
-  const resetProgress = () => {
-    setCurrentCardIndex(0);
-    setShowAnswer(false);
-    setIsFlipped(false);
-  };
-
-  if (jobLoading || progressLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <NavigationBar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!jobData || !jobData.hasFlashcards) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <NavigationBar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <Card className="max-w-md">
-            <CardContent className="text-center p-6">
-              <h2 className="text-xl font-semibold mb-2">No Flashcards Found</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                This job doesn't have any flashcards available for study.
-              </p>
-              <Button onClick={() => window.location.href = '/history'}>
-                <Home className="w-4 h-4 mr-2" />
-                Back to History
-              </Button>
             </CardContent>
           </Card>
         </div>
@@ -275,169 +256,138 @@ export default function Study() {
               <span>Card {currentCardIndex + 1} of {flashcards.length}</span>
               <span>{progressPercentage}% Complete</span>
             </div>
-            <Progress value={progressPercentage} className="h-2" />
+            <Progress value={(currentCardIndex + 1) / flashcards.length * 100} className="w-full" />
           </div>
         </div>
 
         {/* Flashcard */}
-        <div className="mb-8">
-          <Card className={`min-h-[400px] cursor-pointer transition-transform duration-300 ${isFlipped ? 'transform rotateY-180' : ''}`}>
-            <CardContent className="p-8 h-full flex flex-col justify-center">
-              {!showAnswer ? (
-                <div onClick={flipCard}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Question</h3>
-                    {currentCard?.difficulty && (
-                      <Badge variant={
-                        currentCard.difficulty === 'beginner' ? 'default' :
-                        currentCard.difficulty === 'intermediate' ? 'secondary' : 'destructive'
-                      }>
-                        {currentCard.difficulty}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="prose dark:prose-invert max-w-none">
-                    <ReactMarkdown
-                      components={{
-                        code({ className, children, ...props }: any) {
-                          const match = /language-(\w+)/.exec(className || '');
-                          return match ? (
-                            <SyntaxHighlighter
-                              customStyle={{}}
-                              language={match[1]}
-                              PreTag="div"
-                              {...props}
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                          ) : (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
-                          );
-                        }
-                      }}
-                    >
-                      {currentCard?.question || ""}
-                    </ReactMarkdown>
-                  </div>
-                  <div className="mt-6 text-center text-gray-500 dark:text-gray-400">
-                    Click to reveal answer
-                  </div>
-                </div>
-              ) : (
-                <div onClick={flipCard}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Answer</h3>
-                    {currentProgress && (
-                      <Badge variant="outline">
-                        Reviewed {currentProgress.reviewCount} times
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="prose dark:prose-invert max-w-none">
-                    <ReactMarkdown
-                      components={{
-                        code({ node, className, children, ...props }) {
-                          const match = /language-(\w+)/.exec(className || '');
-                          const isInline = !className;
-                          return !isInline && match ? (
-                            <SyntaxHighlighter
-                              style={tomorrow as any}
-                              language={match[1]}
-                              PreTag="div"
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                          ) : (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
-                          );
-                        }
-                      }}
-                    >
-                      {currentCard?.answer || ""}
-                    </ReactMarkdown>
-                  </div>
+        <Card className="min-h-[400px] mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">
+                {showAnswer ? 'Answer' : 'Question'}
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleFlipCard}
+              >
+                {showAnswer ? 'Hide Answer' : 'Show Answer'}
+              </Button>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            <div className="space-y-4">
+              <div className="prose dark:prose-invert max-w-none">
+                <ReactMarkdown
+                  components={{
+                    code({ className, children, ...props }) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      const isInline = !className;
+                      
+                      return !isInline && match ? (
+                        <SyntaxHighlighter
+                          style={tomorrow as any}
+                          language={match[1]}
+                          PreTag="div"
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                  }}
+                >
+                  {showAnswer ? currentCard?.answer || "" : currentCard?.question || ""}
+                </ReactMarkdown>
+              </div>
+              
+              {currentCard?.topic && (
+                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Badge variant="secondary">{currentCard.topic}</Badge>
+                  {currentCard.difficulty && (
+                    <Badge variant="outline">{currentCard.difficulty}</Badge>
+                  )}
+                  {currentProgress && (
+                    <Badge variant="outline">
+                      Reviewed {currentProgress.reviewCount} times
+                    </Badge>
+                  )}
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Study Actions */}
+        {showAnswer && (
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4">How well did you know this?</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Button
+                  variant="outline"
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => handleMarkCardStatus('difficult', 'hard')}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Again (Hard)
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-yellow-600 border-yellow-200 hover:bg-yellow-50"
+                  onClick={() => handleMarkCardStatus('reviewing', 'medium')}
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Good (Medium)
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-green-600 border-green-200 hover:bg-green-50"
+                  onClick={() => handleMarkCardStatus('known', 'easy')}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Easy (Known)
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Navigation and Actions */}
-        <div className="space-y-4">
-          {/* Navigation */}
-          <div className="flex justify-between items-center">
-            <Button
-              variant="outline"
-              onClick={() => navigateCard('prev')}
-              disabled={currentCardIndex === 0}
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={resetProgress}
-            >
+        {/* Navigation */}
+        <div className="flex justify-between items-center">
+          <Button
+            variant="outline"
+            onClick={handlePreviousCard}
+            disabled={currentCardIndex === 0}
+          >
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Previous
+          </Button>
+          
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleResetStudy}>
               <RotateCcw className="w-4 h-4 mr-2" />
               Reset
             </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => navigateCard('next')}
-              disabled={currentCardIndex === flashcards.length - 1}
-            >
-              Next
-              <ChevronRight className="w-4 h-4 ml-2" />
+            <Button variant="outline" onClick={() => window.location.href = '/history'}>
+              <Home className="w-4 h-4 mr-2" />
+              Back to History
             </Button>
           </div>
-
-          {/* Study Actions */}
-          {showAnswer && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <Button
-                variant="outline"
-                onClick={() => handleCardAction('known', 'easy')}
-                disabled={updateProgressMutation.isPending}
-                className="text-green-600 border-green-600 hover:bg-green-50"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Easy
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleCardAction('known', 'medium')}
-                disabled={updateProgressMutation.isPending}
-                className="text-blue-600 border-blue-600 hover:bg-blue-50"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Good
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleCardAction('reviewing', 'hard')}
-                disabled={updateProgressMutation.isPending}
-                className="text-orange-600 border-orange-600 hover:bg-orange-50"
-              >
-                <Clock className="w-4 h-4 mr-2" />
-                Hard
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleCardAction('unknown')}
-                disabled={updateProgressMutation.isPending}
-                className="text-red-600 border-red-600 hover:bg-red-50"
-              >
-                <XCircle className="w-4 h-4 mr-2" />
-                Again
-              </Button>
-            </div>
-          )}
+          
+          <Button
+            variant="outline"
+            onClick={handleNextCard}
+            disabled={currentCardIndex === flashcards.length - 1}
+          >
+            Next
+            <ChevronRight className="w-4 h-4 ml-2" />
+          </Button>
         </div>
       </main>
     </div>
