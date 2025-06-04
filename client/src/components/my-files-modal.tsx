@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, FileText, Calendar, Download, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { FlashcardJob } from "@shared/schema";
 
@@ -17,6 +18,7 @@ interface MyFilesModalProps {
 
 export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProps) {
   const { toast } = useToast();
+  const { user } = useFirebaseAuth();
   const [selectedJob, setSelectedJob] = useState<FlashcardJob | null>(null);
 
   const { data: userJobs = [], isLoading } = useQuery<FlashcardJob[]>({
@@ -153,9 +155,39 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                window.open(`/api/download/pdf/${job.id}`, '_blank');
+                                try {
+                                  const token = await user?.getIdToken();
+                                  const link = document.createElement('a');
+                                  link.href = `/api/download/pdf/${job.id}`;
+                                  link.setAttribute('download', job.filename);
+                                  if (token) {
+                                    // For authenticated downloads, we need to handle this differently
+                                    const response = await fetch(`/api/download/pdf/${job.id}`, {
+                                      headers: {
+                                        'Authorization': `Bearer ${token}`
+                                      }
+                                    });
+                                    if (response.ok) {
+                                      const blob = await response.blob();
+                                      const url = window.URL.createObjectURL(blob);
+                                      link.href = url;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      window.URL.revokeObjectURL(url);
+                                    } else {
+                                      throw new Error('Download failed');
+                                    }
+                                  }
+                                } catch (error) {
+                                  toast({
+                                    title: "Download failed",
+                                    description: "Unable to download the PDF file",
+                                    variant: "destructive",
+                                  });
+                                }
                               }}
                             >
                               <Download className="w-4 h-4" />

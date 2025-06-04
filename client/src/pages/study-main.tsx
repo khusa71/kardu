@@ -8,7 +8,21 @@ import { NavigationBar } from "@/components/navigation-bar";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { Link } from "wouter";
 import { BookOpen, ChevronLeft, ChevronRight, RotateCcw, CheckCircle, XCircle, Eye, EyeOff, Play, FileText } from "lucide-react";
-import type { FlashcardJob } from "@shared/schema";
+interface FlashcardJob {
+  id: number;
+  filename: string;
+  fileSize: number;
+  subject: string;
+  difficulty: string;
+  status: string;
+  progress: number;
+  flashcardCount: number;
+  apiProvider: string;
+  createdAt: string;
+  updatedAt: string;
+  processingTime: number;
+  flashcards: string;
+}
 
 interface FlashcardPair {
   front: string;
@@ -56,11 +70,32 @@ export default function StudyMain() {
     setShowAnswer(false);
   };
 
-  const markDifficulty = (difficulty: 'easy' | 'medium' | 'hard') => {
+  const markDifficulty = async (difficulty: 'easy' | 'medium' | 'hard') => {
     setStudyProgress(prev => ({
       ...prev,
       [currentCardIndex]: difficulty
     }));
+    
+    // Save progress to database
+    if (selectedJobId) {
+      try {
+        await fetch('/api/study-progress', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${await user?.getIdToken()}`
+          },
+          body: JSON.stringify({
+            jobId: selectedJobId,
+            cardIndex: currentCardIndex,
+            difficultyRating: difficulty,
+            status: difficulty === 'easy' ? 'known' : difficulty === 'hard' ? 'unknown' : 'reviewing'
+          })
+        });
+      } catch (error) {
+        console.error('Failed to save study progress:', error);
+      }
+    }
     
     // Auto advance to next card
     if (currentCardIndex < currentFlashcards.length - 1) {
