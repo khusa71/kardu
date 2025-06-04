@@ -137,7 +137,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Brain className="w-5 h-5 text-blue-600" />
-            Welcome to StudyCards AI
+            Welcome to Kardu.io
           </DialogTitle>
           <DialogDescription>
             Sign in to start generating AI-powered flashcards

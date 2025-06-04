@@ -31,11 +31,11 @@ export function ResponsiveNavbar({ onAuthModalOpen, onLogout }: ResponsiveNavbar
               <Brain className="w-6 h-6" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xl lg:text-2xl font-bold text-neutral dark:text-white">StudyCards AI</h1>
+              <h1 className="text-xl lg:text-2xl font-bold text-neutral dark:text-white">Kardu.io</h1>
               <p className="text-gray-600 dark:text-gray-300 text-xs lg:text-sm">Transform PDFs into interactive flashcards</p>
             </div>
             <div className="sm:hidden">
-              <h1 className="text-lg font-bold text-neutral dark:text-white">StudyCards</h1>
+              <h1 className="text-lg font-bold text-neutral dark:text-white">Kardu.io</h1>
             </div>
           </div>
 

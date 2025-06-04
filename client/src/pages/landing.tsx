@@ -18,7 +18,7 @@ export default function Landing() {
                 <Brain className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">StudyCards AI</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kardu.io</h1>
                 <p className="text-gray-600 dark:text-gray-300 text-sm">AI-Powered Flashcard Generation</p>
               </div>
             </div>

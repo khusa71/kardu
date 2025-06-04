@@ -28,7 +28,7 @@ export class ExportService {
       metadata: {
         exportDate: new Date().toISOString(),
         cardCount: flashcards.length,
-        format: 'StudyCards AI Export'
+        format: 'Kardu.io Export'
       },
       flashcards: flashcards.map(card => ({
         question: card.question,

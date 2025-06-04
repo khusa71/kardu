@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Brain, Check, X, RotateCcw, Trophy, TrendingUp } from 'lucide-react';
 
-interface StudyCard extends FlashcardPair {
+interface KarduCard extends FlashcardPair {
   status: 'new' | 'learning' | 'known';
   lastReviewed?: Date;
   nextReview?: Date;
@@ -17,11 +17,11 @@ interface StudyCard extends FlashcardPair {
 
 interface StudyModeProps {
   flashcards: FlashcardPair[];
-  onComplete?: (results: StudyResults) => void;
+  onComplete?: (results: KarduResults) => void;
   onExit?: () => void;
 }
 
-interface StudyResults {
+interface KarduResults {
   totalCards: number;
   newCards: number;
   learningCards: number;
