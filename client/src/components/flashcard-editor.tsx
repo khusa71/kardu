@@ -32,10 +32,7 @@ export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = fal
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Debug logging
-  console.log('FlashcardEditor received flashcards:', flashcards);
-  console.log('FlashcardEditor flashcards length:', flashcards?.length);
-  console.log('FlashcardEditor first flashcard:', flashcards?.[0]);
+
 
   const handleEdit = useCallback((index: number) => {
     setEditingCard({ index, card: { ...flashcards[index] } });

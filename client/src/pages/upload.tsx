@@ -509,30 +509,51 @@ export default function Upload() {
                       <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
                           <Button 
-                            onClick={() => {
-                              // Debug logging
-                              console.log('Edit button clicked, jobStatus:', jobStatus);
-                              console.log('jobStatus.flashcards type:', typeof jobStatus?.flashcards);
-                              console.log('jobStatus.flashcards value:', jobStatus?.flashcards);
-                              
-                              // Ensure flashcards are loaded before switching to edit mode
-                              if (jobStatus?.flashcards) {
-                                let flashcards: FlashcardPair[] = [];
-                                if (Array.isArray(jobStatus.flashcards)) {
-                                  flashcards = jobStatus.flashcards;
-                                } else if (typeof jobStatus.flashcards === 'string') {
-                                  try {
-                                    const parsed = JSON.parse(jobStatus.flashcards);
-                                    flashcards = Array.isArray(parsed) ? parsed : [];
-                                  } catch (error) {
-                                    console.error('Failed to parse flashcards:', error);
-                                    flashcards = [];
-                                  }
+                            onClick={async () => {
+                              try {
+                                // Fetch complete job data with flashcards
+                                const response = await fetch(`/api/jobs/${currentJobId}`, {
+                                  method: 'GET',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                });
+                                
+                                if (!response.ok) {
+                                  throw new Error(`Failed to fetch job data: ${response.statusText}`);
                                 }
-                                console.log('Setting editable flashcards:', flashcards);
-                                setEditableFlashcards(flashcards);
+                                
+                                const jobData = await response.json();
+                                
+                                if (jobData.flashcards) {
+                                  const flashcards = JSON.parse(jobData.flashcards);
+                                  
+                                  // Transform data structure if needed (question/answer vs front/back)
+                                  const normalizedFlashcards = flashcards.map((card: any) => ({
+                                    id: card.id || Math.random(),
+                                    front: card.front || card.question || '',
+                                    back: card.back || card.answer || '',
+                                    subject: card.subject || card.topic || '',
+                                    difficulty: card.difficulty || 'beginner',
+                                    tags: card.tags || []
+                                  }));
+                                  
+                                  setEditableFlashcards(normalizedFlashcards);
+                                  setViewMode('edit');
+                                } else {
+                                  toast({
+                                    title: "No flashcards found",
+                                    description: "Unable to load flashcards for editing.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              } catch (error: any) {
+                                toast({
+                                  title: "Failed to load flashcards",
+                                  description: error.message || "An error occurred while loading flashcards.",
+                                  variant: "destructive",
+                                });
                               }
-                              setViewMode('edit');
                             }} 
                             variant="outline"
                           >
