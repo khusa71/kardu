@@ -378,6 +378,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's flashcard decks for study page
+  app.get("/api/decks", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.uid;
+      
+      // Get completed jobs with flashcards
+      const jobs = await storage.getUserJobs(userId);
+      const completedJobs = jobs.filter(job => 
+        job.status === 'completed' && job.flashcards && job.flashcards.trim() !== ''
+      );
+
+      // Transform jobs into deck format with metadata
+      const decks = completedJobs.map(job => {
+        let flashcardCount = 0;
+        let previewCards = [];
+        
+        try {
+          if (job.flashcards) {
+            const flashcards = JSON.parse(job.flashcards);
+            flashcardCount = Array.isArray(flashcards) ? flashcards.length : 0;
+            previewCards = Array.isArray(flashcards) ? flashcards.slice(0, 3) : [];
+          }
+        } catch (error) {
+          console.error(`Failed to parse flashcards for job ${job.id}:`, error);
+        }
+
+        return {
+          id: job.id,
+          name: job.filename.replace(/\.[^/.]+$/, ""), // Remove file extension
+          filename: job.filename,
+          subject: job.subject,
+          difficulty: job.difficulty,
+          cardCount: flashcardCount,
+          createdAt: job.createdAt,
+          updatedAt: job.updatedAt,
+          apiProvider: job.apiProvider,
+          previewCards,
+          hasFlashcards: flashcardCount > 0
+        };
+      });
+
+      res.json(decks);
+    } catch (error) {
+      console.error("Decks fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch flashcard decks" });
+    }
+  });
+
   // Download original PDF file
   app.get("/api/download/pdf/:id", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
