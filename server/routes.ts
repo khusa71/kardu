@@ -599,6 +599,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Study progress tracking endpoints
+  app.get("/api/study-progress/:jobId", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId);
+      const userId = req.user!.uid;
+
+      const progress = await storage.getStudyProgress(userId, jobId);
+      const stats = await storage.getStudyStats(userId, jobId);
+
+      res.json({ progress, stats });
+    } catch (error) {
+      console.error("Error fetching study progress:", error);
+      res.status(500).json({ error: "Failed to fetch study progress" });
+    }
+  });
+
+  app.post("/api/study-progress", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, cardIndex, status, difficultyRating } = req.body;
+      const userId = req.user!.uid;
+
+      const progressData = {
+        userId,
+        jobId,
+        cardIndex,
+        status,
+        difficultyRating,
+        lastReviewedAt: new Date(),
+        nextReviewDate: getNextReviewDate(status, difficultyRating)
+      };
+
+      const updatedProgress = await storage.updateStudyProgress(progressData);
+      res.json(updatedProgress);
+    } catch (error) {
+      console.error("Error updating study progress:", error);
+      res.status(500).json({ error: "Failed to update study progress" });
+    }
+  });
+
+  // Regenerate flashcards endpoint
+  app.post("/api/regenerate/:jobId", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId);
+      const userId = req.user!.uid;
+      const { customContext } = req.body;
+
+      // Get original job
+      const originalJob = await storage.getFlashcardJob(jobId);
+      if (!originalJob || originalJob.userId !== userId) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Check upload limits
+      const uploadCheck = await storage.checkUploadLimit(userId);
+      if (!uploadCheck.canUpload) {
+        return res.status(403).json({ 
+          error: "Upload limit reached", 
+          uploadsRemaining: uploadCheck.uploadsRemaining 
+        });
+      }
+
+      // Create new job based on original
+      const newJobData = {
+        userId,
+        filename: `Regenerated - ${originalJob.filename}`,
+        fileSize: originalJob.fileSize,
+        subject: originalJob.subject,
+        difficulty: originalJob.difficulty,
+        flashcardCount: originalJob.flashcardCount,
+        status: "pending" as const,
+        apiProvider: originalJob.apiProvider,
+        focusAreas: customContext ? JSON.stringify({ custom: customContext }) : originalJob.focusAreas,
+        pdfStorageKey: originalJob.pdfStorageKey,
+        pdfDownloadUrl: originalJob.pdfDownloadUrl,
+        regeneratedFromJobId: originalJob.id
+      };
+
+      const newJob = await storage.createFlashcardJob(newJobData);
+      await storage.incrementUserUploads(userId);
+
+      // Start processing in background
+      processRegeneratedJob(newJob.id, originalJob.pdfStorageKey!, customContext);
+
+      res.json({ jobId: newJob.id, status: "started" });
+    } catch (error) {
+      console.error("Error regenerating flashcards:", error);
+      res.status(500).json({ error: "Failed to regenerate flashcards" });
+    }
+  });
+
   // Stripe webhook handler with enhanced validation and logging
   app.post("/api/stripe-webhook", async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
@@ -1053,4 +1143,169 @@ function generateAnkiDeck(jobId: number, flashcards: any[]): Promise<string> {
       }
     });
   });
+}
+
+// Helper function to calculate next review date based on difficulty
+function getNextReviewDate(status: string, difficultyRating?: string): Date {
+  const now = new Date();
+  const nextDate = new Date(now);
+
+  if (status === 'known') {
+    // Known cards: longer intervals
+    switch (difficultyRating) {
+      case 'easy':
+        nextDate.setDate(now.getDate() + 7); // 1 week
+        break;
+      case 'medium':
+        nextDate.setDate(now.getDate() + 3); // 3 days
+        break;
+      case 'hard':
+        nextDate.setDate(now.getDate() + 1); // 1 day
+        break;
+      default:
+        nextDate.setDate(now.getDate() + 3); // Default to 3 days
+    }
+  } else if (status === 'reviewing') {
+    // Reviewing cards: shorter intervals
+    switch (difficultyRating) {
+      case 'easy':
+        nextDate.setDate(now.getDate() + 2); // 2 days
+        break;
+      case 'medium':
+        nextDate.setDate(now.getDate() + 1); // 1 day
+        break;
+      case 'hard':
+        nextDate.setHours(now.getHours() + 4); // 4 hours
+        break;
+      default:
+        nextDate.setDate(now.getDate() + 1); // Default to 1 day
+    }
+  } else {
+    // Unknown cards: immediate review
+    nextDate.setHours(now.getHours() + 1); // 1 hour
+  }
+
+  return nextDate;
+}
+
+// Helper function to process regenerated flashcard jobs
+async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: string, customContext?: string) {
+  try {
+    // Update job status to processing
+    await storage.updateFlashcardJob(jobId, {
+      status: "processing",
+      progress: 10,
+      currentTask: "Retrieving original document..."
+    });
+
+    // Download the original PDF from storage
+    const tempDir = path.join(__dirname, "../cache");
+    const tempPdfPath = path.join(tempDir, `regenerate_${jobId}.pdf`);
+    
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    // Download PDF from object storage
+    const pdfStream = await objectStorage.downloadFileStream(pdfStorageKey);
+    const writeStream = fs.createWriteStream(tempPdfPath);
+    
+    await new Promise((resolve, reject) => {
+      pdfStream.pipe(writeStream);
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    // Extract text from PDF
+    await storage.updateFlashcardJob(jobId, {
+      progress: 30,
+      currentTask: "Extracting text from document..."
+    });
+
+    const extractedText = await extractTextFromPDF(tempPdfPath);
+    
+    if (!extractedText.trim()) {
+      throw new Error("No text could be extracted from the PDF");
+    }
+
+    // Get job details for regeneration
+    const job = await storage.getFlashcardJob(jobId);
+    if (!job) {
+      throw new Error("Job not found");
+    }
+
+    // Parse focus areas and add custom context
+    let focusAreas: any = {};
+    try {
+      if (job.focusAreas) {
+        focusAreas = JSON.parse(job.focusAreas);
+      }
+    } catch (e) {
+      console.warn("Could not parse focus areas, using defaults");
+    }
+
+    // Generate flashcards with custom context
+    await storage.updateFlashcardJob(jobId, {
+      progress: 50,
+      currentTask: "Regenerating flashcards with new context..."
+    });
+
+    const flashcards = await generateFlashcards(
+      extractedText,
+      job.subject || "General",
+      job.difficulty as any || "intermediate",
+      job.flashcardCount,
+      job.apiProvider as any,
+      focusAreas,
+      customContext
+    );
+
+    // Generate and store exports
+    await storage.updateFlashcardJob(jobId, {
+      progress: 80,
+      currentTask: "Generating export formats..."
+    });
+
+    const exportResults = await objectStorage.generateAndUploadExports(job.userId!, jobId, flashcards);
+
+    // Generate Anki deck
+    const ankiDeckPath = await generateAnkiDeck(jobId, flashcards);
+    const ankiResult = ankiDeckPath ? await objectStorage.uploadAnkiDeck(job.userId!, jobId, ankiDeckPath) : null;
+
+    // Update job with results
+    await storage.updateFlashcardJob(jobId, {
+      status: "completed",
+      progress: 100,
+      currentTask: "Regeneration completed!",
+      flashcards: JSON.stringify(flashcards),
+      ankiStorageKey: ankiResult?.key,
+      ankiDownloadUrl: ankiResult?.url,
+      csvStorageKey: exportResults.csv?.key,
+      csvDownloadUrl: exportResults.csv?.url,
+      jsonStorageKey: exportResults.json?.key,
+      jsonDownloadUrl: exportResults.json?.url,
+      quizletStorageKey: exportResults.quizlet?.key,
+      quizletDownloadUrl: exportResults.quizlet?.url,
+      processingTime: Math.floor((Date.now() - new Date(job.createdAt!).getTime()) / 1000)
+    });
+
+    // Clean up temporary files
+    try {
+      if (fs.existsSync(tempPdfPath)) {
+        fs.unlinkSync(tempPdfPath);
+      }
+      if (ankiDeckPath && fs.existsSync(ankiDeckPath)) {
+        fs.unlinkSync(ankiDeckPath);
+      }
+    } catch (cleanupError) {
+      console.warn("Failed to clean up temporary files:", cleanupError);
+    }
+
+  } catch (error) {
+    console.error("Error processing regenerated flashcard job:", error);
+    await storage.updateFlashcardJob(jobId, {
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : "Unknown error occurred during regeneration"
+    });
+  }
 }
