@@ -1,13 +1,16 @@
 import {
   users,
   flashcardJobs,
+  studyProgress,
   type User,
   type UpsertUser,
   type FlashcardJob,
   type InsertFlashcardJob,
+  type StudyProgress,
+  type InsertStudyProgress,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations for Firebase Auth
@@ -238,6 +241,62 @@ export class DatabaseStorage implements IStorage {
       .from(flashcardJobs)
       .where(eq(flashcardJobs.userId, userId))
       .orderBy(desc(flashcardJobs.createdAt));
+  }
+
+  // Study progress operations
+  async getStudyProgress(userId: string, jobId: number): Promise<StudyProgress[]> {
+    return await db
+      .select()
+      .from(studyProgress)
+      .where(and(eq(studyProgress.userId, userId), eq(studyProgress.jobId, jobId)))
+      .orderBy(studyProgress.cardIndex);
+  }
+
+  async updateStudyProgress(progressData: InsertStudyProgress): Promise<StudyProgress> {
+    const existing = await db
+      .select()
+      .from(studyProgress)
+      .where(and(
+        eq(studyProgress.userId, progressData.userId),
+        eq(studyProgress.jobId, progressData.jobId),
+        eq(studyProgress.cardIndex, progressData.cardIndex)
+      ))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(studyProgress)
+        .set({
+          ...progressData,
+          reviewCount: sql`${studyProgress.reviewCount} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(studyProgress.id, existing[0].id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(studyProgress)
+        .values({ ...progressData, reviewCount: 1 })
+        .returning();
+      return created;
+    }
+  }
+
+  async getStudyStats(userId: string, jobId: number): Promise<{ total: number; known: number; reviewing: number }> {
+    const job = await this.getFlashcardJob(jobId);
+    if (!job || !job.flashcards) {
+      return { total: 0, known: 0, reviewing: 0 };
+    }
+
+    const flashcardsData = JSON.parse(job.flashcards);
+    const total = flashcardsData.length;
+
+    const progress = await this.getStudyProgress(userId, jobId);
+    const known = progress.filter(p => p.status === 'known').length;
+    const reviewing = progress.filter(p => p.status === 'reviewing').length;
+
+    return { total, known, reviewing };
   }
 }
 
