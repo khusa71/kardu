@@ -21,8 +21,8 @@ export default function Home() {
   const { toast } = useToast();
   const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, logout, sendVerificationEmail, refreshUserData } = useFirebaseAuth();
   
-  // Form state
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // Form state - updated for multiple files
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [apiProvider, setApiProvider] = useState<"openai" | "anthropic">("anthropic");
   const [flashcardCount, setFlashcardCount] = useState(25);
   
@@ -107,12 +107,12 @@ export default function Home() {
     },
   });
 
-  // Handle upload
+  // Handle upload - updated for multiple files
   const handleUpload = useCallback(() => {
-    if (!selectedFile) {
+    if (selectedFiles.length === 0) {
       toast({
-        title: "No file selected",
-        description: "Please select a PDF file to continue.",
+        title: "No files selected",
+        description: "Please select PDF files to continue.",
         variant: "destructive",
       });
       return;
@@ -129,7 +129,12 @@ export default function Home() {
     }
 
     const formData = new FormData();
-    formData.append('pdf', selectedFile);
+    
+    // Append multiple PDF files
+    selectedFiles.forEach(file => {
+      formData.append('pdfs', file);
+    });
+    
     formData.append('apiProvider', apiProvider);
     formData.append('flashcardCount', flashcardCount.toString());
     formData.append('subject', subject);
@@ -137,7 +142,7 @@ export default function Home() {
     formData.append('difficulty', difficulty);
 
     uploadMutation.mutate(formData);
-  }, [selectedFile, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation, user, toast]);
+  }, [selectedFiles, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation, user, toast]);
 
   // Handle authentication state changes
   useEffect(() => {
@@ -154,14 +159,14 @@ export default function Home() {
     }
   }, [user]);
 
-  // Advance step when file is selected
+  // Advance step when files are selected
   useEffect(() => {
-    if (selectedFile && currentStep === 1) {
+    if (selectedFiles.length > 0 && currentStep === 1) {
       setCurrentStep(2);
-    } else if (!selectedFile && currentStep > 1) {
+    } else if (selectedFiles.length === 0 && currentStep > 1) {
       setCurrentStep(1);
     }
-  }, [selectedFile, currentStep]);
+  }, [selectedFiles, currentStep]);
 
   // Check if user can upload based on premium status or upload limit
   const userUploads = (user as any)?.monthlyUploads || 0;
@@ -170,7 +175,7 @@ export default function Home() {
   const isEmailVerified = (user as any)?.isEmailVerified || false;
   
   const canUpload = user && (isPremium || userUploads < userLimit) && isEmailVerified;
-  const isGenerateDisabled = !selectedFile || !canUpload || uploadMutation.isPending;
+  const isGenerateDisabled = selectedFiles.length === 0 || !canUpload || uploadMutation.isPending;
 
   // Debug logging for upload status
   console.log('Debug upload status:', {
@@ -180,7 +185,7 @@ export default function Home() {
       monthlyLimit: (user as any).monthlyLimit,
       isEmailVerified: (user as any).isEmailVerified
     } : null,
-    selectedFile: !!selectedFile,
+    selectedFiles: selectedFiles.length,
     canUpload,
     isGenerateDisabled,
     uploadMutationPending: uploadMutation.isPending
@@ -321,9 +326,13 @@ export default function Home() {
             
             {/* Step 1: PDF Upload */}
             <ResponsiveUploadZone 
-              selectedFile={selectedFile}
-              onFileSelect={setSelectedFile}
-              onFileRemove={() => setSelectedFile(null)}
+              selectedFiles={selectedFiles}
+              onFilesSelect={setSelectedFiles}
+              onFileRemove={(index: number) => {
+                setSelectedFiles(files => files.filter((_, i) => i !== index));
+              }}
+              isPremium={isPremium}
+              maxFiles={isPremium ? 10 : 1}
             />
 
             {/* Step 2: Configuration */}
