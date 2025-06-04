@@ -12,6 +12,7 @@ import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
 import { objectStorage } from "./object-storage-service";
 import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
+import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
 import { insertFlashcardJobSchema } from "@shared/schema";
 import { z } from "zod";
 import Stripe from "stripe";
@@ -119,8 +120,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Upload PDF and start processing (with auth and rate limiting)
-  app.post("/api/upload", verifyFirebaseToken as any, checkUploadLimits as any, upload.single("pdf"), async (req: any, res) => {
+  // Upload PDF and start processing (with auth, rate limiting, and API key validation)
+  app.post("/api/upload", verifyFirebaseToken as any, checkUploadLimits as any, requireApiKeys, upload.single("pdf"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No PDF file uploaded" });
