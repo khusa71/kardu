@@ -103,7 +103,17 @@ export default function History() {
 
   const handleViewFlashcards = async (job: HistoryJob) => {
     try {
-      const response = await apiRequest("GET", `/api/jobs/${job.id}`);
+      const response = await fetch(`/api/jobs/${job.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch job data: ${response.statusText}`);
+      }
+      
       const jobData = await response.json();
       
       if (jobData.flashcards) {
@@ -111,17 +121,27 @@ export default function History() {
         setCurrentFlashcards(flashcards);
         setSelectedJob(job);
         setViewMode('view');
+      } else if (jobData.status === 'completed' && !jobData.flashcards) {
+        // Fallback: try to regenerate if flashcards are missing but job is completed
+        toast({
+          title: "Flashcards Missing",
+          description: "Flashcards appear to be missing. Would you like to regenerate them?",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "No flashcards available",
-          description: "Flashcards are not ready for this upload.",
+          description: jobData.status === 'processing' 
+            ? "Flashcards are still being generated. Please wait and try again."
+            : "Flashcards are not ready for this upload.",
           variant: "destructive",
         });
       }
     } catch (error: any) {
+      console.error('Error loading flashcards:', error);
       toast({
         title: "Failed to load flashcards",
-        description: error.message,
+        description: error.message || "Unable to load flashcards. Please try again.",
         variant: "destructive",
       });
     }
@@ -222,27 +242,49 @@ export default function History() {
   if (viewMode === 'view' && currentFlashcards.length > 0) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Button variant="outline" onClick={() => setViewMode('history')}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                <Button variant="outline" onClick={() => setViewMode('history')} size="sm">
                   ← Back to History
                 </Button>
-                <h1 className="text-xl font-bold">View Flashcards: {selectedJob?.filename}</h1>
+                <div>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                    {selectedJob?.filename}
+                  </h1>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {currentFlashcards.length} cards
+                    </Badge>
+                    {selectedJob?.subject && (
+                      <Badge variant="outline" className="text-xs">
+                        {selectedJob.subject}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
               </div>
-              <Button onClick={() => setViewMode('study')} className="flex items-center">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Start Study Mode
-              </Button>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button 
+                  onClick={() => window.location.href = `/study/${selectedJob?.id}`} 
+                  className="flex items-center flex-1 sm:flex-none" 
+                  size="sm"
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Start Study Mode
+                </Button>
+              </div>
             </div>
           </div>
         </header>
-        <main className="max-w-4xl mx-auto px-4 py-8">
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
           <FlashcardEditor
             flashcards={currentFlashcards}
             onFlashcardsChange={setCurrentFlashcards}
-            readonly={true}
+            readonly={false}
+            jobId={selectedJob?.id}
           />
         </main>
       </div>

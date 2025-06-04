@@ -15,6 +15,8 @@ interface FlashcardEditorProps {
   flashcards: FlashcardPair[];
   onFlashcardsChange: (flashcards: FlashcardPair[]) => void;
   readonly?: boolean;
+  jobId?: number;
+  onSave?: (flashcards: FlashcardPair[]) => Promise<void>;
 }
 
 interface EditingCard {
@@ -22,11 +24,13 @@ interface EditingCard {
   card: FlashcardPair;
 }
 
-export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = false }: FlashcardEditorProps) {
+export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = false, jobId, onSave }: FlashcardEditorProps) {
   const [editingCard, setEditingCard] = useState<EditingCard | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const handleEdit = useCallback((index: number) => {
     setEditingCard({ index, card: { ...flashcards[index] } });
@@ -39,7 +43,22 @@ export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = fal
     updatedFlashcards[editingCard.index] = editingCard.card;
     onFlashcardsChange(updatedFlashcards);
     setEditingCard(null);
+    setHasUnsavedChanges(true);
   }, [editingCard, flashcards, onFlashcardsChange]);
+
+  const handleSaveAll = useCallback(async () => {
+    if (!onSave || isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      await onSave(flashcards);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Failed to save flashcards:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [flashcards, onSave, isSaving]);
 
   const handleDelete = useCallback((index: number) => {
     const updatedFlashcards = flashcards.filter((_, i) => i !== index);
@@ -178,13 +197,32 @@ export function FlashcardEditor({ flashcards, onFlashcardsChange, readonly = fal
             {readonly ? 'Review your flashcards' : 'Edit and organize your flashcards'}
           </p>
         </div>
-        <Button
-          onClick={() => setPreviewMode(true)}
-          className="flex items-center"
-        >
-          <Eye className="w-4 h-4 mr-2" />
-          Preview Mode
-        </Button>
+        <div className="flex items-center gap-2">
+          {hasUnsavedChanges && onSave && (
+            <span className="text-sm text-orange-600 dark:text-orange-400">
+              Unsaved changes
+            </span>
+          )}
+          {onSave && (
+            <Button
+              onClick={handleSaveAll}
+              disabled={isSaving || !hasUnsavedChanges}
+              variant="default"
+              size="sm"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          )}
+          <Button
+            onClick={() => setPreviewMode(true)}
+            variant="outline"
+            size="sm"
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            Preview
+          </Button>
+        </div>
       </div>
 
       {/* Edit Dialog */}
