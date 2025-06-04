@@ -2,10 +2,52 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { logApiKeyStatus } from "./api-key-validator";
+import { createSecureServer, isHTTPSSupported } from "./ssl-config";
 import fs from "fs";
 import path from "path";
 
 const app = express();
+
+// Security headers and HTTPS enforcement
+app.use((req, res, next) => {
+  // Trust proxy settings for Replit deployments
+  app.set('trust proxy', 1);
+  
+  // Force HTTPS in production - check multiple proxy headers
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === 'true';
+  const protocol = req.header('x-forwarded-proto') || 
+                  req.header('x-scheme') || 
+                  (req.connection.encrypted ? 'https' : 'http');
+  
+  if (isProduction && protocol !== 'https') {
+    const host = req.header('host') || req.header('x-forwarded-host');
+    if (host) {
+      return res.redirect(301, `https://${host}${req.url}`);
+    }
+  }
+  
+  // Enhanced security headers
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader('Content-Security-Policy', 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "img-src 'self' data: blob: https: *.stripe.com; " +
+    "font-src 'self' data: https://fonts.gstatic.com; " +
+    "connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com wss: ws:; " +
+    "frame-src https://js.stripe.com https://checkout.stripe.com; " +
+    "object-src 'none'; " +
+    "base-uri 'self';"
+  );
+  
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -97,11 +139,37 @@ function cleanupTempFiles() {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  
+  // Try to create HTTPS server if SSL certificates are available
+  const httpsServer = createSecureServer(app);
+  
+  if (httpsServer && process.env.NODE_ENV === 'production') {
+    // Start HTTPS server on port 443 if certificates are available
+    httpsServer.listen(443, '0.0.0.0', () => {
+      log('HTTPS server running on port 443');
+    });
+    
+    // Also start HTTP server for redirects
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`HTTP server running on port ${port} (redirecting to HTTPS)`);
+      log(`SSL/TLS support: ${isHTTPSSupported() ? 'enabled' : 'disabled'}`);
+    });
+  } else {
+    // Start HTTP server only
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`serving on port ${port}`);
+      log(`SSL/TLS support: ${isHTTPSSupported() ? 'enabled (proxy)' : 'disabled'}`);
+      if (process.env.NODE_ENV === 'production') {
+        log('⚠️  Running in production without direct SSL certificates - relying on reverse proxy');
+      }
+    });
+  }
 })();
