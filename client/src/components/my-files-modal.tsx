@@ -55,38 +55,12 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
     if (selectedJob) {
       onFileSelect(selectedJob);
       onClose();
+      setSelectedJob(null);
     }
   };
 
   const handleRegenerate = (jobId: number) => {
     regenerateMutation.mutate(jobId);
-  };
-
-  const handleDownload = async (job: FlashcardJob) => {
-    try {
-      if (job.pdfDownloadUrl) {
-        const response = await fetch(`/api/download/pdf/${job.id}`);
-        if (response.ok) {
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = job.filename;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-        } else {
-          throw new Error('Download failed');
-        }
-      }
-    } catch (error) {
-      toast({
-        title: "Download Failed",
-        description: "Unable to download the file. Please try again.",
-        variant: "destructive",
-      });
-    }
   };
 
   const formatDate = (date: string | Date | null) => {
@@ -147,7 +121,7 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
                 <Card 
                   key={job.id} 
                   className={`cursor-pointer transition-all hover:shadow-md border-2 ${
-                    selectedJob?.id === job.id 
+                    selectedJob?.id === job.id
                       ? 'border-primary bg-primary/5 ring-2 ring-primary ring-opacity-20' 
                       : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
                   }`}
@@ -197,27 +171,23 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
                                     throw new Error('Authentication required');
                                   }
                                   const token = await user.getIdToken();
-                                  const link = document.createElement('a');
-                                  link.href = `/api/download/pdf/${job.id}`;
-                                  link.setAttribute('download', job.filename);
-                                  if (token) {
-                                    // For authenticated downloads, we need to handle this differently
-                                    const response = await fetch(`/api/download/pdf/${job.id}`, {
-                                      headers: {
-                                        'Authorization': `Bearer ${token}`
-                                      }
-                                    });
-                                    if (response.ok) {
-                                      const blob = await response.blob();
-                                      const url = window.URL.createObjectURL(blob);
-                                      link.href = url;
-                                      document.body.appendChild(link);
-                                      link.click();
-                                      document.body.removeChild(link);
-                                      window.URL.revokeObjectURL(url);
-                                    } else {
-                                      throw new Error('Download failed');
+                                  const response = await fetch(`/api/download/pdf/${job.id}`, {
+                                    headers: {
+                                      'Authorization': `Bearer ${token}`
                                     }
+                                  });
+                                  if (response.ok) {
+                                    const blob = await response.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.setAttribute('download', job.filename);
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    window.URL.revokeObjectURL(url);
+                                  } else {
+                                    throw new Error('Download failed');
                                   }
                                 } catch (error) {
                                   toast({
