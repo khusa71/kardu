@@ -46,8 +46,8 @@ export default function Study() {
 
   // Fetch flashcard job data
   const { data: jobData, isLoading: jobLoading } = useQuery({
-    queryKey: ['/api/history'],
-    select: (data: any[]) => data.find(job => job.id === parseInt(jobId!)),
+    queryKey: ['/api/jobs', jobId],
+    queryFn: () => fetch(`/api/jobs/${jobId}`).then(res => res.json()),
     enabled: !!jobId
   });
 
@@ -77,9 +77,14 @@ export default function Study() {
     },
   });
 
-  // Computed values
+  // Computed values - normalize flashcard data structure
   const flashcards: FlashcardPair[] = jobData?.hasFlashcards && jobData.flashcards 
-    ? JSON.parse(jobData.flashcards) 
+    ? JSON.parse(jobData.flashcards).map((card: any) => ({
+        question: card.question || card.front || '',
+        answer: card.answer || card.back || '',
+        topic: card.topic || card.subject || '',
+        difficulty: card.difficulty || 'beginner'
+      }))
     : [];
   const progress: StudyProgress[] = (progressData as any)?.progress || [];
   const stats: StudyStats = (progressData as any)?.stats || { total: flashcards.length, known: 0, reviewing: 0 };
