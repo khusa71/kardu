@@ -31,7 +31,7 @@ export default function Admin() {
     enabled: !!user,
   });
 
-  const isAdmin = userData?.role === 'admin';
+  const isAdmin = (userData as any)?.role === 'admin';
 
   // Fetch admin metrics
   const { data: metrics, isLoading, error: metricsError } = useQuery({

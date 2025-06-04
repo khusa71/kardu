@@ -49,11 +49,44 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
 
   const handleFileSelect = (job: FlashcardJob) => {
     setSelectedJob(job);
-    onFileSelect(job);
+  };
+
+  const handleConfirmSelection = () => {
+    if (selectedJob) {
+      onFileSelect(selectedJob);
+      onClose();
+    }
   };
 
   const handleRegenerate = (jobId: number) => {
     regenerateMutation.mutate(jobId);
+  };
+
+  const handleDownload = async (job: FlashcardJob) => {
+    try {
+      if (job.pdfDownloadUrl) {
+        const response = await fetch(`/api/download/pdf/${job.id}`);
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = job.filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } else {
+          throw new Error('Download failed');
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Unable to download the file. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatDate = (date: string | Date | null) => {
@@ -221,25 +254,20 @@ export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProp
           )}
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          {selectedJob && selectedJob.status === 'completed' && (
-            <Button onClick={() => handleRegenerate(selectedJob.id)} disabled={regenerateMutation.isPending}>
-              {regenerateMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Regenerating...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Regenerate Flashcards
-                </>
-              )}
+        <div className="flex justify-between items-center pt-4 border-t">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {selectedJob ? `Selected: ${selectedJob.filename}` : 'Select a file to proceed'}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
             </Button>
-          )}
+            {selectedJob && (
+              <Button onClick={handleConfirmSelection} disabled={!selectedJob}>
+                Select File
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

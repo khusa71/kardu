@@ -33,12 +33,14 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
     enabled: !!user,
   });
 
+  const userRole = (userData as any)?.role;
+
   const navItems = [
     { path: "/", label: "Home", icon: Home },
     { path: "/upload", label: "Upload", icon: Upload },
     { path: "/history", label: "History", icon: History },
     { path: "/study", label: "Study", icon: BookOpen },
-    ...(userData?.role === 'admin' ? 
+    ...(userRole === 'admin' ? 
       [{ path: "/admin", label: "Admin", icon: User }] : [])
   ];
 

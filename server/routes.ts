@@ -1172,7 +1172,7 @@ async function processFlashcardJob(
 
       flashcards = await generateFlashcards(
         preprocessResult.filteredContent,
-        apiProvider as "openai" | "anthropic",
+        apiProvider === "openai" ? "openai" : "anthropic",
         systemApiKey,
         parseInt(flashcardCount),
         subject,

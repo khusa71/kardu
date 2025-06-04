@@ -161,7 +161,7 @@ export default function StudyMain() {
               const match = /language-(\w+)/.exec(className || '');
               return match ? (
                 <SyntaxHighlighter
-                  style={tomorrow}
+                  style={tomorrow as any}
                   language={match[1]}
                   PreTag="div"
                   {...props}
