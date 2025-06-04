@@ -182,6 +182,18 @@ export function ResponsiveUploadZone({
             ))}
           </div>
         )}
+        
+        {/* My Files Modal */}
+        <MyFilesModal
+          isOpen={showMyFiles}
+          onClose={() => setShowMyFiles(false)}
+          onFileSelect={(file) => {
+            if (onFileReuse) {
+              onFileReuse(file);
+              setShowMyFiles(false);
+            }
+          }}
+        />
       </CardContent>
     </Card>
   );
