@@ -58,8 +58,8 @@ export default function Study() {
     ? JSON.parse(jobData.flashcards) 
     : [];
 
-  const progress: StudyProgress[] = progressData?.progress || [];
-  const stats: StudyStats = progressData?.stats || { total: flashcards.length, known: 0, reviewing: 0 };
+  const progress: StudyProgress[] = (progressData as any)?.progress || [];
+  const stats: StudyStats = (progressData as any)?.stats || { total: flashcards.length, known: 0, reviewing: 0 };
 
   // Update study progress mutation
   const updateProgressMutation = useMutation({
@@ -240,11 +240,11 @@ export default function Study() {
                   <div className="prose dark:prose-invert max-w-none">
                     <ReactMarkdown
                       components={{
-                        code({ node, inline, className, children, ...props }) {
+                        code({ className, children, ...props }: any) {
                           const match = /language-(\w+)/.exec(className || '');
-                          return !inline && match ? (
+                          return match ? (
                             <SyntaxHighlighter
-                              style={tomorrow}
+                              customStyle={{}}
                               language={match[1]}
                               PreTag="div"
                               {...props}

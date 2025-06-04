@@ -66,7 +66,7 @@ export default function Admin() {
     );
   }
 
-  const adminMetrics: AdminMetrics = metrics || {
+  const adminMetrics: AdminMetrics = (metrics as AdminMetrics) || {
     totalUsers: 0,
     totalJobs: 0,
     storageUsed: "0 MB",
