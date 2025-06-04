@@ -25,8 +25,11 @@ export default function Upload() {
   
   // Form state - updated for multiple files
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [apiProvider, setApiProvider] = useState<"openai" | "anthropic">("anthropic");
-  const [flashcardCount, setFlashcardCount] = useState(25);
+  const [selectedStorageFile, setSelectedStorageFile] = useState<any>(null);
+  const [apiProvider, setApiProvider] = useState<"basic" | "medium" | "advanced">("basic");
+  const [flashcardCount, setFlashcardCount] = useState(5);
+  const [customFileName, setCustomFileName] = useState<string>("");
+  const [customFlashcardSetName, setCustomFlashcardSetName] = useState<string>("");
   
   // Subject and focus areas
   const [subject, setSubject] = useState<string>("programming");

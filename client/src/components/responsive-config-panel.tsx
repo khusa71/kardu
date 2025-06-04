@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Settings, ChevronDown, Lightbulb, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Settings, ChevronDown, Lightbulb, Info, Crown, Zap, LoaderPinwheel, Check } from "lucide-react";
 import { useState } from "react";
 
 interface ResponsiveConfigPanelProps {
-  apiProvider: "openai" | "anthropic";
-  onApiProviderChange: (provider: "openai" | "anthropic") => void;
+  apiProvider: "basic" | "medium" | "advanced";
+  onApiProviderChange: (provider: "basic" | "medium" | "advanced") => void;
   flashcardCount: number;
   onFlashcardCountChange: (count: number) => void;
   subject: string;
@@ -26,7 +27,22 @@ interface ResponsiveConfigPanelProps {
   onDifficultyChange: (difficulty: "beginner" | "intermediate" | "advanced") => void;
   customContext: string;
   onCustomContextChange: (context: string) => void;
+  customFileName?: string;
+  onCustomFileNameChange?: (name: string) => void;
+  customFlashcardSetName?: string;
+  onCustomFlashcardSetNameChange?: (name: string) => void;
   disabled?: boolean;
+  onGenerate: () => void;
+  isGenerateDisabled: boolean;
+  isPending: boolean;
+  canUpload: boolean;
+  user: any;
+  isEmailVerified: boolean;
+  userUploads: number;
+  userLimit: number;
+  isPremium: boolean;
+  onAuthModalOpen: () => void;
+  onSendVerificationEmail: () => Promise<void>;
 }
 
 export function ResponsiveConfigPanel({
@@ -42,7 +58,22 @@ export function ResponsiveConfigPanel({
   onDifficultyChange,
   customContext,
   onCustomContextChange,
-  disabled = false
+  customFileName,
+  onCustomFileNameChange,
+  customFlashcardSetName,
+  onCustomFlashcardSetNameChange,
+  disabled = false,
+  onGenerate,
+  isGenerateDisabled,
+  isPending,
+  canUpload,
+  user,
+  isEmailVerified,
+  userUploads,
+  userLimit,
+  isPremium,
+  onAuthModalOpen,
+  onSendVerificationEmail
 }: ResponsiveConfigPanelProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -104,6 +135,31 @@ export function ResponsiveConfigPanel({
             </div>
           </div>
 
+          {/* Custom File Names */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="customFileName" className="text-sm font-medium">File Name (Optional)</Label>
+              <Input
+                id="customFileName"
+                placeholder="Enter custom file name..."
+                value={customFileName || ""}
+                onChange={(e) => onCustomFileNameChange?.(e.target.value)}
+                className="h-10 lg:h-11 text-sm"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customFlashcardSetName" className="text-sm font-medium">Flashcard Set Name (Optional)</Label>
+              <Input
+                id="customFlashcardSetName"
+                placeholder="Enter flashcard set name..."
+                value={customFlashcardSetName || ""}
+                onChange={(e) => onCustomFlashcardSetNameChange?.(e.target.value)}
+                className="h-10 lg:h-11 text-sm"
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
             <div className="space-y-2">
               <Label className="text-sm font-medium">Difficulty Level</Label>
@@ -120,16 +176,67 @@ export function ResponsiveConfigPanel({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">AI Provider</Label>
-              <Select value={apiProvider} onValueChange={onApiProviderChange}>
-                <SelectTrigger className="h-10 lg:h-11 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
-                  <SelectItem value="openai">OpenAI (GPT)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-medium flex items-center gap-2">
+                AI Provider Tier
+                <Info className="w-3 h-3 text-gray-400" />
+              </Label>
+              <TooltipProvider>
+                <Select value={apiProvider} onValueChange={onApiProviderChange}>
+                  <SelectTrigger className="h-10 lg:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="basic" className="flex items-center">
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-blue-500" />
+                        <span>Basic - GPT-3.5 / Claude Instant</span>
+                      </div>
+                    </SelectItem>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <SelectItem 
+                          value="medium" 
+                          disabled={!isPremium}
+                          className={`flex items-center ${!isPremium ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Crown className="w-4 h-4 text-yellow-500" />
+                            <span>Medium - GPT-4 / Claude 2</span>
+                            {!isPremium && <span className="text-xs text-gray-400 ml-2">Premium</span>}
+                          </div>
+                        </SelectItem>
+                      </TooltipTrigger>
+                      {!isPremium && (
+                        <TooltipContent>
+                          <p>Upgrade to Premium to use this model</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <SelectItem 
+                          value="advanced" 
+                          disabled={!isPremium}
+                          className={`flex items-center ${!isPremium ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Crown className="w-4 h-4 text-purple-500" />
+                            <span>Advanced - GPT-4o / Claude 3 Opus</span>
+                            {!isPremium && <span className="text-xs text-gray-400 ml-2">Premium</span>}
+                          </div>
+                        </SelectItem>
+                      </TooltipTrigger>
+                      {!isPremium && (
+                        <TooltipContent>
+                          <p>Upgrade to Premium to use this model</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </SelectContent>
+                </Select>
+              </TooltipProvider>
             </div>
           </div>
 
@@ -226,6 +333,44 @@ export function ResponsiveConfigPanel({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Generate Button */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div className="text-center">
+              <Button 
+                onClick={onGenerate}
+                disabled={isGenerateDisabled}
+                size="lg"
+                className="w-full sm:w-auto px-8 py-3 text-lg font-semibold"
+              >
+                {isPending ? (
+                  <>
+                    <LoaderPinwheel className="w-5 h-5 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5 mr-2" />
+                    Generate Flashcards
+                  </>
+                )}
+              </Button>
+              
+              {/* Debug info and helpful messages */}
+              {isGenerateDisabled && !isPending && (
+                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                    <div className="font-medium mb-2">Generate button is disabled:</div>
+                    {!user && <div>• Please sign in to continue</div>}
+                    {user && !isEmailVerified && <div>• Please verify your email address</div>}
+                    {user && isEmailVerified && !canUpload && userUploads >= userLimit && !isPremium && (
+                      <div>• Monthly upload limit reached. Upgrade to Premium for unlimited uploads.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
