@@ -77,13 +77,14 @@ export default function StudyMain() {
     }));
     
     // Save progress to database
-    if (selectedJobId) {
+    if (selectedJobId && user?.getIdToken) {
       try {
+        const token = await user.getIdToken();
         await fetch('/api/study-progress', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await user?.getIdToken?.()}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             jobId: selectedJobId,
