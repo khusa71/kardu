@@ -35,6 +35,7 @@ export default function Home() {
     procedures: false,
   });
   const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
+  const [customContext, setCustomContext] = useState<string>("");
   
   // Processing state
   const [currentJobId, setCurrentJobId] = useState<number | null>(null);
@@ -140,6 +141,7 @@ export default function Home() {
     formData.append('subject', subject);
     formData.append('focusAreas', JSON.stringify(focusAreas));
     formData.append('difficulty', difficulty);
+    formData.append('customContext', customContext);
 
     uploadMutation.mutate(formData);
   }, [selectedFiles, apiProvider, flashcardCount, focusAreas, difficulty, uploadMutation, user, toast]);
@@ -347,6 +349,8 @@ export default function Home() {
               onFocusAreasChange={setFocusAreas}
               difficulty={difficulty}
               onDifficultyChange={setDifficulty}
+              customContext={customContext}
+              onCustomContextChange={setCustomContext}
               disabled={currentStep < 2}
             />
 

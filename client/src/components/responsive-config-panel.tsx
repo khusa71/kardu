@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Settings, ChevronDown, Lightbulb, Info } from "lucide-react";
 import { useState } from "react";
 
@@ -23,6 +24,8 @@ interface ResponsiveConfigPanelProps {
   onFocusAreasChange: (areas: any) => void;
   difficulty: "beginner" | "intermediate" | "advanced";
   onDifficultyChange: (difficulty: "beginner" | "intermediate" | "advanced") => void;
+  customContext: string;
+  onCustomContextChange: (context: string) => void;
   disabled?: boolean;
 }
 
@@ -37,6 +40,8 @@ export function ResponsiveConfigPanel({
   onFocusAreasChange,
   difficulty,
   onDifficultyChange,
+  customContext,
+  onCustomContextChange,
   disabled = false
 }: ResponsiveConfigPanelProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -199,6 +204,25 @@ export function ResponsiveConfigPanel({
                       </Label>
                     </div>
                   </div>
+                </div>
+
+                {/* Custom Context Section */}
+                <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Label className="text-sm font-medium flex items-center">
+                    <Lightbulb className="w-3 h-3 mr-1" />
+                    Custom Context (Optional)
+                  </Label>
+                  <Textarea
+                    placeholder="Provide specific instructions or themes for flashcard generation..."
+                    value={customContext}
+                    onChange={(e) => onCustomContextChange(e.target.value)}
+                    disabled={disabled}
+                    rows={3}
+                    className="text-sm resize-none"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Provide specific instructions or themes for flashcard generation. This will override the default subject-based prompts.
+                  </p>
                 </div>
               </div>
             )}

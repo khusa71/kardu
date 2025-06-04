@@ -177,6 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject,
         focusAreas,
         difficulty,
+        customContext,
       } = req.body;
 
       // Get available provider with fallback
