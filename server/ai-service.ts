@@ -276,7 +276,7 @@ async function generateWithOpenAI(prompt: string, apiKey: string): Promise<Flash
 async function generateWithAnthropic(prompt: string, apiKey: string): Promise<FlashcardPair[]> {
   const anthropic = new Anthropic({ apiKey });
   
-  try {
+  return await withRetry(async () => {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       system: "You are an expert Python instructor creating educational flashcards. Generate high-quality question-answer pairs focused specifically on Python syntax, code structure, and programming concepts. Always respond with valid JSON in the exact format requested.",
@@ -305,10 +305,7 @@ async function generateWithAnthropic(prompt: string, apiKey: string): Promise<Fl
     
     const result = JSON.parse(cleanedText);
     return validateAndFormatFlashcards(result.flashcards || []);
-  } catch (error) {
-    console.error("Anthropic API error:", error);
-    throw new Error(`Anthropic API failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  }, "anthropic");
 }
 
 function createFlashcardPrompt(
