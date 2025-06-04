@@ -544,23 +544,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stripe webhook handler
+  // Stripe webhook handler with enhanced validation and logging
   app.post("/api/stripe-webhook", async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
     
+    // Enhanced webhook secret validation
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.error("Missing STRIPE_WEBHOOK_SECRET");
-      return res.status(400).send("Missing webhook secret");
+      console.error("❌ STRIPE_WEBHOOK_SECRET not configured - webhook processing disabled");
+      return res.status(500).json({ 
+        error: "webhook_not_configured",
+        message: "Stripe webhook endpoint is not properly configured" 
+      });
+    }
+
+    if (!sig) {
+      console.error("❌ Missing Stripe signature header");
+      return res.status(400).json({ 
+        error: "missing_signature",
+        message: "Stripe signature header is required" 
+      });
     }
 
     let event: Stripe.Event;
 
     try {
+      // Verify webhook signature
       event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-      console.log(`Webhook received: ${event.type} (ID: ${event.id})`);
+      console.log(`✅ Webhook verified: ${event.type} (ID: ${event.id})`);
     } catch (err: any) {
-      console.error("Webhook signature verification failed:", err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
+      console.error("❌ Webhook signature verification failed:", err.message);
+      console.error("Signature:", sig);
+      console.error("Body length:", req.body.length);
+      return res.status(400).json({ 
+        error: "invalid_signature",
+        message: `Webhook signature verification failed: ${err.message}` 
+      });
     }
 
     try {
@@ -673,11 +691,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Unhandled event type: ${event.type}`);
       }
 
-      res.json({ received: true });
+      res.json({ 
+        received: true,
+        eventType: event.type,
+        eventId: event.id,
+        processed: true
+      });
     } catch (error) {
-      console.error("Webhook processing error:", error);
+      console.error("❌ Webhook processing error:", error);
+      console.error("Event type:", event?.type);
+      console.error("Event ID:", event?.id);
       console.error("Event data:", JSON.stringify(event, null, 2));
-      res.status(500).json({ message: "Webhook processing failed" });
+      
+      res.status(500).json({ 
+        error: "processing_failed",
+        message: "Webhook processing failed",
+        eventType: event?.type,
+        eventId: event?.id
+      });
     }
   });
 

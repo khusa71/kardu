@@ -12,7 +12,153 @@ interface FocusAreas {
   procedures?: boolean;
 }
 
+interface RetryConfig {
+  maxRetries: number;
+  baseDelay: number;
+  maxDelay: number;
+}
+
+interface ApiError extends Error {
+  type: 'rate_limit' | 'api_error' | 'network_error' | 'invalid_response' | 'quota_exceeded';
+  statusCode?: number;
+  retryable: boolean;
+}
+
+const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  baseDelay: 1000,
+  maxDelay: 10000
+};
+
+/**
+ * Categorizes API errors and determines if they are retryable
+ */
+function categorizeError(error: any, provider: string): ApiError {
+  const apiError = error as ApiError;
+  apiError.retryable = false;
+
+  if (error?.status || error?.statusCode) {
+    const status = error.status || error.statusCode;
+    
+    switch (status) {
+      case 429:
+        apiError.type = 'rate_limit';
+        apiError.retryable = true;
+        break;
+      case 500:
+      case 502:
+      case 503:
+      case 504:
+        apiError.type = 'api_error';
+        apiError.retryable = true;
+        break;
+      case 402:
+        apiError.type = 'quota_exceeded';
+        apiError.retryable = false;
+        break;
+      default:
+        apiError.type = 'api_error';
+        apiError.retryable = false;
+    }
+    apiError.statusCode = status;
+  } else if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT') {
+    apiError.type = 'network_error';
+    apiError.retryable = true;
+  } else {
+    apiError.type = 'invalid_response';
+    apiError.retryable = false;
+  }
+
+  return apiError;
+}
+
+/**
+ * Implements exponential backoff retry logic
+ */
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  provider: string,
+  config: RetryConfig = DEFAULT_RETRY_CONFIG
+): Promise<T> {
+  let lastError: ApiError;
+  
+  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = categorizeError(error, provider);
+      
+      console.error(`${provider} API attempt ${attempt + 1} failed:`, {
+        type: lastError.type,
+        statusCode: lastError.statusCode,
+        message: lastError.message
+      });
+      
+      // Don't retry on final attempt or non-retryable errors
+      if (attempt === config.maxRetries || !lastError.retryable) {
+        throw lastError;
+      }
+      
+      // Calculate delay with exponential backoff
+      const delay = Math.min(
+        config.baseDelay * Math.pow(2, attempt),
+        config.maxDelay
+      );
+      
+      console.log(`Retrying ${provider} API in ${delay}ms (attempt ${attempt + 2}/${config.maxRetries + 1})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError!;
+}
+
 export async function generateFlashcards(
+  text: string,
+  provider: "openai" | "anthropic",
+  apiKey: string,
+  count: number,
+  subject: string,
+  focusAreas: FocusAreas,
+  difficulty: string
+): Promise<FlashcardPair[]> {
+  // Try primary provider first, fallback to alternative if available
+  const primaryProvider = provider;
+  const fallbackProvider = provider === "openai" ? "anthropic" : "openai";
+  const fallbackApiKey = fallbackProvider === "openai" 
+    ? process.env.OPENAI_API_KEY 
+    : process.env.ANTHROPIC_API_KEY;
+
+  let lastError: ApiError;
+  
+  // Try primary provider
+  try {
+    console.log(`Attempting flashcard generation with ${primaryProvider}`);
+    return await generateFlashcardsWithProvider(text, primaryProvider, apiKey, count, subject, focusAreas, difficulty);
+  } catch (error) {
+    lastError = categorizeError(error, primaryProvider);
+    console.error(`${primaryProvider} failed:`, lastError.type, lastError.message);
+    
+    // Only attempt fallback if we have the API key and error suggests provider issue
+    if (fallbackApiKey && (lastError.type === 'rate_limit' || lastError.type === 'quota_exceeded' || lastError.type === 'api_error')) {
+      try {
+        console.log(`Attempting fallback to ${fallbackProvider}`);
+        return await generateFlashcardsWithProvider(text, fallbackProvider, fallbackApiKey, count, subject, focusAreas, difficulty);
+      } catch (fallbackError) {
+        const categorizedFallbackError = categorizeError(fallbackError, fallbackProvider);
+        console.error(`${fallbackProvider} fallback also failed:`, categorizedFallbackError.type, categorizedFallbackError.message);
+        
+        // Throw the more informative error
+        throw new Error(`Both AI providers failed. Primary (${primaryProvider}): ${lastError.message}. Fallback (${fallbackProvider}): ${categorizedFallbackError.message}`);
+      }
+    }
+    
+    // Re-throw original error if no fallback available
+    throw lastError;
+  }
+}
+
+async function generateFlashcardsWithProvider(
   text: string,
   provider: "openai" | "anthropic",
   apiKey: string,
@@ -45,15 +191,23 @@ export async function generateFlashcards(
       
       allFlashcards.push(...chunkFlashcards);
     } catch (error) {
-      console.error(`Error processing chunk ${i + 1}:`, error);
-      // Continue with other chunks even if one fails
+      console.error(`Error processing chunk ${i + 1} with ${provider}:`, error);
+      // Continue with other chunks even if one fails, but track the error
+      if (i === 0) {
+        // If the first chunk fails, this might be a systematic issue
+        throw error;
+      }
     }
   }
   
-  // Ensure we have exactly the requested count
-  const finalFlashcards = allFlashcards.slice(0, count);
+  // Ensure we have at least some flashcards
+  if (allFlashcards.length === 0) {
+    throw new Error(`Failed to generate any flashcards with ${provider}`);
+  }
   
   // Ensure we have exactly the requested count and add metadata
+  const finalFlashcards = allFlashcards.slice(0, count);
+  
   return finalFlashcards.map(card => ({
     question: card.question,
     answer: card.answer,
@@ -83,7 +237,7 @@ async function generateFlashcardsForChunk(
 async function generateWithOpenAI(prompt: string, apiKey: string): Promise<FlashcardPair[]> {
   const openai = new OpenAI({ apiKey });
   
-  try {
+  return await withRetry(async () => {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -116,10 +270,7 @@ async function generateWithOpenAI(prompt: string, apiKey: string): Promise<Flash
     
     const result = JSON.parse(cleanedText);
     return validateAndFormatFlashcards(result.flashcards || []);
-  } catch (error) {
-    console.error("OpenAI API error:", error);
-    throw new Error(`OpenAI API failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  }, "openai");
 }
 
 async function generateWithAnthropic(prompt: string, apiKey: string): Promise<FlashcardPair[]> {
