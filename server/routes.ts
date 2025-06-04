@@ -283,15 +283,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           filename: file.originalname,
           fileSize: file.size,
-          apiProvider: selectedProvider,
+          apiProvider: enforcedProvider,
           flashcardCount: parseInt(flashcardCount),
           subject: subject || "general",
           difficulty: difficulty || "intermediate",
           focusAreas: JSON.stringify(focusAreas || {}),
           status: "pending" as const,
           progress: 0,
-          currentTask: selectedProvider !== apiProvider 
-            ? `Starting processing with ${selectedProvider} (fallback from ${apiProvider})...`
+          currentTask: enforcedProvider !== selectedProvider 
+            ? `Starting processing with ${selectedProvider} (fallback from ${enforcedProvider})...`
             : "Starting processing...",
         };
 
@@ -1262,18 +1262,19 @@ async function processFlashcardJob(
       const job = await storage.getFlashcardJob(jobId);
       if (!job) throw new Error("Job not found");
 
-      // Get system-managed API key based on provider
-      const systemApiKey = apiProvider === "openai" 
+      // Map tier to actual provider and get API key
+      const actualProvider = apiProvider === "openai" ? "openai" : "anthropic";
+      const systemApiKey = actualProvider === "openai" 
         ? process.env.OPENAI_API_KEY 
         : process.env.ANTHROPIC_API_KEY;
       
       if (!systemApiKey) {
-        throw new Error(`${apiProvider.toUpperCase()} API key not configured`);
+        throw new Error(`${actualProvider.toUpperCase()} API key not configured`);
       }
 
       flashcards = await generateFlashcards(
         preprocessResult.filteredContent,
-        apiProvider === "openai" ? "openai" : "anthropic",
+        actualProvider,
         systemApiKey,
         parseInt(flashcardCount),
         subject,
