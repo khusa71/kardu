@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Menu, X, Home, Upload, History, BookOpen, LogOut, User } from "lucide-react";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useLocation } from "wouter";
+import { Link } from "wouter";
 
 interface NavigationBarProps {
   onNavigate?: (path: string) => void;
@@ -55,16 +56,16 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => (
-              <Button
-                key={item.path}
-                variant={isActive(item.path) ? "default" : "ghost"}
-                size="sm"
-                onClick={() => handleNavigation(item.path)}
-                className="flex items-center space-x-2"
-              >
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
-              </Button>
+              <Link key={item.path} href={item.path}>
+                <Button
+                  variant={isActive(item.path) ? "default" : "ghost"}
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                </Button>
+              </Link>
             ))}
           </div>
 
@@ -108,15 +109,16 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
           <div className="md:hidden border-t border-gray-200 dark:border-gray-700">
             <div className="py-2 space-y-1">
               {navItems.map((item) => (
-                <Button
-                  key={item.path}
-                  variant={isActive(item.path) ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => handleNavigation(item.path)}
-                >
-                  <item.icon className="w-4 h-4 mr-3" />
-                  {item.label}
-                </Button>
+                <Link key={item.path} href={item.path}>
+                  <Button
+                    variant={isActive(item.path) ? "default" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <item.icon className="w-4 h-4 mr-3" />
+                    {item.label}
+                  </Button>
+                </Link>
               ))}
               
               {/* User Info (Mobile) */}

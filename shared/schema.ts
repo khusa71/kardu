@@ -72,9 +72,30 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   processingTime: integer("processing_time"), // Time taken in seconds
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  regeneratedFromJobId: integer("regenerated_from_job_id"),
+});
+
+export const studyProgress = pgTable("study_progress", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  jobId: integer("job_id").notNull().references(() => flashcardJobs.id, { onDelete: "cascade" }),
+  cardIndex: integer("card_index").notNull(),
+  status: text("status").notNull(), // 'known', 'unknown', 'reviewing'
+  lastReviewedAt: timestamp("last_reviewed_at").defaultNow(),
+  nextReviewDate: timestamp("next_review_date"),
+  difficultyRating: text("difficulty_rating"), // 'easy', 'medium', 'hard'
+  reviewCount: integer("review_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertFlashcardJobSchema = createInsertSchema(flashcardJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStudyProgressSchema = createInsertSchema(studyProgress).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -84,6 +105,8 @@ export type InsertFlashcardJob = z.infer<typeof insertFlashcardJobSchema>;
 export type FlashcardJob = typeof flashcardJobs.$inferSelect;
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type StudyProgress = typeof studyProgress.$inferSelect;
+export type InsertStudyProgress = z.infer<typeof insertStudyProgressSchema>;
 
 export interface FlashcardPair {
   question: string;

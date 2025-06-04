@@ -33,6 +33,11 @@ export interface IStorage {
   updateFlashcardJob(id: number, updates: Partial<FlashcardJob>): Promise<FlashcardJob | undefined>;
   deleteFlashcardJob(id: number): Promise<boolean>;
   getUserJobs(userId: string): Promise<FlashcardJob[]>;
+  
+  // Study progress operations
+  getStudyProgress(userId: string, jobId: number): Promise<StudyProgress[]>;
+  updateStudyProgress(progress: InsertStudyProgress): Promise<StudyProgress>;
+  getStudyStats(userId: string, jobId: number): Promise<{ total: number; known: number; reviewing: number }>;
 }
 
 export class DatabaseStorage implements IStorage {

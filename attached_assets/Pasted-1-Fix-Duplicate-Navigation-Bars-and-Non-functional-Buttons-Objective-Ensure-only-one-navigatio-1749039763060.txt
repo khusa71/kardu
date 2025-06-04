@@ -1,0 +1,154 @@
+1. ✅ Fix: Duplicate Navigation Bars and Non-functional Buttons
+Objective:
+
+Ensure only one navigation bar exists across the app.
+
+Ensure navigation buttons (Home, Upload, History, Study, Logout) work correctly.
+
+Tasks:
+
+Audit layout files (e.g. App.tsx, _app.tsx, or shared Layout.tsx) and remove duplicate Navbar instances.
+
+Ensure new Navbar is imported once and works globally.
+
+Use <Link> or router navigation functions (e.g. useNavigate) instead of <a> tags.
+
+Make sure mobile hamburger toggle works correctly.
+
+Highlight active page.
+
+2. 🔁 New Feature: Regenerate Flashcards from Existing Uploaded PDFs
+Objective:
+Let users reuse previous PDF uploads to generate new flashcards using new subject, context, or difficulty.
+
+Frontend Tasks:
+
+In History page, add a "Regenerate Flashcards" button beside each upload.
+
+On click, show a modal form:
+
+Subject (text)
+
+Difficulty (dropdown)
+
+Custom Context (textarea)
+
+Submit button triggers regeneration with same file.
+
+Backend Tasks:
+
+Add POST /api/jobs/regenerate endpoint
+
+Accept: file ID, subject, context, difficulty
+
+Fetch PDF from object storage using file key
+
+Start a new flashcard generation job using existing PDF
+
+Bonus: Link new job in history with a tag “Regenerated”.
+
+3. 📈 New Feature: Study Progress Tracking System
+Objective:
+Track user progress while studying flashcards — mark cards as known/unknown and resume from where they left off.
+
+Backend Tasks:
+
+Create a study_progress table:
+
+sql
+Copy
+Edit
+user_id | job_id | card_id | status (known/unknown) | last_reviewed_at
+Add endpoints:
+
+GET /api/study-progress?jobId=...
+
+POST /api/study-progress to update progress
+
+Frontend Tasks:
+
+In StudyMode.tsx, persist card status to backend on flip
+
+Allow user to “Resume” a deck from last reviewed card
+
+UI indicator: ✔️ or 🔁 on each card based on status
+
+4. ⏳ New Feature: Spaced Repetition System
+Objective:
+Show flashcards based on spaced repetition schedule.
+
+Logic:
+
+After each review, assign an interval:
+
+Easy → next in 4 days
+
+Medium → 2 days
+
+Hard → 1 day
+
+Save next due date in study_progress
+
+Frontend:
+
+Add a “Daily Review” view to show only cards due today
+
+Allow rating cards as Easy / Medium / Hard after flip
+
+5. 🔐 Role-Based UI Access Guard
+Objective:
+Restrict features based on user role (free or premium)
+
+Frontend:
+
+Disable or grey-out:
+
+Multi-file upload
+
+Advanced config fields (context, difficulty)
+
+Export formats (limit to 1 for free users)
+
+Show tooltip “Upgrade to premium to unlock”
+
+Backend:
+
+Revalidate limits for each request:
+
+Upload: 1 file for free, 10 for premium
+
+Export: prevent abuse of multiple formats for free users
+
+6. 🛠️ Admin Dashboard for Analytics and System Health
+Objective:
+Add basic admin page to monitor platform activity.
+
+Frontend:
+
+Route: /admin (only accessible to admin users)
+
+Show:
+
+Total users
+
+Jobs created (daily/weekly/monthly)
+
+API usage (calls to OpenAI/Anthropic)
+
+File storage stats
+
+Backend:
+
+Create GET /api/admin/metrics
+
+Use DB + object store queries
+
+Protect route with admin middleware
+
+🧪 Testing
+Add unit tests for all new backend routes.
+
+Test flow: login → upload → generate → study → track → regenerate
+
+Confirm limits (uploads, exports) work per role.
+
