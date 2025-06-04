@@ -5,11 +5,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import Home from "@/pages/home";
+import Upload from "@/pages/upload";
 import History from "@/pages/history";
 import Landing from "@/pages/landing";
 import Success from "@/pages/success";
 import NotFound from "@/pages/not-found";
 import Study from "@/pages/study";
+import StudyMain from "@/pages/study-main";
 import Admin from "@/pages/admin";
 
 function Router() {
@@ -26,9 +28,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={user ? Home : Landing} />
-      <Route path="/upload" component={user ? Home : Landing} />
+      <Route path="/upload" component={user ? Upload : Landing} />
       <Route path="/history" component={user ? History : Landing} />
-      <Route path="/study" component={user ? History : Landing} />
+      <Route path="/study" component={user ? StudyMain : Landing} />
       <Route path="/study/:jobId" component={user ? Study : Landing} />
       <Route path="/admin" component={user ? Admin : Landing} />
       <Route path="/success" component={Success} />
