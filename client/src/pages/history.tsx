@@ -122,12 +122,34 @@ export default function History() {
         setSelectedJob(job);
         setViewMode('view');
       } else if (jobData.status === 'completed' && !jobData.flashcards) {
-        // Fallback: try to regenerate if flashcards are missing but job is completed
-        toast({
-          title: "Flashcards Missing",
-          description: "Flashcards appear to be missing. Would you like to regenerate them?",
-          variant: "destructive",
-        });
+        // Fallback: offer to regenerate if flashcards are missing but job is completed
+        const shouldRegenerate = confirm("Flashcards appear to be missing for this completed job. Would you like to regenerate them?");
+        if (shouldRegenerate) {
+          try {
+            const response = await fetch(`/api/regenerate/${job.id}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({}),
+            });
+            
+            if (response.ok) {
+              toast({
+                title: "Regeneration Started",
+                description: "Flashcards are being regenerated. Please check back in a few minutes.",
+              });
+            } else {
+              throw new Error('Failed to start regeneration');
+            }
+          } catch (error) {
+            toast({
+              title: "Regeneration Failed",
+              description: "Unable to regenerate flashcards. Please try again later.",
+              variant: "destructive",
+            });
+          }
+        }
       } else {
         toast({
           title: "No flashcards available",
@@ -285,6 +307,33 @@ export default function History() {
             onFlashcardsChange={setCurrentFlashcards}
             readonly={false}
             jobId={selectedJob?.id}
+            onSave={async (flashcards) => {
+              try {
+                const response = await fetch(`/api/jobs/${selectedJob?.id}/flashcards`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ flashcards: JSON.stringify(flashcards) }),
+                });
+                
+                if (!response.ok) {
+                  throw new Error('Failed to save flashcards');
+                }
+                
+                toast({
+                  title: "Success",
+                  description: "Flashcards saved successfully",
+                });
+              } catch (error: any) {
+                toast({
+                  title: "Error",
+                  description: error.message || "Failed to save flashcards",
+                  variant: "destructive",
+                });
+                throw error;
+              }
+            }}
           />
         </main>
       </div>

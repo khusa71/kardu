@@ -692,6 +692,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update flashcards endpoint
+  app.put("/api/jobs/:id/flashcards", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const userId = req.user!.uid;
+      const { flashcards } = req.body;
+
+      // Verify job ownership
+      const job = await storage.getFlashcardJob(jobId);
+      if (!job || job.userId !== userId) {
+        return res.status(404).json({ error: "Job not found or access denied" });
+      }
+
+      // Update flashcards
+      const updatedJob = await storage.updateFlashcardJob(jobId, {
+        flashcards,
+        updatedAt: new Date()
+      });
+
+      res.json({ success: true, job: updatedJob });
+    } catch (error) {
+      console.error("Error updating flashcards:", error);
+      res.status(500).json({ error: "Failed to update flashcards" });
+    }
+  });
+
   // Regenerate flashcards endpoint
   app.post("/api/regenerate/:jobId", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
