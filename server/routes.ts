@@ -219,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdJobs.push(job);
 
         // Start processing asynchronously with selected provider
-        processFlashcardJob(job.id, file.buffer, file.originalname, selectedProvider, subject, focusAreas, difficulty, userId, flashcardCount);
+        processFlashcardJob(job.id, file.buffer, file.originalname, selectedProvider, subject, focusAreas, difficulty, userId, flashcardCount, customContext);
       }
 
       // Increment user upload count once for the batch
@@ -840,7 +840,8 @@ async function processFlashcardJob(
   focusAreas: string,
   difficulty: string,
   userId: string,
-  flashcardCount: string
+  flashcardCount: string,
+  customContext?: string
 ) {
   let tempPdfPath: string | null = null;
   
@@ -924,7 +925,8 @@ async function processFlashcardJob(
         parseInt(flashcardCount),
         subject,
         JSON.parse(focusAreas || "{}"),
-        difficulty
+        difficulty,
+        customContext
       );
 
       // Cache the results for future use

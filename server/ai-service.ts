@@ -120,7 +120,8 @@ export async function generateFlashcards(
   count: number,
   subject: string,
   focusAreas: FocusAreas,
-  difficulty: string
+  difficulty: string,
+  customContext?: string
 ): Promise<FlashcardPair[]> {
   // Try primary provider first, fallback to alternative if available
   const primaryProvider = provider;
@@ -143,7 +144,7 @@ export async function generateFlashcards(
     if (fallbackApiKey && (lastError.type === 'rate_limit' || lastError.type === 'quota_exceeded' || lastError.type === 'api_error')) {
       try {
         console.log(`Attempting fallback to ${fallbackProvider}`);
-        return await generateFlashcardsWithProvider(text, fallbackProvider, fallbackApiKey, count, subject, focusAreas, difficulty);
+        return await generateFlashcardsWithProvider(text, fallbackProvider, fallbackApiKey, count, subject, focusAreas, difficulty, customContext);
       } catch (fallbackError) {
         const categorizedFallbackError = categorizeError(fallbackError, fallbackProvider);
         console.error(`${fallbackProvider} fallback also failed:`, categorizedFallbackError.type, categorizedFallbackError.message);
@@ -165,7 +166,8 @@ async function generateFlashcardsWithProvider(
   count: number,
   subject: string,
   focusAreas: FocusAreas,
-  difficulty: string
+  difficulty: string,
+  customContext?: string
 ): Promise<FlashcardPair[]> {
   // Chunk the text if it's too large
   const chunks = chunkText(text, 8000); // Conservative chunk size
