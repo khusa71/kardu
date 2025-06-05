@@ -40,12 +40,12 @@ function getProductionCSP(): string {
  * Development CSP configuration with nonce support (eliminates unsafe-inline)
  */
 function getDevelopmentCSP(nonce?: string): string {
-  // Secure CSP for development with nonce support
+  // Development CSP with Vite compatibility - allows inline scripts for HMR
   const nonceStr = nonce ? `'nonce-${nonce}'` : '';
   return [
     "default-src 'self'",
-    `script-src 'self' ${nonceStr} https://js.stripe.com https://replit.com 'strict-dynamic'`,
-    `style-src 'self' ${nonceStr} https://fonts.googleapis.com`,
+    `script-src 'self' ${nonceStr} 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://replit.com`, // Allow inline for Vite HMR
+    `style-src 'self' ${nonceStr} 'unsafe-inline' https://fonts.googleapis.com`, // Allow inline styles for Vite
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
     "connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com wss: ws:",
@@ -206,12 +206,12 @@ export function getEnhancedSecurityStatus() {
       },
       csp: {
         enabled: true,
-        environment: process.env.NODE_ENV === 'production' ? 'strict' : 'enforced',
-        unsafeInline: false, // Eliminated with nonce-based CSP
-        unsafeEval: false, // Eliminated with strict-dynamic
+        environment: process.env.NODE_ENV === 'production' ? 'strict' : 'development-compatible',
+        unsafeInline: process.env.NODE_ENV === 'development', // Required for Vite HMR in development
+        unsafeEval: process.env.NODE_ENV === 'development', // Required for Vite HMR in development
         trustedTypes: process.env.NODE_ENV === 'production' && enhancedSecurityConfig.contentSecurityPolicy.includes('require-trusted-types-for'),
         mixedContentBlocked: enhancedSecurityConfig.contentSecurityPolicy.includes('upgrade-insecure-requests'),
-        strictDynamic: true,
+        strictDynamic: process.env.NODE_ENV === 'production',
         nonceSupported: true
       },
       headers: {
