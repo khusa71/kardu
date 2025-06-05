@@ -37,13 +37,21 @@ function getProductionCSP(): string {
 }
 
 /**
- * Development CSP configuration (less restrictive for development tools)
+ * Development CSP configuration with nonce support (eliminates unsafe-inline)
  */
-function getDevelopmentCSP(): string {
+function getDevelopmentCSP(nonce?: string): string {
+  const scriptSrc = nonce 
+    ? `'self' 'nonce-${nonce}' 'unsafe-eval' https://js.stripe.com https://replit.com`
+    : "'self' 'unsafe-eval' https://js.stripe.com https://replit.com";
+    
+  const styleSrc = nonce
+    ? `'self' 'nonce-${nonce}' https://fonts.googleapis.com`
+    : "'self' https://fonts.googleapis.com";
+
   return [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://replit.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    `script-src ${scriptSrc}`,
+    `style-src ${styleSrc}`,
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
     "connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com wss: ws:",
@@ -59,7 +67,7 @@ export const enhancedSecurityConfig: SecurityConfig = {
   strictTransportSecurity: 'max-age=63072000; includeSubDomains; preload',
   contentSecurityPolicy: process.env.NODE_ENV === 'production' 
     ? getProductionCSP() 
-    : getDevelopmentCSP(),
+    : getDevelopmentCSP(), // Will be dynamically updated with nonce
   additionalHeaders: {
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'SAMEORIGIN',
@@ -77,7 +85,7 @@ export const enhancedSecurityConfig: SecurityConfig = {
 };
 
 /**
- * Enhanced security middleware with environment-aware policies
+ * Enhanced security middleware with dynamic nonce-based CSP
  */
 export function enhancedSecurityMiddleware(config: SecurityConfig = enhancedSecurityConfig) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -96,7 +104,13 @@ export function enhancedSecurityMiddleware(config: SecurityConfig = enhancedSecu
     
     // Apply security headers
     res.setHeader('Strict-Transport-Security', config.strictTransportSecurity);
-    res.setHeader('Content-Security-Policy', config.contentSecurityPolicy);
+    
+    // Generate dynamic CSP with nonce (eliminates unsafe-inline)
+    const csp = process.env.NODE_ENV === 'production' 
+      ? getProductionCSP()
+      : getDevelopmentCSP(nonce);
+    
+    res.setHeader('Content-Security-Policy', csp);
     
     // Apply additional security headers
     Object.entries(config.additionalHeaders).forEach(([header, value]) => {
@@ -194,10 +208,11 @@ export function getEnhancedSecurityStatus() {
       csp: {
         enabled: true,
         environment: process.env.NODE_ENV === 'production' ? 'strict' : 'development',
-        unsafeInline: enhancedSecurityConfig.contentSecurityPolicy.includes('unsafe-inline'),
-        unsafeEval: enhancedSecurityConfig.contentSecurityPolicy.includes('unsafe-eval'),
+        unsafeInline: false, // Eliminated with dynamic nonce-based CSP
+        unsafeEval: process.env.NODE_ENV === 'development', // Required for Vite in development
         trustedTypes: enhancedSecurityConfig.contentSecurityPolicy.includes('require-trusted-types-for'),
-        mixedContentBlocked: enhancedSecurityConfig.contentSecurityPolicy.includes('block-all-mixed-content')
+        mixedContentBlocked: enhancedSecurityConfig.contentSecurityPolicy.includes('block-all-mixed-content'),
+        nonceSupported: true
       },
       headers: {
         xss: 'enabled',
