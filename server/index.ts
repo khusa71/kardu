@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { logApiKeyStatus } from "./api-key-validator";
+import { healthMonitor } from "./health-monitor";
 import fs from "fs";
 import path from "path";
 
@@ -71,17 +72,60 @@ function cleanupTempFiles() {
   // Log API key configuration status
   logApiKeyStatus();
   
+  // Start health monitoring
+  healthMonitor.startMonitoring();
+  
   // Run cleanup every hour
   setInterval(cleanupTempFiles, 3600000);
   
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // Add graceful shutdown handling
+  process.on('SIGTERM', () => {
+    log('Received SIGTERM, shutting down gracefully');
+    server.close(() => {
+      log('Server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    log('Received SIGINT, shutting down gracefully');
+    server.close(() => {
+      log('Server closed');
+      process.exit(0);
+    });
+  });
+
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (reason, promise) => {
+    log(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+  });
+
+  process.on('uncaughtException', (err) => {
+    log(`Uncaught Exception: ${err.message}`);
+    console.error(err);
+    process.exit(1);
+  });
+
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
+    
+    // Log detailed error information for debugging
+    log(`Error ${status} on ${req.method} ${req.path}: ${message}`);
+    
+    // Don't expose internal errors in production
+    const responseMessage = status === 500 && process.env.NODE_ENV === 'production' 
+      ? "Internal Server Error" 
+      : message;
 
-    res.status(status).json({ message });
-    throw err;
+    res.status(status).json({ message: responseMessage });
+    
+    // Only throw the error if it's not a client error (4xx)
+    if (status >= 500) {
+      console.error('Server Error:', err);
+    }
   });
 
   // importantly only setup vite in development and after

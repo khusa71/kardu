@@ -531,10 +531,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Object Storage download endpoint - simplified for direct access
-  app.get("/api/object-storage/download/:key(*)", async (req: Request, res) => {
+  // Health endpoint for monitoring
+  app.get("/api/health", async (_req: Request, res: Response) => {
     try {
-      const storageKey = req.params.key;
+      const health = await healthMonitor.getHealthStatus();
+      res.status(health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503).json(health);
+    } catch (error) {
+      res.status(503).json({ 
+        status: 'unhealthy', 
+        timestamp: Date.now(),
+        error: 'Health check failed' 
+      });
+    }
+  });
+
+  // Object Storage download endpoint - simplified for direct access
+  app.get("/api/object-storage/download/:key(*)", async (req: Request, res: Response) => {
+    try {
+      const storageKey = req.params.key as string;
       
       // Only allow downloads from user directories (security check)
       if (!storageKey.startsWith('users/')) {
