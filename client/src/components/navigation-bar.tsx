@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Menu, X, Home, Upload, History, BookOpen, LogOut, User } from "lucide-react";
+import { Menu, X, Home, Upload, History, BookOpen, LogOut, User, Brain } from "lucide-react";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -53,27 +53,32 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
   if (!user) return null;
 
   return (
-    <nav className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+      <div className="container-section py-4">
         <div className="flex items-center justify-between">
           {/* Logo/Brand */}
-          <div className="flex items-center space-x-3">
-            <div className="bg-blue-600 text-white rounded-lg p-2">
-              <BookOpen className="w-6 h-6" />
+          <Link href="/">
+            <div className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+              <div className="bg-primary text-primary-foreground rounded-xl p-2.5">
+                <Brain className="w-6 h-6" />
+              </div>
+              <span className="text-xl font-bold text-foreground">Kardu.io</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kardu.io</h1>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => (
               <Link key={item.path} href={item.path}>
                 <Button
                   variant="ghost"
-                  className={`text-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                    isActive(item.path) ? 'text-blue-600' : 'text-gray-700 dark:text-gray-300'
+                  className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
+                    isActive(item.path) 
+                      ? 'text-primary bg-primary/10' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                   }`}
                 >
+                  <item.icon className="w-4 h-4 mr-2" />
                   {item.label}
                 </Button>
               </Link>
@@ -81,10 +86,15 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
           </div>
 
           {/* User Info & Actions */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="text-sm text-gray-600 dark:text-gray-300">
-              {user.email?.split('@')[0]}
-              <Badge variant={(user as any)?.isPremium ? "default" : "secondary"} className="ml-2 text-xs">
+          <div className="hidden md:flex items-center space-x-4">
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {user.email?.split('@')[0]}
+              </span>
+              <Badge 
+                variant={(user as any)?.isPremium ? "default" : "secondary"} 
+                className="ml-2 text-xs"
+              >
                 {(user as any)?.isPremium ? "Pro" : "Free"}
               </Badge>
             </div>
@@ -92,8 +102,9 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
               variant="outline" 
               size="sm" 
               onClick={handleLogout}
-              className="rounded-full"
+              className="rounded-xl"
             >
+              <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
           </div>
@@ -116,13 +127,17 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
 
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-            <div className="py-2 space-y-1 px-2">
+          <div className="md:hidden border-t border-border bg-background">
+            <div className="py-4 space-y-2">
               {navItems.map((item) => (
                 <Button
                   key={item.path}
-                  variant={isActive(item.path) ? "default" : "ghost"}
-                  className="w-full justify-start text-left"
+                  variant="ghost"
+                  className={`w-full justify-start text-left px-4 py-3 rounded-lg transition-colors ${
+                    isActive(item.path) 
+                      ? 'text-primary bg-primary/10' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
                   onClick={() => handleNavigation(item.path)}
                 >
                   <item.icon className="w-4 h-4 mr-3" />
@@ -131,12 +146,12 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
               ))}
               
               {/* User Info (Mobile) */}
-              <div className="px-2 py-3 border-t border-gray-200 dark:border-gray-700 mt-2">
+              <div className="px-4 py-4 border-t border-border mt-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <User className="w-4 h-4 text-gray-500" />
+                  <div className="flex items-center space-x-3">
+                    <User className="w-4 h-4 text-muted-foreground" />
                     <div className="text-sm">
-                      <p className="text-gray-900 dark:text-white font-medium">
+                      <p className="text-foreground font-medium">
                         {user.email?.split('@')[0]}
                       </p>
                       <Badge variant={(userData as any)?.isPremium ? "default" : "secondary"} className="text-xs">

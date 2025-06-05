@@ -23,75 +23,97 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <NavigationBar />
       
       {/* Hero Section */}
-      <main className="bg-white dark:bg-gray-900">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h1 className="mb-6 text-5xl font-medium leading-tight text-gray-900 dark:text-white lg:text-7xl">
-            Create flashcards in seconds.
-          </h1>
-          <p className="mx-auto mb-12 max-w-2xl text-xl leading-relaxed text-gray-600 dark:text-gray-300 lg:text-2xl">
-            Upload any PDF and transform it into interactive flashcards with AI. Study smarter, learn faster.
-          </p>
-          
-          <div className="mb-16">
-            {user ? (
-              <Link href="/upload">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 font-medium text-lg">
-                  Start Creating Flashcards
+      <main className="bg-background">
+        <section className="container-content py-16 md:py-24 lg:py-32 text-center">
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <h1 className="text-hero text-foreground">
+                Create flashcards
+                <span className="block text-primary">in seconds</span>
+              </h1>
+              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                Upload any PDF and transform it into interactive flashcards with AI. Study smarter, learn faster.
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+              {user ? (
+                <Link href="/upload">
+                  <Button 
+                    size="lg"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg font-semibold rounded-xl min-w-[240px]"
+                  >
+                    Start Creating Flashcards
+                  </Button>
+                </Link>
+              ) : (
+                <Button 
+                  onClick={() => setShowAuthModal(true)}
+                  size="lg"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg font-semibold rounded-xl min-w-[200px]"
+                >
+                  Get Started Free
                 </Button>
-              </Link>
-            ) : (
-              <Button 
-                onClick={() => setShowAuthModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 font-medium text-lg"
-              >
-                Get Started Free
-              </Button>
-            )}
+              )}
+            </div>
+
+            <div className="pt-4">
+              <p className="text-sm text-muted-foreground">
+                No credit card required • Free forever
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* Features Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          <Card className="text-center">
-            <CardContent className="p-6">
-              <div className="bg-blue-100 dark:bg-blue-900 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Zap className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">AI-Powered Generation</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Advanced AI analyzes your PDFs and creates relevant, high-quality flashcards automatically.
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container-section">
+            <div className="text-center mb-16">
+              <h2 className="text-section text-foreground mb-4">
+                Powerful features for effective learning
+              </h2>
+              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                Everything you need to create and study with AI-generated flashcards
               </p>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="text-center">
-            <CardContent className="p-6">
-              <div className="bg-green-100 dark:bg-green-900 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Target className="w-8 h-8 text-green-600" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
+              <div className="text-center group">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                  <Zap className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-4">AI-Powered Generation</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Advanced AI analyzes your PDFs and creates relevant, high-quality flashcards automatically
+                </p>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Customizable Focus</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Choose what to focus on - concepts, definitions, examples, or procedures.
-              </p>
-            </CardContent>
-          </Card>
 
-          <Card className="text-center">
-            <CardContent className="p-6">
-              <div className="bg-purple-100 dark:bg-purple-900 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Clock className="w-8 h-8 text-purple-600" />
+              <div className="text-center group">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                  <Target className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-4">Customizable Focus</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Choose what to focus on - concepts, definitions, examples, or procedures for targeted learning
+                </p>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Study Tracking</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Track your progress and focus on cards that need more practice.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+
+              <div className="text-center group">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                  <Clock className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-4">Study Tracking</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Track your progress and focus on cards that need more practice with built-in analytics
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* How It Works */}
         <div className="text-center mb-16">
