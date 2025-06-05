@@ -104,8 +104,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+
+      // Check current monthly usage and reset if needed
+      const { uploadsRemaining } = await storage.checkUploadLimit(userId);
+      const updatedUser = await storage.getUser(userId); // Get fresh data after potential reset
       
-      res.json(user);
+      // Calculate correct monthly usage data
+      const currentUploads = updatedUser?.monthlyUploads || 0;
+      const monthlyLimit = updatedUser?.monthlyLimit || (updatedUser?.isPremium ? 100 : 3);
+      
+      const userWithUsage = {
+        ...updatedUser,
+        uploadsThisMonth: currentUploads,
+        uploadsRemaining: uploadsRemaining,
+        monthlyLimit: monthlyLimit
+      };
+      
+      res.json(userWithUsage);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
