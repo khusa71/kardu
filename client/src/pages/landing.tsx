@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth-modal";
-import { Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, Menu, X, Upload, Bot, Rocket, ChevronRight } from "lucide-react";
+import { Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, Menu, X, Upload, Bot, Rocket, ChevronRight, Feather } from "lucide-react";
 
 export default function Landing() {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -54,6 +54,33 @@ export default function Landing() {
     setCurrentStep((prev) => (prev + 1) % steps.length);
   };
 
+  // Custom Owl Icon Component
+  const OwlIcon = ({ className }: { className?: string }) => (
+    <svg 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      className={className}
+    >
+      {/* Owl body */}
+      <ellipse cx="12" cy="16" rx="6" ry="7" />
+      {/* Owl eyes */}
+      <circle cx="9" cy="11" r="2" />
+      <circle cx="15" cy="11" r="2" />
+      {/* Eye pupils */}
+      <circle cx="9" cy="11" r="0.5" fill="currentColor" />
+      <circle cx="15" cy="11" r="0.5" fill="currentColor" />
+      {/* Beak */}
+      <path d="M12 13 L11 15 L13 15 Z" fill="currentColor" />
+      {/* Ear tufts */}
+      <path d="M7 7 L8 9 L9 7" />
+      <path d="M15 7 L16 9 L17 7" />
+    </svg>
+  );
+
   return (
     <div className="min-h-screen bg-background dark:bg-background">
       {/* Header */}
@@ -61,12 +88,15 @@ export default function Landing() {
         <div className="container-section py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
+            <button 
+              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
               <div className="bg-primary text-primary-foreground rounded-xl p-2.5">
-                <Brain className="w-6 h-6" />
+                <OwlIcon className="w-6 h-6" />
               </div>
               <span className="text-xl font-bold text-foreground">Kardu.io</span>
-            </div>
+            </button>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">

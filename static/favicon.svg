@@ -1,0 +1,22 @@
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="12" cy="12" r="12" fill="#3b82f6"/>
+  
+  <!-- Owl body -->
+  <ellipse cx="12" cy="15" rx="5" ry="6" stroke="white" stroke-width="1.5" fill="none"/>
+  
+  <!-- Owl eyes -->
+  <circle cx="9.5" cy="10.5" r="1.5" stroke="white" stroke-width="1.2" fill="none"/>
+  <circle cx="14.5" cy="10.5" r="1.5" stroke="white" stroke-width="1.2" fill="none"/>
+  
+  <!-- Eye pupils -->
+  <circle cx="9.5" cy="10.5" r="0.4" fill="white"/>
+  <circle cx="14.5" cy="10.5" r="0.4" fill="white"/>
+  
+  <!-- Beak -->
+  <path d="M12 12.5 L11.2 14 L12.8 14 Z" fill="white"/>
+  
+  <!-- Ear tufts -->
+  <path d="M7.5 7 L8.5 8.5 L9.5 7" stroke="white" stroke-width="1.2" fill="none"/>
+  <path d="M14.5 7 L15.5 8.5 L16.5 7" stroke="white" stroke-width="1.2" fill="none"/>
+</svg>
