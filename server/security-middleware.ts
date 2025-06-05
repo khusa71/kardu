@@ -104,17 +104,18 @@ function getDevelopmentCSP(nonce: string): CSPConfig {
       `'nonce-${nonce}'`,
       "https://js.stripe.com",
       "https://replit.com",
-      // For Vite HMR - more specific than unsafe-eval
+      // Essential for Vite React plugin and HMR
+      "'unsafe-eval'", // Required for Vite's dynamic imports and React Fast Refresh
       "'wasm-unsafe-eval'",
-      "blob:"
+      "blob:",
+      "data:"
     ],
     styleSrc: [
       "'self'",
       `'nonce-${nonce}'`,
       "https://fonts.googleapis.com",
-      "'unsafe-hashes'",
-      // Allow inline styles for Vite HMR
-      "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='" // Empty string hash
+      "'unsafe-inline'", // Required for Vite's style injection and React components
+      "'unsafe-hashes'"
     ],
     fontSrc: [
       "'self'",
@@ -134,9 +135,11 @@ function getDevelopmentCSP(nonce: string): CSPConfig {
       "https://api.anthropic.com",
       "wss:",
       "ws:",
-      // For Vite HMR
+      // For Vite HMR - broader support for development
+      "ws://localhost:*",
       "wss://localhost:*",
-      "ws://localhost:*"
+      "http://localhost:*",
+      "https://localhost:*"
     ],
     frameSrc: [
       "'self'",

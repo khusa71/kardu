@@ -551,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Security status endpoint
   app.get("/api/security-status", async (_req: express.Request, res: express.Response) => {
     try {
-      const securityStatus = getEnhancedSecurityStatus();
+      const securityStatus = getSecurityStatus();
       res.json(securityStatus);
     } catch (error) {
       res.status(500).json({ 
