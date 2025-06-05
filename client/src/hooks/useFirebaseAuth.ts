@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   sendEmailVerification,
+  sendPasswordResetEmail,
   onAuthStateChanged,
   updateProfile
 } from 'firebase/auth';
@@ -33,6 +34,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
   refreshUserData: () => Promise<void>;
@@ -202,6 +204,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for instructions to reset your password.",
+      });
+    } catch (error: any) {
+      let errorMessage = error.message;
+      
+      // Handle specific Firebase errors with user-friendly messages
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = "No account found with this email address.";
+          break;
+        case 'auth/invalid-email':
+          errorMessage = "Please enter a valid email address.";
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = "Too many requests. Please try again later.";
+          break;
+        default:
+          errorMessage = "Unable to send password reset email. Please try again.";
+      }
+      
+      toast({
+        title: "Password Reset Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const sendVerificationEmail = async () => {
     try {
       if (auth.currentUser) {
@@ -249,6 +285,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
+    resetPassword,
     logout,
     sendVerificationEmail,
     refreshUserData

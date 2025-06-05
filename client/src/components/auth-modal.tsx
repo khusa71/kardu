@@ -19,6 +19,8 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -27,7 +29,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useFirebaseAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useFirebaseAuth();
 
   const handleGoogleSignIn = async () => {
     try {
@@ -92,6 +94,23 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       setEmailSent(true);
     } catch (error) {
       console.error("Sign up error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!formData.email) {
+      setErrors({ email: "Please enter your email address" });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await resetPassword(formData.email);
+      setResetEmailSent(true);
+    } catch (error) {
+      console.error("Password reset error:", error);
     } finally {
       setLoading(false);
     }
