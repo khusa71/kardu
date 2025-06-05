@@ -13,6 +13,7 @@ import { exportService } from "./export-service";
 import { objectStorage } from "./object-storage-service";
 import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
+import { healthMonitor } from "./health-monitor";
 
 // AI Model mapping for quality tiers
 const modelMap = {

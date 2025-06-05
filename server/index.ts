@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
+import { monitoringService } from "./monitoring-service";
 import fs from "fs";
 import path from "path";
 
@@ -24,6 +25,9 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
+      // Record metrics for monitoring
+      monitoringService.recordRequest(duration, res.statusCode >= 400);
+      
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
@@ -74,6 +78,9 @@ function cleanupTempFiles() {
   
   // Start health monitoring
   healthMonitor.startMonitoring();
+  
+  // Start performance monitoring
+  monitoringService.startPeriodicCollection();
   
   // Run cleanup every hour
   setInterval(cleanupTempFiles, 3600000);
