@@ -175,17 +175,12 @@ export default function StudyMain() {
       completedCards: newCompletedCards
     });
     
-    toast({
-      title: "Progress saved",
-      description: `Card rated as ${rating}`,
-    });
-    
-    // Auto-advance to next card after rating
+    // Auto-advance to next card after rating (no toast notification)
     setTimeout(() => {
       if (currentCardIndex < currentFlashcards.length - 1) {
         nextCard();
       }
-    }, 500);
+    }, 300);
   };
 
   // Markdown renderer component
