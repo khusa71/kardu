@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { logApiKeyStatus } from "./api-key-validator";
@@ -10,7 +11,15 @@ import path from "path";
 
 const app = express();
 
-// Apply security middleware
+// Apply helmet security middleware with custom configuration
+app.use(helmet({
+  contentSecurityPolicy: false, // We'll use our custom CSP
+  hsts: false, // We'll use our custom HSTS
+  frameguard: false, // We'll use our custom X-Frame-Options
+  crossOriginEmbedderPolicy: false, // Custom COEP policy
+}));
+
+// Apply our enhanced security middleware
 app.use(securityMiddleware());
 
 app.use(express.json());

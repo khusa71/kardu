@@ -1,0 +1,45 @@
+Security Report Summary
+A
+Site:	https://e9a2f452-36b1-45e6-b65e-0b182e037350-00-ln6987ek5j4b.spock.replit.dev/
+IP Address:	34.82.58.13
+Report Time:	05 Jun 2025 12:50:32 UTC
+Headers:	
+Content-Security-Policy Permissions-Policy Referrer-Policy Strict-Transport-Security X-Content-Type-Options X-Frame-Options
+Warning:	Grade capped at A, please see warnings below.
+Advanced:	
+Great grade! Perform a deeper security analysis of your website and APIs:	
+Warnings
+Content-Security-Policy	This policy contains 'unsafe-inline' which is dangerous in the script-src directive. This policy contains 'unsafe-eval' which is dangerous in the script-src directive.
+Raw Headers
+HTTP/1.1	200 OK
+Content-Length	44221
+Content-Security-Policy	default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://replit.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com wss: ws:; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests
+Content-Type	text/html; charset=utf-8
+Date	Thu, 05 Jun 2025 12:50:32 GMT
+Permissions-Policy	camera=(), microphone=(), geolocation=()
+Referrer-Policy	no-referrer-when-downgrade
+Replit-Cluster	spock
+Strict-Transport-Security	max-age=63072000; includeSubDomains; preload
+Vary	Origin
+X-Content-Type-Options	nosniff
+X-Dns-Prefetch-Control	off
+X-Download-Options	noopen
+X-Frame-Options	SAMEORIGIN
+X-Permitted-Cross-Domain-Policies	none
+X-Powered-By	Express
+X-Robots-Tag	none, noindex, noarchive, nofollow, nositelinkssearchbox, noimageindex
+X-Robots-Tag	none, noindex, noarchive, nofollow, nositelinkssearchbox, noimageindex
+X-Xss-Protection	1; mode=block
+Upcoming Headers
+Cross-Origin-Embedder-Policy	Cross-Origin Embedder Policy allows a site to prevent assets being loaded that do not grant permission to load them via CORS or CORP.
+Cross-Origin-Opener-Policy	Cross-Origin Opener Policy allows a site to opt-in to Cross-Origin Isolation in the browser.
+Cross-Origin-Resource-Policy	Cross-Origin Resource Policy allows a resource owner to specify who can load the resource.
+Additional Information
+Content-Security-Policy	Content Security Policy is an effective measure to protect your site from XSS attacks. By whitelisting sources of approved content, you can prevent the browser from loading malicious assets. Analyse this policy in more detail. You can sign up for a free account on Report URI to collect reports about problems on your site.
+Permissions-Policy	Permissions Policy is a new header that allows a site to control which features and APIs can be used in the browser.
+Referrer-Policy	Referrer Policy is a new header that allows a site to control how much information the browser includes with navigations away from a document and should be set by all sites.
+Strict-Transport-Security	HTTP Strict Transport Security is an excellent feature to support on your site and strengthens your implementation of TLS by getting the User Agent to enforce the use of HTTPS.
+X-Content-Type-Options	X-Content-Type-Options stops a browser from trying to MIME-sniff the content type and forces it to stick with the declared content-type. The only valid value for this header is "X-Content-Type-Options: nosniff".
+X-Frame-Options	X-Frame-Options tells the browser whether you want to allow your site to be framed or not. By preventing a browser from framing your site you can defend against attacks like clickjacking.
+X-Powered-By	X-Powered-By can usually be seen with values like "PHP/5.5.9-1ubuntu4.5" or "ASP.NET". Trying to minimise the amount of information you give out about your server is a good idea. This header should be removed or the value changed.
+X-Xss-Protection	X-XSS-Protection sets the configuration for the XSS Auditor built into older browsers. The recommended value was "X-XSS-Protection: 1; mode=block" but you should now look at Content Security Policy instead.
