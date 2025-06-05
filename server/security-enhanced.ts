@@ -40,18 +40,20 @@ function getProductionCSP(): string {
  * Development CSP configuration with nonce support (eliminates unsafe-inline)
  */
 function getDevelopmentCSP(nonce?: string): string {
-  // Relaxed CSP for development to support Vite HMR, React plugin, and Firebase
+  // Secure CSP for development with nonce support
+  const nonceStr = nonce ? `'nonce-${nonce}'` : '';
   return [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com https://www.gstatic.com", // Required for Vite HMR and React plugin
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Required for Vite
+    `script-src 'self' ${nonceStr} https://js.stripe.com https://replit.com 'strict-dynamic'`,
+    `style-src 'self' ${nonceStr} https://fonts.googleapis.com`,
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
     "connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com wss: ws:",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.firebaseapp.com",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self'",
+    "upgrade-insecure-requests"
   ].join('; ');
 }
 
@@ -102,13 +104,12 @@ export function enhancedSecurityMiddleware(config: SecurityConfig = enhancedSecu
     // Apply security headers
     res.setHeader('Strict-Transport-Security', config.strictTransportSecurity);
     
-    // Apply CSP based on environment
-    if (process.env.NODE_ENV === 'production') {
-      res.setHeader('Content-Security-Policy', getProductionCSP());
-    } else {
-      // Use CSP Report-Only in development for monitoring without blocking
-      res.setHeader('Content-Security-Policy-Report-Only', getDevelopmentCSP(nonce));
-    }
+    // Apply enforced CSP in all environments
+    const csp = process.env.NODE_ENV === 'production' 
+      ? getProductionCSP()
+      : getDevelopmentCSP(nonce);
+    
+    res.setHeader('Content-Security-Policy', csp);
     
     // Apply additional security headers
     Object.entries(config.additionalHeaders).forEach(([header, value]) => {
@@ -205,13 +206,13 @@ export function getEnhancedSecurityStatus() {
       },
       csp: {
         enabled: true,
-        environment: process.env.NODE_ENV === 'production' ? 'strict' : 'report-only',
-        unsafeInline: process.env.NODE_ENV === 'development', // Report-only in development
-        unsafeEval: process.env.NODE_ENV === 'development', // Report-only in development
+        environment: process.env.NODE_ENV === 'production' ? 'strict' : 'enforced',
+        unsafeInline: false, // Eliminated with nonce-based CSP
+        unsafeEval: false, // Eliminated with strict-dynamic
         trustedTypes: process.env.NODE_ENV === 'production' && enhancedSecurityConfig.contentSecurityPolicy.includes('require-trusted-types-for'),
-        mixedContentBlocked: process.env.NODE_ENV === 'production' && enhancedSecurityConfig.contentSecurityPolicy.includes('block-all-mixed-content'),
-        strictDynamic: process.env.NODE_ENV === 'production',
-        reportingEnabled: true
+        mixedContentBlocked: enhancedSecurityConfig.contentSecurityPolicy.includes('upgrade-insecure-requests'),
+        strictDynamic: true,
+        nonceSupported: true
       },
       headers: {
         xss: 'enabled',
