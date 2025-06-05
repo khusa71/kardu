@@ -396,9 +396,10 @@ export default function History() {
                 View and manage your past PDF uploads and generated flashcards
               </p>
             </div>
-            <Badge variant="outline" className="flex items-center">
-              <FileText className="w-4 h-4 mr-2" />
-              {jobs.length} uploads
+            <Badge variant="outline" className="flex items-center text-xs sm:text-sm">
+              <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">{jobs.length} uploads</span>
+              <span className="sm:hidden">{jobs.length}</span>
             </Badge>
           </div>
         </div>
