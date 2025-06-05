@@ -73,17 +73,24 @@ export default function Landing() {
         </div>
       </header>
 
+      {/* Beta Badge */}
+      <div className="bg-primary/10 border-primary/20 border-b text-center py-3">
+        <p className="text-sm text-primary font-medium">
+          🚀 In Beta – Help shape the future of learning with AI flashcards
+        </p>
+      </div>
+
       {/* Hero Section */}
       <main className="bg-background">
         <section className="container-content py-16 md:py-24 lg:py-32 text-center">
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-hero text-foreground">
-                Transform PDFs into
-                <span className="block text-primary"> Smart Flashcards</span>
+                Turn Any PDF Into AI-Powered Flashcards —
+                <span className="block text-primary"> in Seconds</span>
               </h1>
               <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
-                AI-powered flashcard generation that understands your content. Study smarter, learn faster, remember more.
+                We're in beta — but already helping early users study smarter and save time.
               </p>
             </div>
             
@@ -93,12 +100,13 @@ export default function Landing() {
                 size="lg"
                 className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg font-semibold rounded-xl min-w-[200px]"
               >
-                Start Free Today
+                Try Free Beta
               </Button>
               <Button 
                 variant="outline"
                 size="lg"
                 className="px-8 py-3 text-lg font-medium rounded-xl min-w-[180px] border-border hover:bg-muted"
+                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
               >
                 See How It Works
               </Button>
@@ -106,8 +114,54 @@ export default function Landing() {
 
             <div className="pt-8">
               <p className="text-sm text-muted-foreground">
-                No credit card required • 3 free PDFs per month • Export to all formats
+                3 free PDFs every month — no credit card required
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* How It Works Section */}
+        <section id="how-it-works" className="py-16 md:py-24 bg-background">
+          <div className="container-section">
+            <div className="text-center mb-16">
+              <h2 className="text-section text-foreground mb-4">
+                How It Works
+              </h2>
+              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                Three simple steps to transform your PDFs into smart flashcards
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
+              <div className="text-center group">
+                <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                  <div className="text-2xl font-bold text-primary">1</div>
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-4">Upload a PDF</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Simply drag and drop your study material, textbook, or notes in PDF format
+                </p>
+              </div>
+
+              <div className="text-center group">
+                <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                  <div className="text-2xl font-bold text-primary">2</div>
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-4">Generate Smart Flashcards</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Our AI analyzes your content and creates targeted flashcards automatically
+                </p>
+              </div>
+
+              <div className="text-center group">
+                <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                  <div className="text-2xl font-bold text-primary">3</div>
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-4">Study or Export</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Study directly in the app or export to Anki, Quizlet, CSV and more
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -129,7 +183,7 @@ export default function Landing() {
                 <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
                   <Brain className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">AI-Powered Generation</h3>
+                <h3 className="text-xl font-semibold text-foreground mb-4">AI-powered flashcard generation from your real content</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   Advanced AI analyzes your PDFs and creates high-quality flashcards tailored to your content and learning style
                 </p>
@@ -139,7 +193,7 @@ export default function Landing() {
                 <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
                   <Download className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">Multiple Export Formats</h3>
+                <h3 className="text-xl font-semibold text-foreground mb-4">Export to Anki, CSV, Quizlet & more</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   Export to Anki, CSV, JSON, or Quizlet format. Compatible with all major study platforms and tools
                 </p>
@@ -149,11 +203,85 @@ export default function Landing() {
                 <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
                   <Shield className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">Secure & Private</h3>
+                <h3 className="text-xl font-semibold text-foreground mb-4">Private & secure — no files stored permanently</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   Your documents are processed securely with enterprise-grade encryption and never stored permanently
                 </p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials Section */}
+        <section className="py-16 md:py-24 bg-background">
+          <div className="container-section">
+            <div className="text-center mb-16">
+              <h2 className="text-section text-foreground mb-4">
+                What Our Early Users Say
+              </h2>
+              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                Used by early learners in our beta who gave us a 4.7/5 average rating.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <CardContent className="p-0">
+                  <div className="flex items-center mb-4">
+                    <div className="flex text-yellow-400">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-current" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground mb-4 italic">
+                    "This beta tool saved me hours of manual flashcard creation. The AI really understands the content."
+                  </p>
+                  <div className="text-sm">
+                    <p className="font-medium text-foreground">Sarah M.</p>
+                    <p className="text-muted-foreground">Medical Student</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <CardContent className="p-0">
+                  <div className="flex items-center mb-4">
+                    <div className="flex text-yellow-400">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-current" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground mb-4 italic">
+                    "Perfect for studying complex textbooks. The export to Anki feature is exactly what I needed."
+                  </p>
+                  <div className="text-sm">
+                    <p className="font-medium text-foreground">Alex R.</p>
+                    <p className="text-muted-foreground">Graduate Student</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow md:col-span-2 lg:col-span-1">
+                <CardContent className="p-0">
+                  <div className="flex items-center mb-4">
+                    <div className="flex text-yellow-400">
+                      {[...Array(4)].map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-current" />
+                      ))}
+                      <Star className="w-4 h-4 text-gray-300" />
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground mb-4 italic">
+                    "Great potential! Looking forward to more features as the beta progresses."
+                  </p>
+                  <div className="text-sm">
+                    <p className="font-medium text-foreground">Jordan K.</p>
+                    <p className="text-muted-foreground">Professional Learner</p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>
@@ -176,7 +304,7 @@ export default function Landing() {
                 <CardHeader className="p-0 pb-6">
                   <CardTitle className="text-2xl font-bold text-foreground">Free</CardTitle>
                   <CardDescription className="text-muted-foreground mt-2">
-                    Perfect for getting started
+                    3 free PDFs every month — no credit card required
                   </CardDescription>
                   <div className="text-4xl font-bold text-foreground mt-4">
                     $0<span className="text-lg font-normal text-muted-foreground">/month</span>
@@ -222,7 +350,7 @@ export default function Landing() {
                 <CardHeader className="p-0 pb-6">
                   <CardTitle className="text-2xl font-bold text-foreground">Premium</CardTitle>
                   <CardDescription className="text-muted-foreground mt-2">
-                    For serious learners
+                    Ready for more? Unlock advanced AI and more uploads
                   </CardDescription>
                   <div className="text-4xl font-bold text-foreground mt-4">
                     $9<span className="text-lg font-normal text-muted-foreground">/month</span>
