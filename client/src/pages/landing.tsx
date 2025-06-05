@@ -71,10 +71,18 @@ export default function Landing() {
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
               <nav className="flex items-center space-x-6">
-                <Button variant="ghost" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+                <Button 
+                  variant="ghost" 
+                  className="text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                  onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                >
                   Features
                 </Button>
-                <Button variant="ghost" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+                <Button 
+                  variant="ghost" 
+                  className="text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                  onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+                >
                   Pricing
                 </Button>
               </nav>
@@ -101,10 +109,24 @@ export default function Landing() {
           {mobileMenuOpen && (
             <div className="md:hidden mt-4 pb-6 border-t border-border pt-6">
               <div className="flex flex-col space-y-4">
-                <Button variant="ghost" className="justify-start text-sm font-medium text-muted-foreground hover:text-foreground">
+                <Button 
+                  variant="ghost" 
+                  className="justify-start text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                  onClick={() => {
+                    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+                    setMobileMenuOpen(false);
+                  }}
+                >
                   Features
                 </Button>
-                <Button variant="ghost" className="justify-start text-sm font-medium text-muted-foreground hover:text-foreground">
+                <Button 
+                  variant="ghost" 
+                  className="justify-start text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                  onClick={() => {
+                    document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+                    setMobileMenuOpen(false);
+                  }}
+                >
                   Pricing
                 </Button>
                 <Button 
@@ -273,7 +295,7 @@ export default function Landing() {
         </section>
 
         {/* Features Section */}
-        <section className="py-16 md:py-24 bg-muted/30">
+        <section id="features" className="py-16 md:py-24 bg-muted/30">
           <div className="container-section">
             <div className="text-center mb-16">
               <h2 className="text-section text-foreground mb-4">
@@ -517,7 +539,7 @@ export default function Landing() {
         </section>
 
         {/* Pricing Section */}
-        <section className="py-16 md:py-24 bg-background">
+        <section id="pricing" className="py-16 md:py-24 bg-background">
           <div className="container-content">
             <div className="text-center mb-16">
               <h2 className="text-section text-foreground mb-4">
