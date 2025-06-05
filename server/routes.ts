@@ -13,6 +13,7 @@ import { exportService } from "./export-service";
 import { objectStorage } from "./object-storage-service";
 import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
+import { setupVite, serveStatic, log } from "./vite";
 
 // AI Model mapping for quality tiers
 const modelMap = {
@@ -532,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Object Storage download endpoint - simplified for direct access
-  app.get("/api/object-storage/download/:key(*)", async (req: Request, res) => {
+  app.get("/api/object-storage/download/:key(*)", async (req: express.Request, res: express.Response) => {
     try {
       const storageKey = req.params.key;
       
@@ -1178,6 +1179,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Setup Vite development server or serve static files in production
+  if (process.env.NODE_ENV === "development") {
+    await setupVite(app, httpServer);
+    log("Vite development server configured");
+  } else {
+    serveStatic(app);
+    log("Static file serving configured");
+  }
+  
   return httpServer;
 }
 
