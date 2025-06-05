@@ -65,7 +65,7 @@ export const enhancedSecurityConfig: SecurityConfig = {
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'SAMEORIGIN',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), fullscreen=(self)',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), fullscreen=(self), autoplay=(), encrypted-media=(), picture-in-picture=()',
     'X-XSS-Protection': '1; mode=block',
     'X-DNS-Prefetch-Control': 'off',
     'X-Download-Options': 'noopen',
@@ -73,7 +73,11 @@ export const enhancedSecurityConfig: SecurityConfig = {
     'Cross-Origin-Embedder-Policy': 'unsafe-none',
     'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
     'Cross-Origin-Resource-Policy': 'cross-origin',
-    'Cache-Control': 'no-store, no-cache, must-revalidate, private'
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    'Expect-CT': 'max-age=86400, enforce',
+    'NEL': '{"report_to":"default","max_age":31536000,"include_subdomains":true}',
+    'Report-To': '{"group":"default","max_age":31536000,"endpoints":[{"url":"/api/reports"}],"include_subdomains":true}',
+    'Feature-Policy': "camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; usb 'none'"
   }
 };
 
@@ -98,9 +102,12 @@ export function enhancedSecurityMiddleware(config: SecurityConfig = enhancedSecu
     // Apply security headers
     res.setHeader('Strict-Transport-Security', config.strictTransportSecurity);
     
-    // Only apply CSP in production to avoid Vite conflicts
+    // Apply CSP based on environment
     if (process.env.NODE_ENV === 'production') {
       res.setHeader('Content-Security-Policy', getProductionCSP());
+    } else {
+      // Use CSP Report-Only in development for monitoring without blocking
+      res.setHeader('Content-Security-Policy-Report-Only', getDevelopmentCSP(nonce));
     }
     
     // Apply additional security headers
@@ -197,13 +204,14 @@ export function getEnhancedSecurityStatus() {
         hstsMaxAge: '63072000'
       },
       csp: {
-        enabled: process.env.NODE_ENV === 'production',
-        environment: process.env.NODE_ENV === 'production' ? 'strict' : 'disabled',
-        unsafeInline: false, // Disabled in development to avoid Vite conflicts
-        unsafeEval: false, // Disabled in development to avoid Vite conflicts
+        enabled: true,
+        environment: process.env.NODE_ENV === 'production' ? 'strict' : 'report-only',
+        unsafeInline: process.env.NODE_ENV === 'development', // Report-only in development
+        unsafeEval: process.env.NODE_ENV === 'development', // Report-only in development
         trustedTypes: process.env.NODE_ENV === 'production' && enhancedSecurityConfig.contentSecurityPolicy.includes('require-trusted-types-for'),
         mixedContentBlocked: process.env.NODE_ENV === 'production' && enhancedSecurityConfig.contentSecurityPolicy.includes('block-all-mixed-content'),
-        strictDynamic: process.env.NODE_ENV === 'production'
+        strictDynamic: process.env.NODE_ENV === 'production',
+        reportingEnabled: true
       },
       headers: {
         xss: 'enabled',

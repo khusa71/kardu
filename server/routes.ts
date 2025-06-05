@@ -561,6 +561,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Security reports endpoint for CSP violation reports
+  app.post("/api/reports", express.json(), async (req: express.Request, res: express.Response) => {
+    try {
+      const report = req.body;
+      console.log('Security Report:', JSON.stringify(report, null, 2));
+      
+      // In production, you might want to store these reports in a database
+      // or send them to a monitoring service
+      
+      res.status(204).send(); // No content response for reports
+    } catch (error) {
+      console.error('Error processing security report:', error);
+      res.status(500).json({ error: 'Failed to process report' });
+    }
+  });
+
   // Object Storage download endpoint - simplified for direct access
   app.get("/api/object-storage/download/:key(*)", async (req: Request, res: Response) => {
     try {
