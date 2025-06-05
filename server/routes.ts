@@ -470,6 +470,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update job filename
+  app.put("/api/jobs/:id/rename", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.uid;
+      const jobId = parseInt(req.params.id);
+      const { filename } = req.body;
+
+      if (!filename || !filename.trim()) {
+        return res.status(400).json({ message: "Filename is required" });
+      }
+
+      // Get the job to verify ownership
+      const job = await storage.getFlashcardJob(jobId);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      if (job.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Update the filename
+      await storage.updateJobFilename(jobId, filename.trim());
+
+      res.json({ message: "Filename updated successfully" });
+    } catch (error) {
+      console.error("Filename update error:", error);
+      res.status(500).json({ message: "Failed to update filename" });
+    }
+  });
+
   // Get user's flashcard decks for study page
   app.get("/api/decks", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {

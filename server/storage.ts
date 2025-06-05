@@ -34,6 +34,7 @@ export interface IStorage {
   createFlashcardJob(job: InsertFlashcardJob): Promise<FlashcardJob>;
   getFlashcardJob(id: number): Promise<FlashcardJob | undefined>;
   updateFlashcardJob(id: number, updates: Partial<FlashcardJob>): Promise<FlashcardJob | undefined>;
+  updateJobFilename(id: number, filename: string): Promise<void>;
   deleteFlashcardJob(id: number): Promise<boolean>;
   getUserJobs(userId: string): Promise<FlashcardJob[]>;
   
@@ -228,6 +229,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(flashcardJobs.id, id))
       .returning();
     return job || undefined;
+  }
+
+  async updateJobFilename(id: number, filename: string): Promise<void> {
+    await db
+      .update(flashcardJobs)
+      .set({ 
+        filename,
+        updatedAt: new Date()
+      })
+      .where(eq(flashcardJobs.id, id));
   }
 
   async deleteFlashcardJob(id: number): Promise<boolean> {
