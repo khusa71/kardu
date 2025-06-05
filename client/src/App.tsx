@@ -16,6 +16,7 @@ import NotFound from "@/pages/not-found";
 import Study from "@/pages/study";
 import StudyMain from "@/pages/study-main";
 import Admin from "@/pages/admin";
+import ResetPassword from "@/pages/reset-password";
 
 // Redirect component for authenticated users visiting root
 function DashboardRedirect() {
@@ -73,6 +74,7 @@ function Router() {
       <Route path="/study/:jobId" component={user ? Study : LoginRedirect} />
       <Route path="/admin" component={user ? Admin : LoginRedirect} />
       <Route path="/success" component={Success} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route component={NotFound} />
     </Switch>
   );
