@@ -312,11 +312,6 @@ function getStandaloneHTML() {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Serve standalone interface for root and non-API routes BEFORE any other middleware
-  app.get('/', (req, res) => {
-    res.send(getStandaloneHTML());
-  });
-  
   // Raw body middleware for Stripe webhooks
   app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
   

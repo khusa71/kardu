@@ -101,8 +101,9 @@ function cleanupTempFiles() {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  // Skip Vite entirely - stable interface already set up above
-  log("Serving standalone application interface");
+  // Force production mode to avoid Vite HMR connection issues
+  setupFallbackServer(app);
+  log("Serving stable production interface");
 
 function setupStandaloneInterface(app: any) {
   // Serve a complete working interface without Vite
