@@ -1,26 +1,21 @@
 import express, { type Request, Response, NextFunction } from "express";
-import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
 import { monitoringService } from "./monitoring-service";
-import { enhancedSecurityMiddleware, getEnhancedSecurityStatus } from "./security-enhanced";
+import { createSecurityMiddleware, injectNonceMiddleware, getSecurityStatus } from "./security-middleware";
 import fs from "fs";
 import path from "path";
 
 const app = express();
 
-// Apply helmet security middleware with custom configuration
-app.use(helmet({
-  contentSecurityPolicy: false, // We'll use our custom CSP
-  hsts: false, // We'll use our custom HSTS
-  frameguard: false, // We'll use our custom X-Frame-Options
-  crossOriginEmbedderPolicy: false, // Custom COEP policy
-}));
+// Apply comprehensive security middleware with nonce-based CSP
+const securityMiddlewares = createSecurityMiddleware();
+securityMiddlewares.forEach(middleware => app.use(middleware));
 
-// Apply our enhanced security middleware
-app.use(enhancedSecurityMiddleware());
+// Apply nonce injection middleware for HTML templates
+app.use(injectNonceMiddleware());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -89,6 +84,10 @@ function cleanupTempFiles() {
   
   // Log API key configuration status
   logApiKeyStatus();
+  
+  // Log security configuration status
+  const securityStatus = getSecurityStatus();
+  log(`Security Configuration - Score: ${securityStatus.validation.score}/100, Environment: ${securityStatus.environment}`);
   
   // Start health monitoring
   healthMonitor.startMonitoring();
