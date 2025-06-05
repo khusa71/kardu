@@ -534,15 +534,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Health endpoint for monitoring
-  app.get("/api/health", async (_req: Request, res: Response) => {
+  app.get("/api/health", async (_req: express.Request, res: express.Response) => {
     try {
       const health = await healthMonitor.getHealthStatus();
-      res.status(health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503).json(health);
+      const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+      res.status(statusCode).json(health);
     } catch (error) {
       res.status(503).json({ 
         status: 'unhealthy', 
         timestamp: Date.now(),
         error: 'Health check failed' 
+      });
+    }
+  });
+
+  // Security status endpoint
+  app.get("/api/security-status", async (_req: express.Request, res: express.Response) => {
+    try {
+      const securityStatus = getSecurityStatus();
+      res.json(securityStatus);
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Failed to get security status',
+        timestamp: new Date().toISOString()
       });
     }
   });
