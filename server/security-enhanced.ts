@@ -40,10 +40,10 @@ function getProductionCSP(): string {
  * Development CSP configuration with nonce support (eliminates unsafe-inline)
  */
 function getDevelopmentCSP(nonce?: string): string {
-  // Relaxed CSP for development to support Vite HMR
+  // Relaxed CSP for development to support Vite HMR and React plugin
   return [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-eval'", // Required for Vite HMR
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com", // Required for Vite HMR and React plugin
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Required for Vite
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
