@@ -341,20 +341,6 @@ export function ResponsiveConfigPanel({
                   </>
                 )}
               </Button>
-              
-              {/* Debug info and helpful messages */}
-              {isGenerateDisabled && !isPending && (
-                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                  <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                    <div className="font-medium mb-2">Generate button is disabled:</div>
-                    {!user && <div>• Please sign in to continue</div>}
-                    {user && !isEmailVerified && <div>• Please verify your email address</div>}
-                    {user && isEmailVerified && !canUpload && userUploads >= userLimit && !isPremium && (
-                      <div>• Monthly upload limit reached. Upgrade to Premium for unlimited uploads.</div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
