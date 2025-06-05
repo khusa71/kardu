@@ -111,7 +111,7 @@ export function enhancedSecurityMiddleware(config: SecurityConfig = enhancedSecu
     
     // Apply CSP based on environment
     if (process.env.NODE_ENV === 'production') {
-      res.setHeader('Content-Security-Policy', getProductionCSP());
+      res.setHeader('Content-Security-Policy', getProductionCSP(nonce));
     } else {
       // Use CSP Report-Only in development for monitoring without blocking
       res.setHeader('Content-Security-Policy-Report-Only', getDevelopmentCSP(nonce));
