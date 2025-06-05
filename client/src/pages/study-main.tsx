@@ -39,6 +39,12 @@ interface StudyProgress {
   lastReviewedAt: string;
 }
 
+interface StudySession {
+  deckId: number;
+  cardRatings: { [cardIndex: number]: 'easy' | 'medium' | 'hard' };
+  completedCards: number[];
+}
+
 export default function StudyMain() {
   const { user } = useFirebaseAuth();
   const { toast } = useToast();
@@ -53,6 +59,7 @@ export default function StudyMain() {
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterDifficulty, setFilterDifficulty] = useState("all");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [studySession, setStudySession] = useState<StudySession>({ deckId: 0, cardRatings: {}, completedCards: [] });
 
   // Fetch flashcard decks
   const { data: decks = [], isLoading: isLoadingDecks } = useQuery<FlashcardDeck[]>({
@@ -149,6 +156,36 @@ export default function StudyMain() {
   const resetStudy = () => {
     setCurrentCardIndex(0);
     setShowAnswer(false);
+    setStudySession({ deckId: selectedDeck?.id || 0, cardRatings: {}, completedCards: [] });
+  };
+
+  // Handle difficulty rating
+  const handleDifficultyRating = (rating: 'easy' | 'medium' | 'hard') => {
+    const newRatings = { ...studySession.cardRatings };
+    newRatings[currentCardIndex] = rating;
+    
+    const newCompletedCards = [...studySession.completedCards];
+    if (!newCompletedCards.includes(currentCardIndex)) {
+      newCompletedCards.push(currentCardIndex);
+    }
+    
+    setStudySession({
+      ...studySession,
+      cardRatings: newRatings,
+      completedCards: newCompletedCards
+    });
+    
+    toast({
+      title: "Progress saved",
+      description: `Card rated as ${rating}`,
+    });
+    
+    // Auto-advance to next card after rating
+    setTimeout(() => {
+      if (currentCardIndex < currentFlashcards.length - 1) {
+        nextCard();
+      }
+    }, 500);
   };
 
   // Markdown renderer component
@@ -157,19 +194,18 @@ export default function StudyMain() {
       <div className="prose dark:prose-invert max-w-none">
         <ReactMarkdown
           components={{
-            code({ className, children, ...props }) {
+            code({ className, children }) {
               const match = /language-(\w+)/.exec(className || '');
               return match ? (
                 <SyntaxHighlighter
                   style={tomorrow as any}
                   language={match[1]}
                   PreTag="div"
-                  {...props}
                 >
                   {String(children).replace(/\n$/, '')}
                 </SyntaxHighlighter>
               ) : (
-                <code className={className} {...props}>
+                <code className={className}>
                   {children}
                 </code>
               );
@@ -359,34 +395,37 @@ export default function StudyMain() {
     );
   }
 
-  // Study Mode - Flashcard View
+  // Study Mode - Mobile-First Flashcard View
   if (studyMode === 'study' && selectedDeck && currentFlashcards.length > 0) {
     const currentCard = currentFlashcards[currentCardIndex];
+    const isCardRated = studySession.cardRatings[currentCardIndex];
     
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <NavigationBar />
         
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Study Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+        {/* Mobile-optimized container */}
+        <div className="max-w-2xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+          {/* Compact Study Header */}
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate mb-1">
                 {selectedDeck.name}
               </h1>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">{selectedDeck.subject}</Badge>
-                <Badge className={getDifficultyColor(selectedDeck.difficulty)}>
+                <Badge variant="secondary" className="text-xs">{selectedDeck.subject}</Badge>
+                <Badge className={`${getDifficultyColor(selectedDeck.difficulty)} text-xs`}>
                   {selectedDeck.difficulty}
                 </Badge>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 ml-2">
               <Button
                 variant="outline"
                 onClick={() => setStudyMode('edit')}
                 size="sm"
+                className="hidden sm:flex"
               >
                 <Edit3 className="w-4 h-4 mr-2" />
                 Edit
@@ -396,21 +435,26 @@ export default function StudyMain() {
                 onClick={() => setStudyMode('browse')}
                 size="sm"
               >
-                <X className="w-4 h-4 mr-2" />
-                Exit
+                <X className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Exit</span>
               </Button>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Card {currentCardIndex + 1} of {currentFlashcards.length}
+                {currentCardIndex + 1} / {currentFlashcards.length}
               </span>
-              <span className="text-sm text-gray-500">
-                {Math.round(((currentCardIndex + 1) / currentFlashcards.length) * 100)}% complete
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">
+                  {studySession.completedCards.length} completed
+                </span>
+                <span className="text-sm text-gray-500">
+                  {Math.round(((currentCardIndex + 1) / currentFlashcards.length) * 100)}%
+                </span>
+              </div>
             </div>
             <Progress 
               value={((currentCardIndex + 1) / currentFlashcards.length) * 100} 
@@ -418,99 +462,177 @@ export default function StudyMain() {
             />
           </div>
 
-          {/* Flashcard */}
-          <Card className="min-h-[400px] mb-6">
-            <CardHeader>
+          {/* Mobile-Optimized Flashcard - No scrolling needed */}
+          <Card className="mb-4 sm:mb-6 min-h-[60vh] sm:min-h-[50vh] flex flex-col">
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">
-                  {showAnswer ? 'Answer' : 'Question'}
+                <CardTitle className="text-base sm:text-lg">
+                  Question
                 </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAnswer(!showAnswer)}
-                >
-                  {showAnswer ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  {showAnswer ? 'Hide Answer' : 'Show Answer'}
-                </Button>
+                {isCardRated && (
+                  <Badge variant="outline" className="text-xs">
+                    Rated: {isCardRated}
+                  </Badge>
+                )}
               </div>
             </CardHeader>
             
-            <CardContent>
-              <div className="space-y-4">
-                <MarkdownRenderer 
-                  content={showAnswer ? currentCard.back : currentCard.front} 
-                />
-                
-                {currentCard.subject && (
-                  <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <Badge variant="secondary">{currentCard.subject}</Badge>
-                    {currentCard.difficulty && (
-                      <Badge className={getDifficultyColor(currentCard.difficulty)}>
-                        {currentCard.difficulty}
-                      </Badge>
-                    )}
-                    {currentCard.tags && currentCard.tags.map((tag, index) => (
-                      <Badge key={index} variant="outline">{tag}</Badge>
-                    ))}
-                  </div>
-                )}
+            <CardContent className="flex-1 flex flex-col">
+              {/* Question - Always visible */}
+              <div className="mb-4">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">
+                  Question:
+                </div>
+                <div className="prose dark:prose-invert max-w-none prose-sm">
+                  <MarkdownRenderer content={currentCard.front} />
+                </div>
               </div>
+              
+              {/* Answer - Scrollable container for long answers */}
+              {showAnswer && (
+                <div className="flex-1 flex flex-col">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">
+                    Answer:
+                  </div>
+                  <div className="flex-1 max-h-[40vh] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+                    <div className="prose dark:prose-invert max-w-none prose-sm">
+                      <MarkdownRenderer content={currentCard.back} />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Show Answer Button */}
+              {!showAnswer && (
+                <div className="flex-1 flex items-center justify-center">
+                  <Button
+                    onClick={() => setShowAnswer(true)}
+                    size="lg"
+                    className="w-full sm:w-auto"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Show Answer
+                  </Button>
+                </div>
+              )}
+              
+              {/* Card Tags */}
+              {currentCard.subject && (
+                <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Badge variant="secondary" className="text-xs">{currentCard.subject}</Badge>
+                  {currentCard.difficulty && (
+                    <Badge className={`${getDifficultyColor(currentCard.difficulty)} text-xs`}>
+                      {currentCard.difficulty}
+                    </Badge>
+                  )}
+                  {currentCard.tags && currentCard.tags.map((tag, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">{tag}</Badge>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Navigation Controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={previousCard}
-                disabled={currentCardIndex === 0}
-                size="sm"
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Previous
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={nextCard}
-                disabled={currentCardIndex === currentFlashcards.length - 1}
-                size="sm"
-              >
-                Next
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={resetStudy}
-                size="sm"
-              >
-                <RotateCcw className="w-4 h-4 mr-1" />
-                Reset
-              </Button>
-            </div>
-
-            {/* Study Actions */}
-            {showAnswer && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400 mr-2">
-                  How well did you know this?
-                </span>
-                <Button variant="outline" size="sm" className="text-red-600">
+          {/* Study Progress Buttons - Mobile-First */}
+          {showAnswer && (
+            <div className="mb-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-3 text-center">
+                How well did you know this?
+              </div>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <Button 
+                  variant={isCardRated === 'hard' ? 'default' : 'outline'} 
+                  size="sm" 
+                  className="text-red-600 hover:text-red-700 flex-1"
+                  onClick={() => handleDifficultyRating('hard')}
+                >
                   <XCircle className="w-4 h-4 mr-1" />
                   Hard
                 </Button>
-                <Button variant="outline" size="sm" className="text-yellow-600">
+                <Button 
+                  variant={isCardRated === 'medium' ? 'default' : 'outline'} 
+                  size="sm" 
+                  className="text-yellow-600 hover:text-yellow-700 flex-1"
+                  onClick={() => handleDifficultyRating('medium')}
+                >
                   Medium
                 </Button>
-                <Button variant="outline" size="sm" className="text-green-600">
+                <Button 
+                  variant={isCardRated === 'easy' ? 'default' : 'outline'} 
+                  size="sm" 
+                  className="text-green-600 hover:text-green-700 flex-1"
+                  onClick={() => handleDifficultyRating('easy')}
+                >
                   <CheckCircle className="w-4 h-4 mr-1" />
                   Easy
                 </Button>
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Navigation Controls - Mobile-Optimized */}
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              variant="outline"
+              onClick={previousCard}
+              disabled={currentCardIndex === 0}
+              size="sm"
+              className="flex-1 sm:flex-none"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Previous
+            </Button>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={resetStudy}
+                size="sm"
+                className="hidden sm:flex"
+              >
+                <RotateCcw className="w-4 h-4 mr-1" />
+                Reset
+              </Button>
+              
+              {showAnswer && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAnswer(false)}
+                  size="sm"
+                >
+                  <EyeOff className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            
+            <Button
+              variant="outline"
+              onClick={nextCard}
+              disabled={currentCardIndex === currentFlashcards.length - 1}
+              size="sm"
+              className="flex-1 sm:flex-none"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+
+          {/* Study Session Summary - Mobile */}
+          <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-3 gap-4 text-center text-sm">
+              <div>
+                <div className="font-semibold text-green-600">{studySession.completedCards.filter(i => studySession.cardRatings[i] === 'easy').length}</div>
+                <div className="text-gray-500">Easy</div>
+              </div>
+              <div>
+                <div className="font-semibold text-yellow-600">{studySession.completedCards.filter(i => studySession.cardRatings[i] === 'medium').length}</div>
+                <div className="text-gray-500">Medium</div>
+              </div>
+              <div>
+                <div className="font-semibold text-red-600">{studySession.completedCards.filter(i => studySession.cardRatings[i] === 'hard').length}</div>
+                <div className="text-gray-500">Hard</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
