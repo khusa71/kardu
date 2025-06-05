@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -576,7 +576,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => jobStatus.ankiDownloadUrl && window.open(jobStatus.ankiDownloadUrl, '_blank')}
+                              onClick={() => window.open(jobStatus.ankiDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               Anki Deck
@@ -586,7 +586,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => jobStatus.csvDownloadUrl && window.open(jobStatus.csvDownloadUrl, '_blank')}
+                              onClick={() => window.open(jobStatus.csvDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               CSV
@@ -596,7 +596,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => { if (jobStatus.jsonDownloadUrl) window.open(jobStatus.jsonDownloadUrl, '_blank'); }}
+                              onClick={() => window.open(jobStatus.jsonDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               JSON
@@ -606,7 +606,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => { if (jobStatus.quizletDownloadUrl) window.open(jobStatus.quizletDownloadUrl, '_blank'); }}
+                              onClick={() => window.open(jobStatus.quizletDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               Quizlet
@@ -616,7 +616,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => { if (jobStatus.pdfDownloadUrl) window.open(jobStatus.pdfDownloadUrl, '_blank'); }}
+                              onClick={() => window.open(jobStatus.pdfDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               Original PDF

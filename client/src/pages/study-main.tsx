@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { FlashcardPair } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -157,15 +157,14 @@ export default function StudyMain() {
       <div className="prose dark:prose-invert max-w-none">
         <ReactMarkdown
           components={{
-            code({ className, children, ref, ...props }) {
+            code({ className, children, ...props }) {
               const match = /language-(\w+)/.exec(className || '');
-              const { ref: _ref, ...restProps } = props;
               return match ? (
                 <SyntaxHighlighter
                   style={tomorrow as any}
                   language={match[1]}
                   PreTag="div"
-                  {...restProps}
+                  {...props}
                 >
                   {String(children).replace(/\n$/, '')}
                 </SyntaxHighlighter>
