@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -18,7 +19,10 @@ import {
   BarChart3,
   FileDown,
   Eye,
-  Trash2
+  Trash2,
+  Edit2,
+  Check,
+  X
 } from "lucide-react";
 import { FlashcardEditor } from "@/components/flashcard-editor";
 import { StudyMode } from "@/components/study-mode";
@@ -49,9 +53,12 @@ interface HistoryJob {
 export default function History() {
   const { user, loading: authLoading } = useFirebaseAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'history' | 'view' | 'study'>('history');
   const [selectedJob, setSelectedJob] = useState<HistoryJob | null>(null);
   const [currentFlashcards, setCurrentFlashcards] = useState<FlashcardPair[]>([]);
+  const [editingJobId, setEditingJobId] = useState<number | null>(null);
+  const [editingFilename, setEditingFilename] = useState<string>('');
 
   // Fetch user's upload history
   const { data: jobs = [], isLoading, error } = useQuery<HistoryJob[]>({
@@ -175,6 +182,52 @@ export default function History() {
       toast({
         title: "Failed to load flashcards",
         description: error.message || "Unable to load flashcards. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStartRename = (jobId: number, currentFilename: string) => {
+    setEditingJobId(jobId);
+    setEditingFilename(currentFilename);
+  };
+
+  const handleCancelRename = () => {
+    setEditingJobId(null);
+    setEditingFilename('');
+  };
+
+  const handleSaveRename = async (jobId: number) => {
+    if (!editingFilename.trim()) {
+      toast({
+        title: "Invalid filename",
+        description: "Filename cannot be empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await apiRequest("PUT", `/api/jobs/${jobId}/rename`, {
+        filename: editingFilename.trim()
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Filename updated",
+          description: "The filename has been successfully updated.",
+        });
+        
+        // Refresh the history data
+        queryClient.invalidateQueries({ queryKey: ["/api/history"] });
+        handleCancelRename();
+      } else {
+        throw new Error('Failed to update filename');
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to update filename",
+        description: "Unable to update the filename. Please try again.",
         variant: "destructive",
       });
     }
@@ -432,7 +485,51 @@ export default function History() {
                     <div className="flex-1 min-w-0">
                       <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
                         <FileText className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                        <span className="truncate">{job.filename}</span>
+                        {editingJobId === job.id ? (
+                          <div className="flex items-center space-x-2 flex-1">
+                            <Input
+                              value={editingFilename}
+                              onChange={(e) => setEditingFilename(e.target.value)}
+                              className="text-sm sm:text-base"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveRename(job.id);
+                                } else if (e.key === 'Escape') {
+                                  handleCancelRename();
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleSaveRename(job.id)}
+                              className="text-green-600 hover:text-green-700 p-1"
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleCancelRename}
+                              className="text-red-600 hover:text-red-700 p-1"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2 flex-1">
+                            <span className="truncate">{job.filename}</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleStartRename(job.id, job.filename)}
+                              className="text-gray-500 hover:text-gray-700 p-1"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
                       </CardTitle>
                       <CardDescription className="mt-1">
                         <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm">
