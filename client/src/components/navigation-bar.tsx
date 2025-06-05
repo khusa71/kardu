@@ -36,7 +36,7 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
   const userRole = (userData as any)?.role;
 
   const navItems = [
-    { path: "/", label: "Home", icon: Home },
+    { path: "/dashboard", label: "Dashboard", icon: Home },
     { path: "/upload", label: "Upload", icon: Upload },
     { path: "/history", label: "History", icon: History },
     { path: "/study", label: "Study", icon: BookOpen },
@@ -45,8 +45,8 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
   ];
 
   const isActive = (path: string) => {
-    if (path === "/" && location === "/") return true;
-    if (path !== "/" && location.startsWith(path)) return true;
+    if (path === "/dashboard" && (location === "/" || location === "/dashboard")) return true;
+    if (path !== "/dashboard" && location.startsWith(path)) return true;
     return false;
   };
 
