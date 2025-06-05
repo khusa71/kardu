@@ -13,7 +13,7 @@ export const defaultSecurityConfig: SecurityConfig = {
   strictTransportSecurity: 'max-age=63072000; includeSubDomains; preload',
   contentSecurityPolicy: process.env.NODE_ENV === 'production' ? [
     "default-src 'self'",
-    "script-src 'self' https://js.stripe.com https://www.gstatic.com https://replit.com",
+    "script-src 'self' 'strict-dynamic' https://js.stripe.com https://replit.com",
     "style-src 'self' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
@@ -26,7 +26,7 @@ export const defaultSecurityConfig: SecurityConfig = {
     "block-all-mixed-content"
   ].join('; ') : [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://replit.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://replit.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
@@ -64,15 +64,23 @@ export function securityMiddleware(config: SecurityConfig = defaultSecurityConfi
       return res.redirect(301, `https://${req.header('host')}${req.url}`);
     }
 
-    // Generate nonce for inline scripts if needed (development mode)
+    // Generate nonce for CSP
     const nonce = generateNonce();
     res.locals.nonce = nonce;
     
     // Apply HSTS header
     res.setHeader('Strict-Transport-Security', config.strictTransportSecurity);
     
-    // Apply Content Security Policy (environment-specific configuration already set)
-    res.setHeader('Content-Security-Policy', config.contentSecurityPolicy);
+    // Apply enhanced Content Security Policy with nonce
+    let csp = config.contentSecurityPolicy;
+    if (process.env.NODE_ENV === 'production') {
+      // Use strict CSP with nonce for production
+      csp = csp.replace(
+        "'strict-dynamic'", 
+        `'nonce-${nonce}' 'strict-dynamic'`
+      );
+    }
+    res.setHeader('Content-Security-Policy', csp);
     
     // Apply additional security headers
     Object.entries(config.additionalHeaders).forEach(([header, value]) => {

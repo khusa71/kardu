@@ -14,7 +14,7 @@ import { objectStorage } from "./object-storage-service";
 import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
-import { getSecurityStatus } from "./security-config-fixed";
+import { getEnhancedSecurityStatus } from "./security-enhanced";
 
 // AI Model mapping for quality tiers
 const modelMap = {
@@ -551,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Security status endpoint
   app.get("/api/security-status", async (_req: express.Request, res: express.Response) => {
     try {
-      const securityStatus = getSecurityStatus();
+      const securityStatus = getEnhancedSecurityStatus();
       res.json(securityStatus);
     } catch (error) {
       res.status(500).json({ 
