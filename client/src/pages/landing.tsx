@@ -93,7 +93,7 @@ export default function Landing() {
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               <div className="bg-primary text-primary-foreground rounded-xl p-2.5">
-                <OwlIcon className="w-6 h-6" />
+                <Feather className="w-6 h-6" />
               </div>
               <span className="text-xl font-bold text-foreground">Kardu.io</span>
             </button>
