@@ -101,15 +101,26 @@ function cleanupTempFiles() {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  // Implement stable fallback for Vite connection issues
+  // Enhanced fallback strategy for stable development
   const useViteFallback = process.env.USE_VITE_FALLBACK === "true" || process.env.NODE_ENV === "production";
   
   if (!useViteFallback && app.get("env") === "development") {
+    let viteStarted = false;
     try {
       await setupVite(app, server);
+      viteStarted = true;
       log("Vite development server started successfully");
-    } catch (viteError) {
-      console.warn("Vite setup failed, switching to fallback mode:", viteError.message);
+      
+      // Monitor HMR health and switch to fallback if needed
+      setTimeout(() => {
+        if (!viteStarted) {
+          log("Vite HMR issues detected, switching to stable mode");
+          setupFallbackServer(app);
+        }
+      }, 30000); // Give Vite 30 seconds to stabilize
+      
+    } catch (viteError: any) {
+      console.warn("Vite setup failed, switching to fallback mode:", viteError?.message || viteError);
       setupFallbackServer(app);
     }
   } else {

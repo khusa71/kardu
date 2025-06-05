@@ -596,7 +596,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => jobStatus.jsonDownloadUrl && window.open(jobStatus.jsonDownloadUrl, '_blank')}
+                              onClick={() => { if (jobStatus.jsonDownloadUrl) window.open(jobStatus.jsonDownloadUrl, '_blank'); }}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               JSON
@@ -606,7 +606,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => jobStatus.quizletDownloadUrl && window.open(jobStatus.quizletDownloadUrl, '_blank')}
+                              onClick={() => { if (jobStatus.quizletDownloadUrl) window.open(jobStatus.quizletDownloadUrl, '_blank'); }}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               Quizlet
@@ -616,7 +616,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => jobStatus.pdfDownloadUrl && window.open(jobStatus.pdfDownloadUrl, '_blank')}
+                              onClick={() => { if (jobStatus.pdfDownloadUrl) window.open(jobStatus.pdfDownloadUrl, '_blank'); }}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               Original PDF

@@ -157,14 +157,15 @@ export default function StudyMain() {
       <div className="prose dark:prose-invert max-w-none">
         <ReactMarkdown
           components={{
-            code({ className, children, ...props }) {
+            code({ className, children, ref, ...props }) {
               const match = /language-(\w+)/.exec(className || '');
+              const { ref: _ref, ...restProps } = props;
               return match ? (
                 <SyntaxHighlighter
                   style={tomorrow as any}
                   language={match[1]}
                   PreTag="div"
-                  {...props}
+                  {...restProps}
                 >
                   {String(children).replace(/\n$/, '')}
                 </SyntaxHighlighter>
