@@ -4,10 +4,15 @@ import { setupVite, serveStatic, log } from "./vite";
 import { logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
 import { monitoringService } from "./monitoring-service";
+import { securityMiddleware, getSecurityStatus } from "./security-config";
 import fs from "fs";
 import path from "path";
 
 const app = express();
+
+// Apply security middleware
+app.use(securityMiddleware());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
