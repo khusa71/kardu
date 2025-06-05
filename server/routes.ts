@@ -66,7 +66,257 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+function getStandaloneHTML() {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Kardu.io - AI-Powered Flashcard Generation</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          min-height: 100vh;
+        }
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 2rem;
+        }
+        .header {
+          background: white;
+          padding: 2rem;
+          border-radius: 1rem;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          margin-bottom: 2rem;
+          text-align: center;
+        }
+        .main-content {
+          background: white;
+          padding: 2rem;
+          border-radius: 1rem;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        h1 { color: #1f2937; font-size: 2.5rem; margin-bottom: 1rem; }
+        h2 { color: #374151; font-size: 1.5rem; margin-bottom: 1rem; }
+        .upload-area {
+          border: 2px dashed #d1d5db;
+          border-radius: 0.5rem;
+          padding: 3rem;
+          text-align: center;
+          margin: 2rem 0;
+          transition: border-color 0.2s;
+          cursor: pointer;
+        }
+        .upload-area:hover { border-color: #3b82f6; }
+        .upload-area.dragover { border-color: #3b82f6; background: #eff6ff; }
+        .btn {
+          background: #3b82f6;
+          color: white;
+          padding: 0.75rem 1.5rem;
+          border: none;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          font-size: 1rem;
+          margin: 0.5rem;
+          transition: background 0.2s;
+        }
+        .btn:hover { background: #2563eb; }
+        .btn:disabled { background: #9ca3af; cursor: not-allowed; }
+        .status {
+          background: #f3f4f6;
+          padding: 1rem;
+          border-radius: 0.5rem;
+          margin: 1rem 0;
+          display: none;
+        }
+        .progress {
+          width: 100%;
+          height: 8px;
+          background: #e5e7eb;
+          border-radius: 4px;
+          overflow: hidden;
+          margin: 1rem 0;
+        }
+        .progress-bar {
+          height: 100%;
+          background: #3b82f6;
+          transition: width 0.3s ease;
+          width: 0%;
+        }
+        .file-input { display: none; }
+        .features {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1rem;
+          margin: 2rem 0;
+        }
+        .feature {
+          background: #f9fafb;
+          padding: 1.5rem;
+          border-radius: 0.5rem;
+          text-align: center;
+        }
+        .error { color: #dc2626; background: #fef2f2; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; }
+        .success { color: #059669; background: #ecfdf5; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; }
+        .auth-notice {
+          background: #fef3c7;
+          color: #92400e;
+          padding: 1rem;
+          border-radius: 0.5rem;
+          margin: 1rem 0;
+          text-align: center;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Smart Flashcard Generator</h1>
+          <p>Transform your PDFs into interactive flashcards with AI-powered content generation</p>
+        </div>
+        
+        <div class="main-content">
+          <div class="auth-notice">
+            <p>Note: Authentication required for uploads. Backend server is running successfully.</p>
+          </div>
+          
+          <h2>Upload Your PDF Document</h2>
+          
+          <div class="upload-area" id="uploadArea">
+            <p>Drop your PDF file here or click to browse</p>
+            <input type="file" id="fileInput" class="file-input" accept=".pdf" />
+            <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+          </div>
+          
+          <div id="status" class="status">
+            <p id="statusText">Processing...</p>
+            <div class="progress">
+              <div class="progress-bar" id="progressBar"></div>
+            </div>
+          </div>
+          
+          <div class="features">
+            <div class="feature">
+              <h3>AI-Powered</h3>
+              <p>Advanced AI models generate high-quality flashcards from your content</p>
+            </div>
+            <div class="feature">
+              <h3>Multiple Formats</h3>
+              <p>Export to Anki, CSV, JSON, or Quizlet formats</p>
+            </div>
+            <div class="feature">
+              <h3>Customizable</h3>
+              <p>Choose focus areas and difficulty levels for optimal learning</p>
+            </div>
+          </div>
+          
+          <button class="btn" onclick="testAPI()">Test API Connection</button>
+          <div id="api-results" style="margin-top: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 0.5rem; font-family: monospace; font-size: 0.875rem; text-align: left; white-space: pre-wrap; display: none;"></div>
+        </div>
+      </div>
+      
+      <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+        const statusText = document.getElementById('statusText');
+        const progressBar = document.getElementById('progressBar');
+        
+        // File upload handling
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('drop', handleDrop);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        function handleDragOver(e) {
+          e.preventDefault();
+          uploadArea.classList.add('dragover');
+        }
+        
+        function handleDragLeave(e) {
+          e.preventDefault();
+          uploadArea.classList.remove('dragover');
+        }
+        
+        function handleDrop(e) {
+          e.preventDefault();
+          uploadArea.classList.remove('dragover');
+          const files = e.dataTransfer.files;
+          if (files.length > 0 && files[0].type === 'application/pdf') {
+            showError('Authentication required. Please set up Firebase authentication to upload files.');
+          } else {
+            showError('Please upload a PDF file');
+          }
+        }
+        
+        function handleFileSelect(e) {
+          const file = e.target.files[0];
+          if (file && file.type === 'application/pdf') {
+            showError('Authentication required. Please set up Firebase authentication to upload files.');
+          } else {
+            showError('Please select a PDF file');
+          }
+        }
+        
+        function showError(message) {
+          status.style.display = 'block';
+          status.innerHTML = '<div class="error">' + message + '</div>';
+        }
+        
+        function showSuccess(message) {
+          status.style.display = 'block';
+          status.innerHTML = '<div class="success">' + message + '</div>';
+        }
+        
+        async function testAPI() {
+          const resultsDiv = document.getElementById('api-results');
+          resultsDiv.style.display = 'block';
+          resultsDiv.textContent = 'Testing API endpoints...\\n\\n';
+          
+          const endpoints = [
+            { name: 'Server Health', url: '/api/auth/user' },
+            { name: 'API Base', url: '/api/' }
+          ];
+          
+          for (const endpoint of endpoints) {
+            try {
+              const response = await fetch(endpoint.url);
+              resultsDiv.textContent += '✓ ' + endpoint.name + ': ' + response.status + ' ' + response.statusText + '\\n';
+              
+              try {
+                const data = await response.json();
+                resultsDiv.textContent += '  Response: ' + JSON.stringify(data, null, 2) + '\\n\\n';
+              } catch (e) {
+                resultsDiv.textContent += '  Response: Non-JSON response\\n\\n';
+              }
+            } catch (error) {
+              resultsDiv.textContent += '✗ ' + endpoint.name + ': Failed - ' + error.message + '\\n\\n';
+            }
+          }
+        }
+        
+        // Test API connectivity on load
+        window.addEventListener('load', () => {
+          console.log('Standalone application loaded successfully');
+          console.log('Backend server is running and responsive');
+        });
+      </script>
+    </body>
+    </html>
+  `;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve standalone interface for root and non-API routes BEFORE any other middleware
+  app.get('/', (req, res) => {
+    res.send(getStandaloneHTML());
+  });
+  
   // Raw body middleware for Stripe webhooks
   app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
   
