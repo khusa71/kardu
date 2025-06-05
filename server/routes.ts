@@ -15,6 +15,8 @@ import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } f
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
 import { getEnhancedSecurityStatus } from "./security-enhanced";
+import { getPageCount } from "./page-count-service";
+import { canUserUpload, incrementUploadCount, getQuotaStatus } from "./usage-quota-service";
 
 // AI Model mapping for quality tiers
 const modelMap = {
@@ -127,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced upload validation middleware with file count limits
+  // Enhanced upload validation middleware with page-based limits
   const validateFileUploads = async (req: any, res: any, next: any) => {
     try {
       const userId = req.user!.uid;
@@ -145,18 +147,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ 
           message: "Please verify your email to continue",
           requiresEmailVerification: true 
-        });
-      }
-
-      // Check monthly upload limits
-      const { canUpload, uploadsRemaining } = await storage.checkUploadLimit(userId);
-      if (!canUpload) {
-        return res.status(429).json({ 
-          message: "You've reached your monthly limit. Upgrade to generate more flashcards.",
-          isPremium: user.isPremium,
-          monthlyUploads: user.monthlyUploads,
-          monthlyLimit: user.monthlyLimit,
-          requiresUpgrade: true
         });
       }
 
@@ -200,7 +190,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      req.uploadsRemaining = uploadsRemaining;
+      // Page-based validation for each file
+      const tempDir = "/tmp";
+      let totalPagesWillProcess = 0;
+      const fileValidations = [];
+
+      for (const file of files) {
+        // Save file temporarily to check page count
+        const tempFilePath = path.join(tempDir, `temp_${Date.now()}_${file.originalname}`);
+        fs.writeFileSync(tempFilePath, file.buffer);
+
+        try {
+          // Get page count
+          const pageInfo = await getPageCount(tempFilePath);
+          
+          // Check if user can upload this file
+          const uploadCheck = await canUserUpload(userId, pageInfo.pageCount);
+          
+          if (!uploadCheck.canUpload) {
+            // Clean up temp file
+            fs.unlinkSync(tempFilePath);
+            return res.status(429).json({
+              message: uploadCheck.reason,
+              fileName: file.originalname,
+              pageCount: pageInfo.pageCount,
+              quotaInfo: uploadCheck.quotaInfo,
+              limits: uploadCheck.limits,
+              requiresUpgrade: !user.isPremium
+            });
+          }
+
+          totalPagesWillProcess += uploadCheck.pagesWillProcess || 0;
+          fileValidations.push({
+            file,
+            tempFilePath,
+            pageInfo,
+            pagesWillProcess: uploadCheck.pagesWillProcess
+          });
+
+        } catch (error) {
+          // Clean up temp file on error
+          fs.unlinkSync(tempFilePath);
+          return res.status(400).json({
+            message: `Failed to analyze PDF: ${file.originalname}`,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      // Store validation info for use in upload handler
+      req.fileValidations = fileValidations;
+      req.totalPagesWillProcess = totalPagesWillProcess;
       req.userType = user.isPremium ? "premium" : "free";
       next();
     } catch (error) {
@@ -291,15 +331,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Process multiple files - create a job for each file
+      // Process files using page-based validation results
       const createdJobs = [];
+      const fileValidations = req.fileValidations;
       
-      for (const file of files) {
-        // Validate input for each file
+      for (let i = 0; i < fileValidations.length; i++) {
+        const validation = fileValidations[i];
+        const file = validation.file;
+        
+        // Create job with page information
         const jobData = {
           userId,
           filename: file.originalname,
           fileSize: file.size,
+          pageCount: validation.pageInfo.pageCount,
+          pagesProcessed: validation.pagesWillProcess,
           apiProvider: enforcedProvider,
           flashcardCount: parseInt(flashcardCount),
           subject: subject || "general",
@@ -307,31 +353,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           focusAreas: JSON.stringify(focusAreas || {}),
           status: "pending" as const,
           progress: 0,
-          currentTask: enforcedProvider !== selectedProvider 
-            ? `Starting processing with ${selectedProvider} (fallback from ${enforcedProvider})...`
-            : "Starting processing...",
+          currentTask: validation.pagesWillProcess < validation.pageInfo.pageCount 
+            ? `Processing first ${validation.pagesWillProcess} of ${validation.pageInfo.pageCount} pages...`
+            : enforcedProvider !== selectedProvider 
+              ? `Starting processing with ${selectedProvider} (fallback from ${enforcedProvider})...`
+              : "Starting processing...",
         };
 
         // Create job record
         const job = await storage.createFlashcardJob(jobData);
         createdJobs.push(job);
 
-        // Start processing asynchronously with selected provider
-        processFlashcardJob(job.id, file.buffer, file.originalname, selectedProvider, subject, focusAreas, difficulty, userId, flashcardCount, customContext);
+        // Start processing asynchronously with page limits
+        processFlashcardJobWithPageLimits(
+          job.id, 
+          validation.tempFilePath, 
+          file.originalname, 
+          selectedProvider, 
+          subject, 
+          focusAreas, 
+          difficulty, 
+          userId, 
+          flashcardCount, 
+          customContext,
+          validation.pagesWillProcess
+        );
       }
 
-      // Increment user upload count once for the batch
-      await storage.incrementUserUploads(userId);
+      // Increment user quotas
+      await incrementUploadCount(userId, req.totalPagesWillProcess);
 
       res.json({ 
         jobs: createdJobs.map(job => ({
           jobId: job.id,
           filename: job.filename,
-          status: job.status
+          status: job.status,
+          pageCount: job.pageCount,
+          pagesProcessed: job.pagesProcessed
         })),
         totalFiles: files.length,
-        userType: req.userType,
-        uploadsRemaining: (req as any).uploadsRemaining - 1
+        totalPagesProcessed: req.totalPagesWillProcess,
+        userType: req.userType
       });
     } catch (error) {
       console.error("Upload error:", error);

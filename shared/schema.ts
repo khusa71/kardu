@@ -35,7 +35,9 @@ export const users = pgTable("users", {
   role: varchar("role").default("user"), // 'user' | 'admin' | 'moderator'
   monthlyUploads: integer("monthly_uploads").default(0),
   monthlyLimit: integer("monthly_limit").default(3),
+  monthlyPagesProcessed: integer("monthly_pages_processed").default(0),
   lastUploadDate: timestamp("last_upload_date"),
+  lastResetDate: timestamp("last_reset_date").defaultNow(),
   // Stripe fields
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
@@ -50,6 +52,8 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   userId: varchar("user_id").references(() => users.id),
   filename: text("filename").notNull(),
   fileSize: integer("file_size").notNull(),
+  pageCount: integer("page_count"), // Number of pages in the PDF
+  pagesProcessed: integer("pages_processed"), // Actual pages processed (may be less due to limits)
   pdfStorageKey: text("pdf_storage_key"), // Object Storage key for original PDF
   pdfDownloadUrl: text("pdf_download_url"), // Download URL for original PDF
   apiProvider: text("api_provider").notNull(), // 'openai' | 'anthropic'
