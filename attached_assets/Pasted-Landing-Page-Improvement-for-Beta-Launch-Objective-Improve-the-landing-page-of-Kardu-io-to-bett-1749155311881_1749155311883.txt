@@ -1,0 +1,76 @@
+Landing Page Improvement for Beta Launch
+
+🎯 Objective:
+Improve the landing page of Kardu.io to better educate, persuade, and convert users — while keeping the tone honest and grounded in beta launch reality. This means avoiding any fake or inflated claims and instead using genuine language that builds early trust and communicates value.
+
+✅ Specific Changes to Implement:
+
+Hero Section (Top of Page):
+
+Replace current headline with a more direct, authentic value proposition:
+
+“Turn Any PDF Into AI-Powered Flashcards — in Seconds”
+
+Subheading example:
+
+“We’re in beta — but already helping early users study smarter and save time.”
+
+Primary CTA: “Try Free Beta”
+
+Secondary CTA: “See How It Works” (scroll to steps section)
+
+Add “How It Works” Section (New):
+
+Use a clean, 3-step structure:
+
+Upload a PDF
+
+Generate Smart Flashcards
+
+Study or Export to Anki, Quizlet, etc.
+
+Include light illustrations or icons (or placeholders for them).
+
+Testimonials Section (Optional Beta Claims):
+
+Add early user quote(s) if available. If not, insert a placeholder:
+
+“Used by early learners in our beta who gave us a 4.7/5 average rating.”
+
+Title: “What Our Early Users Say”
+
+Feature Section:
+
+Keep content focused and factual:
+
+“AI-powered flashcard generation from your real content”
+
+“Export to Anki, CSV, Quizlet & more”
+
+“Private & secure — no files stored permanently”
+
+Pricing Section:
+
+Emphasize free tier as no-risk entry:
+
+“3 free PDFs every month — no credit card required”
+
+Make premium plan visible, but use soft upsell language:
+
+“Ready for more? Unlock advanced AI and more uploads for just $9/month”
+
+Add Beta Badge (Sticky Banner or Section):
+
+At top or just above the footer, include:
+
+“🚀 In Beta – Help shape the future of learning with AI flashcards”
+
+🔧 Technical/Structural Notes:
+
+Ensure all sections are mobile-first and use consistent spacing, padding, and grid layout.
+
+Keep SEO-friendly headings (H1 for main, H2 for sections).
+
+Use container or grid layout to avoid misaligned buttons or cards.
+
+Add soft transition effects or hover states for better UX polish.
