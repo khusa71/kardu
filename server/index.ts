@@ -101,10 +101,19 @@ function cleanupTempFiles() {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+  try {
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+  } catch (viteError) {
+    console.warn("Vite setup failed, serving static fallback:", viteError);
+    // Fallback to serving the client directory directly
+    app.use(express.static(path.resolve(import.meta.dirname, "..", "client")));
+    app.get("*", (req, res) => {
+      res.sendFile(path.resolve(import.meta.dirname, "..", "client", "index.html"));
+    });
   }
 
   // ALWAYS serve the app on port 5000
