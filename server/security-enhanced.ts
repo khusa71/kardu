@@ -18,21 +18,24 @@ function generateCSPHash(content: string): string {
 /**
  * Production CSP configuration with strict security
  */
-function getProductionCSP(): string {
+function getProductionCSP(nonce?: string): string {
+  const productionNonce = nonce || 'fallback-nonce';
+  
   return [
     "default-src 'self'",
-    "script-src 'self' 'strict-dynamic'",
-    "style-src 'self' https://fonts.googleapis.com",
+    `script-src 'self' 'nonce-${productionNonce}' 'strict-dynamic'`,
+    `style-src 'self' 'nonce-${productionNonce}' https://fonts.googleapis.com`,
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
-    "connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com wss: ws:",
+    "connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com wss: ws:",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "upgrade-insecure-requests",
     "block-all-mixed-content",
-    "require-trusted-types-for 'script'"
+    "require-trusted-types-for 'script'",
+    "report-uri /api/reports"
   ].join('; ');
 }
 
@@ -40,18 +43,22 @@ function getProductionCSP(): string {
  * Development CSP configuration with nonce support (eliminates unsafe-inline)
  */
 function getDevelopmentCSP(nonce?: string): string {
-  // Relaxed CSP for development to support Vite HMR, React plugin, and Firebase
+  // Static nonce for development to fix Vite React plugin compatibility
+  const staticNonce = 'dev-static-nonce-12345';
+  const developmentNonce = nonce || staticNonce;
+  
   return [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com https://www.gstatic.com", // Required for Vite HMR and React plugin
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Required for Vite
+    `script-src 'self' 'nonce-${developmentNonce}' 'unsafe-eval' https://replit.com https://www.gstatic.com`,
+    `style-src 'self' 'nonce-${developmentNonce}' 'unsafe-inline' https://fonts.googleapis.com`,
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
     "connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com wss: ws:",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.firebaseapp.com",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self'",
+    `report-uri /api/reports`
   ].join('; ');
 }
 
