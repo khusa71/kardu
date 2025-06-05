@@ -112,9 +112,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Signed in with Google successfully!",
       });
     } catch (error: any) {
+      let errorMessage = error.message;
+      
+      // Handle specific Firebase errors with user-friendly messages
+      switch (error.code) {
+        case 'auth/unauthorized-domain':
+          errorMessage = "Google sign-in is temporarily unavailable. Please try signing in with email and password instead.";
+          break;
+        case 'auth/popup-blocked':
+          errorMessage = "Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.";
+          break;
+        case 'auth/cancelled-popup-request':
+          errorMessage = "Sign-in was cancelled. Please try again.";
+          break;
+        case 'auth/popup-closed-by-user':
+          errorMessage = "Sign-in was cancelled. Please try again.";
+          break;
+        default:
+          errorMessage = "Unable to sign in with Google. Please try again or use email sign-in.";
+      }
+      
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Google Sign-in Error",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;

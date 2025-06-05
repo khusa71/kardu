@@ -4,11 +4,29 @@ import { initializeApp, getApps } from 'firebase-admin/app';
 
 // Initialize Firebase Admin (if not already initialized)
 if (getApps().length === 0) {
-  // For development, we'll use the project ID from environment
-  // In production, you would use a service account key
-  admin.initializeApp({
-    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-  });
+  try {
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      // Parse the service account key from environment
+      const serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id,
+      });
+      console.log('✅ Firebase Admin initialized with service account');
+    } else {
+      // Fallback for development
+      admin.initializeApp({
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+      });
+      console.log('⚠️ Firebase Admin initialized without service account (development mode)');
+    }
+  } catch (error) {
+    console.error('❌ Firebase Admin initialization failed:', error);
+    // Fallback initialization
+    admin.initializeApp({
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+    });
+  }
 }
 
 export interface AuthenticatedRequest extends Request {

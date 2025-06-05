@@ -156,12 +156,20 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             Continue with Google
           </Button>
 
+          {/* Notice for Google Sign-in */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> If Google sign-in isn't working, please use email sign-in below. 
+              We're working to resolve this issue.
+            </p>
+          </div>
+
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <Separator className="w-full" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or</span>
+              <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
             </div>
           </div>
 
