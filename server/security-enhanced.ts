@@ -40,18 +40,11 @@ function getProductionCSP(): string {
  * Development CSP configuration with nonce support (eliminates unsafe-inline)
  */
 function getDevelopmentCSP(nonce?: string): string {
-  const scriptSrc = nonce 
-    ? `'self' 'nonce-${nonce}' 'unsafe-eval' https://js.stripe.com https://replit.com`
-    : "'self' 'unsafe-eval' https://js.stripe.com https://replit.com";
-    
-  const styleSrc = nonce
-    ? `'self' 'nonce-${nonce}' https://fonts.googleapis.com`
-    : "'self' https://fonts.googleapis.com";
-
+  // Relaxed CSP for development to support Vite HMR
   return [
     "default-src 'self'",
-    `script-src ${scriptSrc}`,
-    `style-src ${styleSrc}`,
+    "script-src 'self' 'unsafe-eval'", // Required for Vite HMR
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Required for Vite
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
     "connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com wss: ws:",
@@ -208,11 +201,11 @@ export function getEnhancedSecurityStatus() {
       csp: {
         enabled: true,
         environment: process.env.NODE_ENV === 'production' ? 'strict' : 'development',
-        unsafeInline: false, // Eliminated with dynamic nonce-based CSP
+        unsafeInline: process.env.NODE_ENV === 'development', // Required for Vite in development
         unsafeEval: process.env.NODE_ENV === 'development', // Required for Vite in development
         trustedTypes: enhancedSecurityConfig.contentSecurityPolicy.includes('require-trusted-types-for'),
         mixedContentBlocked: enhancedSecurityConfig.contentSecurityPolicy.includes('block-all-mixed-content'),
-        nonceSupported: true
+        strictDynamic: process.env.NODE_ENV === 'production'
       },
       headers: {
         xss: 'enabled',
