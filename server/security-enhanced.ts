@@ -40,12 +40,12 @@ function getProductionCSP(): string {
  * Development CSP configuration with nonce support (eliminates unsafe-inline)
  */
 function getDevelopmentCSP(nonce?: string): string {
-  // Development CSP with Vite compatibility - allows inline scripts for HMR
-  const nonceStr = nonce ? `'nonce-${nonce}'` : '';
+  // Development CSP with static nonce for Vite compatibility
+  const staticNonce = 'dev-static-nonce-2024'; // Static nonce for development consistency
   return [
     "default-src 'self'",
-    `script-src 'self' ${nonceStr} 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://replit.com`, // Allow inline for Vite HMR
-    `style-src 'self' ${nonceStr} 'unsafe-inline' https://fonts.googleapis.com`, // Allow inline styles for Vite
+    `script-src 'self' 'nonce-${staticNonce}' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://replit.com`,
+    `style-src 'self' 'nonce-${staticNonce}' 'unsafe-inline' https://fonts.googleapis.com`,
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
     "connect-src 'self' https://api.stripe.com https://api.openai.com https://api.anthropic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com wss: ws:",
@@ -97,8 +97,10 @@ export function enhancedSecurityMiddleware(config: SecurityConfig = enhancedSecu
       return res.redirect(301, `https://${req.header('host')}${req.url}`);
     }
 
-    // Generate cryptographic nonce for CSP
-    const nonce = randomBytes(16).toString('base64');
+    // Generate nonce based on environment
+    const nonce = process.env.NODE_ENV === 'production' 
+      ? randomBytes(16).toString('base64') // Dynamic nonce for production
+      : 'dev-static-nonce-2024'; // Static nonce for development
     res.locals.nonce = nonce;
     
     // Apply security headers
