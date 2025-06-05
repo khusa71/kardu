@@ -2,11 +2,57 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth-modal";
-import { Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, Menu, X } from "lucide-react";
+import { Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, Menu, X, Upload, Bot, Rocket, ChevronRight } from "lucide-react";
 
 export default function Landing() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showAllSteps, setShowAllSteps] = useState(false);
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
+
+  const steps = [
+    {
+      number: "1",
+      icon: Upload,
+      title: "Upload a PDF",
+      description: "Simply drag and drop your study material, textbook, or notes in PDF format"
+    },
+    {
+      number: "2", 
+      icon: Bot,
+      title: "Generate Smart Flashcards",
+      description: "Our AI analyzes your content and creates targeted flashcards automatically"
+    },
+    {
+      number: "3",
+      icon: Rocket,
+      title: "Study or Export",
+      description: "Study directly in the app or export to Anki, Quizlet, CSV and more"
+    }
+  ];
+
+  const features = [
+    {
+      icon: Brain,
+      title: "AI-powered flashcard generation from your real content",
+      description: "Advanced AI analyzes your PDFs and creates high-quality flashcards tailored to your content and learning style"
+    },
+    {
+      icon: Download,
+      title: "Export to Anki, CSV, Quizlet & more",
+      description: "Export to Anki, CSV, JSON, or Quizlet format. Compatible with all major study platforms and tools"
+    },
+    {
+      icon: Shield,
+      title: "Private & secure — no files stored permanently",
+      description: "Your documents are processed securely with enterprise-grade encryption and never stored permanently"
+    }
+  ];
+
+  const handleStepSpin = () => {
+    setCurrentStep((prev) => (prev + 1) % steps.length);
+  };
 
   return (
     <div className="min-h-screen bg-background dark:bg-background">
@@ -132,36 +178,96 @@ export default function Landing() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-              <div className="text-center group">
-                <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
-                  <div className="text-2xl font-bold text-primary">1</div>
+            {/* Mobile Slot Machine Spinner */}
+            <div className="md:hidden">
+              {!showAllSteps ? (
+                <div className="max-w-sm mx-auto">
+                  <Card 
+                    className="p-6 border-border hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 active:scale-95"
+                    onClick={handleStepSpin}
+                  >
+                    <CardContent className="p-0 text-center">
+                      <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-colors">
+                        {currentStep === 0 && <Upload className="w-8 h-8 text-primary" />}
+                        {currentStep === 1 && <Bot className="w-8 h-8 text-primary" />}
+                        {currentStep === 2 && <Rocket className="w-8 h-8 text-primary" />}
+                      </div>
+                      <div className="text-3xl font-bold text-primary mb-2">
+                        {steps[currentStep].number}
+                      </div>
+                      <h3 className="text-xl font-semibold text-foreground mb-4">
+                        {steps[currentStep].title}
+                      </h3>
+                      <p className="text-muted-foreground leading-relaxed mb-6">
+                        {steps[currentStep].description}
+                      </p>
+                      <div className="flex justify-center space-x-2 mb-4">
+                        {steps.map((_, index) => (
+                          <div
+                            key={index}
+                            className={`w-2 h-2 rounded-full transition-colors ${
+                              index === currentStep ? 'bg-primary' : 'bg-muted'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Tap to see next step</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <div className="text-center mt-6">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAllSteps(true)}
+                      className="px-6 py-2"
+                    >
+                      Show All Steps
+                    </Button>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">Upload a PDF</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Simply drag and drop your study material, textbook, or notes in PDF format
-                </p>
-              </div>
+              ) : (
+                <div className="space-y-6">
+                  {steps.map((step, index) => (
+                    <Card key={index} className="p-6 border-border">
+                      <CardContent className="p-0 text-center">
+                        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          {index === 0 && <Upload className="w-6 h-6 text-primary" />}
+                          {index === 1 && <Bot className="w-6 h-6 text-primary" />}
+                          {index === 2 && <Rocket className="w-6 h-6 text-primary" />}
+                        </div>
+                        <div className="text-2xl font-bold text-primary mb-2">{step.number}</div>
+                        <h3 className="text-lg font-semibold text-foreground mb-3">{step.title}</h3>
+                        <p className="text-muted-foreground leading-relaxed">{step.description}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  <div className="text-center">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShowAllSteps(false)}
+                      className="px-6 py-2"
+                    >
+                      Show Interactive Steps
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
 
-              <div className="text-center group">
-                <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
-                  <div className="text-2xl font-bold text-primary">2</div>
+            {/* Desktop Horizontal Layout */}
+            <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
+              {steps.map((step, index) => (
+                <div key={index} className="text-center group">
+                  <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                    {index === 0 && <Upload className="w-8 h-8 text-primary" />}
+                    {index === 1 && <Bot className="w-8 h-8 text-primary" />}
+                    {index === 2 && <Rocket className="w-8 h-8 text-primary" />}
+                  </div>
+                  <div className="text-2xl font-bold text-primary mb-2">{step.number}</div>
+                  <h3 className="text-xl font-semibold text-foreground mb-4">{step.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{step.description}</p>
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">Generate Smart Flashcards</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Our AI analyzes your content and creates targeted flashcards automatically
-                </p>
-              </div>
-
-              <div className="text-center group">
-                <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
-                  <div className="text-2xl font-bold text-primary">3</div>
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">Study or Export</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Study directly in the app or export to Anki, Quizlet, CSV and more
-                </p>
-              </div>
+              ))}
             </div>
           </div>
         </section>
@@ -171,42 +277,61 @@ export default function Landing() {
           <div className="container-section">
             <div className="text-center mb-16">
               <h2 className="text-section text-foreground mb-4">
-                Everything you need to study smarter
+                Everything You Need
               </h2>
               <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
                 Powerful features designed to transform how you create and study with flashcards
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-              <div className="text-center group">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
-                  <Brain className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">AI-powered flashcard generation from your real content</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Advanced AI analyzes your PDFs and creates high-quality flashcards tailored to your content and learning style
-                </p>
+            {/* Mobile and Small Screens - Progressive Disclosure */}
+            <div className="md:hidden">
+              <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
+                {features.slice(0, showAllFeatures ? features.length : 2).map((feature, index) => (
+                  <Card 
+                    key={index} 
+                    className="p-6 border-border hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 active:scale-95"
+                    onClick={() => {/* Add tap scale animation */}}
+                  >
+                    <CardContent className="p-0 text-center">
+                      <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors hover:bg-primary/20">
+                        {index === 0 && <Brain className="w-8 h-8 text-primary transition-transform hover:scale-110" />}
+                        {index === 1 && <Download className="w-8 h-8 text-primary transition-transform hover:scale-110" />}
+                        {index === 2 && <Shield className="w-8 h-8 text-primary transition-transform hover:scale-110" />}
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground mb-3">{feature.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed text-sm">{feature.description}</p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-
-              <div className="text-center group">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
-                  <Download className="w-8 h-8 text-primary" />
+              
+              {!showAllFeatures && (
+                <div className="text-center mt-8">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAllFeatures(true)}
+                    className="px-6 py-2"
+                  >
+                    See All Features
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">Export to Anki, CSV, Quizlet & more</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Export to Anki, CSV, JSON, or Quizlet format. Compatible with all major study platforms and tools
-                </p>
-              </div>
+              )}
+            </div>
 
-              <div className="text-center group">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
-                  <Shield className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">Private & secure — no files stored permanently</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  Your documents are processed securely with enterprise-grade encryption and never stored permanently
-                </p>
+            {/* Tablet and Desktop - 2-Column Grid (switches to 1-column on <375px) */}
+            <div className="hidden md:block">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
+                {features.map((feature, index) => (
+                  <div key={index} className="text-center group">
+                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                      <feature.icon className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground mb-4">{feature.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
