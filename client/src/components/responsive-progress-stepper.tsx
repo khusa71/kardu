@@ -40,28 +40,50 @@ export function ResponsiveProgressStepper({ currentStep }: ResponsiveProgressSte
 
   return (
     <div className="mb-8 lg:mb-12">
-      {/* Mobile View - Vertical Layout */}
-      <div className="block sm:hidden space-y-4">
-        {steps.map((step, index) => (
-          <div key={step.number} className="flex items-center space-x-3">
-            <div className={getStepClass(step)}>
-              {step.completed ? (
-                <CheckCircle className="w-4 h-4" />
-              ) : (
-                step.number
-              )}
-            </div>
-            <div className="flex-1">
-              <span className={`text-sm font-medium ${
+      {/* Mobile View - Compact Horizontal Layout */}
+      <div className="block sm:hidden">
+        <div className="relative flex items-start justify-between px-2">
+          {steps.map((step, index) => (
+            <div key={step.number} className="flex flex-col items-center flex-1 relative">
+              {/* Step Circle */}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 relative z-10 ${
+                step.completed 
+                  ? "bg-green-500 text-white" 
+                  : step.active 
+                    ? "bg-primary text-white" 
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+              }`}>
+                {step.completed ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  step.number
+                )}
+              </div>
+              
+              {/* Step Title */}
+              <span className={`mt-2 text-xs font-medium text-center max-w-[60px] leading-tight ${
                 step.active || step.completed 
-                  ? 'text-neutral dark:text-white' 
-                  : 'text-gray-400 dark:text-gray-500'
+                  ? 'text-foreground' 
+                  : 'text-muted-foreground'
               }`}>
                 {step.title}
               </span>
             </div>
+          ))}
+          
+          {/* Connector Lines - Positioned absolutely */}
+          <div className="absolute top-4 left-0 right-0 flex items-center px-6">
+            {steps.slice(0, -1).map((step, index) => (
+              <div key={`connector-${index}`} className="flex-1 flex items-center">
+                <div className={`h-0.5 w-full ${
+                  steps[index + 1] && (step.completed || steps[index + 1].active)
+                    ? "bg-green-500" 
+                    : "bg-gray-200 dark:bg-gray-700"
+                } transition-all duration-300`} />
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Desktop View - Horizontal Layout */}
