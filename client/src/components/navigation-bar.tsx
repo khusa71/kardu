@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Menu, X, Home, Upload, History, BookOpen, LogOut, User, Brain } from "lucide-react";
+import { Menu, X, Home, Upload, History, BookOpen, LogOut, User, Brain, Feather } from "lucide-react";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -60,7 +60,7 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
           <Link href="/">
             <div className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
               <div className="bg-primary text-primary-foreground rounded-xl p-2.5">
-                <Brain className="w-6 h-6" />
+                <Feather className="w-6 h-6" />
               </div>
               <span className="text-xl font-bold text-foreground">Kardu.io</span>
             </div>
