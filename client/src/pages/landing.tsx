@@ -326,7 +326,9 @@ export default function Landing() {
                 {features.map((feature, index) => (
                   <div key={index} className="text-center group">
                     <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
-                      <feature.icon className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />
+                      {index === 0 && <Brain className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />}
+                      {index === 1 && <Download className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />}
+                      {index === 2 && <Shield className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />}
                     </div>
                     <h3 className="text-xl font-semibold text-foreground mb-4">{feature.title}</h3>
                     <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
@@ -349,64 +351,167 @@ export default function Landing() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
-                  <div className="flex items-center mb-4">
-                    <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-current" />
-                      ))}
+            {/* Mobile/Tablet: Staggered Layout */}
+            <div className="lg:hidden max-w-4xl mx-auto space-y-6">
+              {/* First testimonial - 90% width */}
+              <div className="w-[90%] mx-auto">
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-muted-foreground mb-4 italic">
-                    "This beta tool saved me hours of manual flashcard creation. The AI really understands the content."
-                  </p>
-                  <div className="text-sm">
-                    <p className="font-medium text-foreground">Sarah M.</p>
-                    <p className="text-muted-foreground">Medical Student</p>
-                  </div>
-                </CardContent>
-              </Card>
+                    <p className="text-muted-foreground mb-4 italic text-base leading-relaxed">
+                      "This beta tool saved me hours of manual flashcard creation. The AI really understands the content."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-sm font-medium text-primary">SM</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Sarah M.</p>
+                        <p className="text-muted-foreground">Medical Student</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
-                  <div className="flex items-center mb-4">
-                    <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-current" />
-                      ))}
+              {/* Second testimonial - 85% width, offset right */}
+              <div className="w-[85%] ml-auto">
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-muted-foreground mb-4 italic">
-                    "Perfect for studying complex textbooks. The export to Anki feature is exactly what I needed."
-                  </p>
-                  <div className="text-sm">
-                    <p className="font-medium text-foreground">Alex R.</p>
-                    <p className="text-muted-foreground">Graduate Student</p>
-                  </div>
-                </CardContent>
-              </Card>
+                    <p className="text-muted-foreground mb-4 italic text-base leading-relaxed">
+                      "Perfect for studying complex textbooks. The export to Anki feature is exactly what I needed."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-sm font-medium text-primary">AR</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Alex R.</p>
+                        <p className="text-muted-foreground">Graduate Student</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-              <Card className="p-6 border-border hover:shadow-lg transition-shadow md:col-span-2 lg:col-span-1">
-                <CardContent className="p-0">
-                  <div className="flex items-center mb-4">
-                    <div className="flex text-yellow-400">
-                      {[...Array(4)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-current" />
-                      ))}
-                      <Star className="w-4 h-4 text-gray-300" />
+              {/* Third testimonial - 90% width, offset left */}
+              <div className="w-[90%] mr-auto">
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(4)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                        <Star className="w-4 h-4 text-gray-300" />
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-muted-foreground mb-4 italic">
-                    "Great potential! Looking forward to more features as the beta progresses."
-                  </p>
-                  <div className="text-sm">
-                    <p className="font-medium text-foreground">Jordan K.</p>
-                    <p className="text-muted-foreground">Professional Learner</p>
-                  </div>
-                </CardContent>
-              </Card>
+                    <p className="text-muted-foreground mb-4 italic text-base leading-relaxed">
+                      "Great potential! Looking forward to more features as the beta progresses."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-sm font-medium text-primary">JK</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Jordan K.</p>
+                        <p className="text-muted-foreground">Professional Learner</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Desktop: Traditional Grid Layout */}
+            <div className="hidden lg:block">
+              <div className="grid grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4 italic">
+                      "This beta tool saved me hours of manual flashcard creation. The AI really understands the content."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
+                        <span className="text-xs font-medium text-primary">SM</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Sarah M.</p>
+                        <p className="text-muted-foreground">Medical Student</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4 italic">
+                      "Perfect for studying complex textbooks. The export to Anki feature is exactly what I needed."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
+                        <span className="text-xs font-medium text-primary">AR</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Alex R.</p>
+                        <p className="text-muted-foreground">Graduate Student</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(4)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                        <Star className="w-4 h-4 text-gray-300" />
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4 italic">
+                      "Great potential! Looking forward to more features as the beta progresses."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
+                        <span className="text-xs font-medium text-primary">JK</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Jordan K.</p>
+                        <p className="text-muted-foreground">Professional Learner</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </section>
