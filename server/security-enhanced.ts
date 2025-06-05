@@ -21,7 +21,7 @@ function generateCSPHash(content: string): string {
 function getProductionCSP(): string {
   return [
     "default-src 'self'",
-    "script-src 'self' https://js.stripe.com https://replit.com",
+    "script-src 'self' 'strict-dynamic'",
     "style-src 'self' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
