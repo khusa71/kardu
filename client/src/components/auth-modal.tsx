@@ -123,6 +123,33 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   };
 
+  if (resetEmailSent) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              Password Reset Email Sent
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <Mail className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+            <p className="text-gray-600 mb-4">
+              We've sent a password reset email to <strong>{formData.email}</strong>
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Please check your email and follow the instructions to reset your password.
+            </p>
+            <Button onClick={onClose} className="w-full">
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   if (emailSent) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -144,6 +171,61 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <Button onClick={onClose} className="w-full">
               Got it
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (showForgotPassword) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-blue-600" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription>
+              Enter your email address and we'll send you a password reset link
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="Enter your email address"
+                value={formData.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                className={errors.email ? "border-red-500" : ""}
+              />
+              {errors.email && (
+                <p className="text-sm text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.email}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowForgotPassword(false)}
+                className="flex-1"
+              >
+                Back
+              </Button>
+              <Button
+                onClick={handleForgotPassword}
+                disabled={loading}
+                className="flex-1"
+              >
+                {loading ? "Sending..." : "Send Reset Link"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -249,6 +331,17 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     {errors.password}
                   </p>
                 )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="px-0 text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Forgot password?
+                </Button>
               </div>
 
               <Button onClick={handleSignIn} className="w-full" disabled={loading}>
