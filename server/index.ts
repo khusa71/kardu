@@ -5,7 +5,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
 import { monitoringService } from "./monitoring-service";
-import { securityMiddleware, getSecurityStatus } from "./security-config";
+import { securityMiddleware, getSecurityStatus } from "./security-config-fixed";
 import fs from "fs";
 import path from "path";
 
