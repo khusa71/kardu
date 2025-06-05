@@ -16,6 +16,7 @@ import { ResponsiveProgressStepper } from "@/components/responsive-progress-step
 import { ResponsiveUploadZone } from "@/components/responsive-upload-zone";
 import { ResponsiveConfigPanel } from "@/components/responsive-config-panel";
 import { MyFilesModal } from "@/components/my-files-modal";
+import { QuotaStatus } from "@/components/quota-status";
 import { Download, LoaderPinwheel, Check, Star, HelpCircle, ExternalLink, AlertCircle, RotateCcw, Edit, Play } from "lucide-react";
 import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 

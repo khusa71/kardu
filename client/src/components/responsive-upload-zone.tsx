@@ -134,7 +134,7 @@ export function ResponsiveUploadZone({
                 Drop your PDF here, or tap to browse
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Supports PDF files up to 10MB
+                {isPremium ? "Up to 100 pages per file • 10MB max" : "Up to 20 pages per file • 10MB max"}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-xs text-gray-400">
