@@ -376,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId, 
           flashcardCount, 
           customContext,
-          validation.pagesWillProcess
+          validation.pagesWillProcess || validation.pageInfo.pageCount
         );
       }
 
@@ -813,6 +813,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("User jobs error:", error);
       res.status(500).json({ message: "Failed to get user jobs" });
+    }
+  });
+
+  // Get user quota status for dashboard
+  app.get("/api/quota-status", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.uid;
+      const quotaStatus = await getQuotaStatus(userId);
+      res.json(quotaStatus);
+    } catch (error) {
+      console.error("Quota status error:", error);
+      res.status(500).json({ message: "Failed to fetch quota status" });
     }
   });
 
@@ -1333,6 +1345,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// Page-limited background processing function
+async function processFlashcardJobWithPageLimits(
+  jobId: number,
+  pdfPath: string,
+  originalFilename: string,
+  apiProvider: string,
+  subject: string,
+  focusAreas: string,
+  difficulty: string,
+  userId: string,
+  flashcardCount: string,
+  customContext?: string,
+  maxPages?: number
+) {
+  try {
+    // Update job status
+    await storage.updateFlashcardJob(jobId, {
+      status: "processing",
+      progress: 10,
+      currentTask: maxPages ? `Extracting text from first ${maxPages} pages...` : "Extracting text from PDF...",
+    });
+
+    // Extract text from PDF with page limit
+    const ocrResult = await extractTextWithOCR(pdfPath, maxPages);
+    const extractedText = ocrResult.text;
+    
+    if (ocrResult.isScanned) {
+      await storage.updateFlashcardJob(jobId, {
+        progress: 25,
+        currentTask: `OCR processing completed (${Math.round(ocrResult.confidence * 100)}% confidence)`,
+      });
+    } else {
+      await storage.updateFlashcardJob(jobId, {
+        progress: 25,
+        currentTask: "Text extraction completed",
+      });
+    }
+
+    // Check cache first to avoid unnecessary API calls
+    const contentHash = cacheService.generateContentHash(extractedText, subject, difficulty, focusAreas || "{}");
+    const cachedFlashcards = await cacheService.getCachedFlashcards(contentHash);
+    
+    let flashcards;
+    
+    if (cachedFlashcards) {
+      flashcards = cachedFlashcards;
+      await storage.updateFlashcardJob(jobId, {
+        progress: 80,
+        currentTask: "Retrieved from cache (cost-optimized)",
+        flashcards: JSON.stringify(flashcards),
+      });
+    } else {
+      // Preprocess content for cost optimization
+      await storage.updateFlashcardJob(jobId, {
+        progress: 30,
+        currentTask: "Preprocessing content for cost optimization...",
+      });
+
+      const preprocessResult = preprocessingService.preprocessContent(extractedText, subject);
+      
+      await storage.updateFlashcardJob(jobId, {
+        progress: 35,
+        currentTask: `Content optimized (Est. cost: $${preprocessResult.estimatedCost.toFixed(3)})`,
+      });
+
+      // Generate flashcards using AI with optimized content
+      await storage.updateFlashcardJob(jobId, {
+        progress: 40,
+        currentTask: "Analyzing content with AI...",
+      });
+
+      const job = await storage.getFlashcardJob(jobId);
+      if (!job) throw new Error("Job not found");
+
+      // Map tier to actual provider and get API key
+      const actualProvider = apiProvider === "openai" ? "openai" : "anthropic";
+      const systemApiKey = actualProvider === "openai" 
+        ? process.env.OPENAI_API_KEY 
+        : process.env.ANTHROPIC_API_KEY;
+      
+      if (!systemApiKey) {
+        throw new Error(`${actualProvider.toUpperCase()} API key not configured`);
+      }
+
+      flashcards = await generateFlashcards(
+        preprocessResult.filteredContent,
+        actualProvider,
+        systemApiKey,
+        parseInt(flashcardCount),
+        subject,
+        JSON.parse(focusAreas || "{}"),
+        difficulty,
+        customContext
+      );
+
+      // Cache the results for future use
+      await cacheService.cacheFlashcards(
+        contentHash,
+        extractedText,
+        subject,
+        flashcards,
+        difficulty,
+        focusAreas || "{}"
+      );
+
+      await storage.updateFlashcardJob(jobId, {
+        progress: 75,
+        currentTask: "Creating flashcard pairs",
+        flashcards: JSON.stringify(flashcards),
+      });
+    }
+
+    // Generate Anki deck using Python
+    await storage.updateFlashcardJob(jobId, {
+      progress: 90,
+      currentTask: "Generating Anki deck",
+    });
+
+    const ankiDeckPath = await generateAnkiDeck(jobId, flashcards);
+
+    // Get job info for filename
+    const currentJob = await storage.getFlashcardJob(jobId);
+    if (!currentJob) throw new Error("Job not found");
+
+    // Store files in Object Storage
+    const storedPdf = await objectStorage.uploadPDF(userId, jobId, pdfPath, originalFilename);
+    const storedAnki = await objectStorage.uploadAnkiDeck(userId, jobId, ankiDeckPath);
+    const exportFiles = await objectStorage.generateAndUploadExports(userId, jobId, flashcards);
+
+    // Complete the job
+    await storage.updateFlashcardJob(jobId, {
+      status: "completed",
+      progress: 100,
+      currentTask: "All files ready for download",
+      pdfStorageKey: storedPdf.key,
+      pdfDownloadUrl: storedPdf.url,
+      ankiStorageKey: storedAnki.key,
+      ankiDownloadUrl: storedAnki.url,
+      csvStorageKey: exportFiles.csv?.key,
+      csvDownloadUrl: exportFiles.csv?.url,
+      jsonStorageKey: exportFiles.json?.key,
+      jsonDownloadUrl: exportFiles.json?.url,
+      quizletStorageKey: exportFiles.quizlet?.key,
+      quizletDownloadUrl: exportFiles.quizlet?.url,
+    });
+
+    console.log(`Job ${jobId} completed successfully with ${maxPages ? `${maxPages} pages processed` : 'all pages processed'}`);
+
+  } catch (error) {
+    console.error(`Error processing job ${jobId}:`, error);
+    await storage.updateFlashcardJob(jobId, {
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : "Unknown error occurred",
+      currentTask: "Processing failed",
+    });
+  } finally {
+    // Clean up temp file
+    try {
+      if (fs.existsSync(pdfPath)) {
+        fs.unlinkSync(pdfPath);
+      }
+    } catch (cleanupError) {
+      console.error(`Error cleaning up temp file ${pdfPath}:`, cleanupError);
+    }
+  }
 }
 
 // Background processing function

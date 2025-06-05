@@ -58,14 +58,14 @@ doc.close()
   }
 }
 
-export async function extractTextWithOCR(pdfPath: string): Promise<OCRResult> {
+export async function extractTextWithOCR(pdfPath: string, maxPages?: number): Promise<OCRResult> {
   try {
     // First check if document is scanned
     const isScanned = await detectIfScanned(pdfPath);
     
     if (!isScanned) {
       // Extract text normally
-      const text = await extractTextFromPDF(pdfPath);
+      const text = await extractTextFromPDF(pdfPath, maxPages);
       return {
         text,
         confidence: 0.95,
@@ -175,22 +175,32 @@ print(f"TEXT:{final_text}")
   }
 }
 
-async function extractTextFromPDF(pdfPath: string): Promise<string> {
+async function extractTextFromPDF(pdfPath: string, maxPages?: number): Promise<string> {
   const pythonScript = `
 import fitz
 import sys
 
 pdf_path = sys.argv[1]
+max_pages = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] != 'None' else None
 doc = fitz.open(pdf_path)
 
 text_content = []
-for page in doc:
+total_pages = len(doc)
+pages_to_process = min(total_pages, max_pages) if max_pages else total_pages
+
+for page_num in range(pages_to_process):
+    page = doc[page_num]
     text = page.get_text()
     if text.strip():
         text_content.append(text)
 
 doc.close()
-print('\\n\\n'.join(text_content))
+
+processed_text = '\\n\\n'.join(text_content)
+if max_pages and total_pages > max_pages:
+    processed_text += f'\\n\\n[Note: Only the first {pages_to_process} of {total_pages} pages were processed due to plan limits]'
+
+print(processed_text)
 `;
   
   const tempScript = path.join('/tmp', `extract_${Date.now()}.py`);
@@ -198,7 +208,12 @@ print('\\n\\n'.join(text_content))
   
   try {
     const result = await new Promise<string>((resolve, reject) => {
-      const process = spawn('python3', [tempScript, pdfPath]);
+      const args = [tempScript, pdfPath];
+      if (maxPages !== undefined) {
+        args.push(maxPages.toString());
+      }
+      
+      const process = spawn('python3', args);
       let output = '';
       
       process.stdout.on('data', (data) => {
