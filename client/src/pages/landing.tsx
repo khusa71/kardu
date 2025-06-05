@@ -8,24 +8,35 @@ export default function Landing() {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="bg-blue-600 text-white rounded-lg p-2">
                 <Brain className="w-6 h-6" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kardu.io</h1>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">AI-Powered Flashcard Generation</p>
-              </div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kardu.io</h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button onClick={() => setShowAuthModal(true)} className="bg-blue-600 hover:bg-blue-700">
-                Sign In
-                <ArrowRight className="w-4 h-4 ml-2" />
+            <div className="flex items-center space-x-6">
+              <Button 
+                variant="ghost" 
+                className="text-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Features
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Pricing
+              </Button>
+              <Button 
+                onClick={() => setShowAuthModal(true)} 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 text-lg font-bold rounded-full"
+              >
+                Get Started
               </Button>
             </div>
           </div>
@@ -33,169 +44,154 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            Transform Your PDFs into
-            <span className="text-blue-600 dark:text-blue-400"> Smart Flashcards</span>
+      <main className="bg-white dark:bg-gray-900">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <h1 className="mb-6 text-5xl font-medium leading-tight text-gray-900 dark:text-white lg:text-7xl">
+            Your personal AI tutor. For flashcards.
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
-            Upload any educational PDF and let our AI create interactive flashcards with spaced repetition. 
-            Perfect for students, professionals, and lifelong learners.
+          <p className="mx-auto mb-12 max-w-2xl text-xl leading-relaxed text-gray-600 dark:text-gray-300 lg:text-2xl">
+            Transform any PDF into smart flashcards with AI. Study smarter, learn faster, remember more.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="mb-16">
             <Button 
-              size="lg" 
               onClick={() => setShowAuthModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 font-medium text-lg"
             >
-              <Brain className="w-5 h-5 mr-2" />
               Get Started Free
-            </Button>
-            <Button variant="outline" size="lg" className="px-8 py-3">
-              <FileText className="w-5 h-5 mr-2" />
-              View Demo
             </Button>
           </div>
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-4">
-                <Brain className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-20">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center p-8">
+              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Brain className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
-              <CardTitle>AI-Powered Generation</CardTitle>
-              <CardDescription>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">AI-Powered Generation</h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                 Advanced AI analyzes your PDFs and creates high-quality flashcards tailored to your content
-              </CardDescription>
-            </CardHeader>
-          </Card>
+              </p>
+            </div>
 
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-4">
-                <Zap className="w-6 h-6 text-green-600 dark:text-green-400" />
+            <div className="text-center p-8">
+              <div className="w-16 h-16 bg-green-50 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Zap className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
-              <CardTitle>Multiple Export Formats</CardTitle>
-              <CardDescription>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Multiple Export Formats</h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                 Export to Anki, CSV, JSON, or Quizlet format. Compatible with all major study platforms
-              </CardDescription>
-            </CardHeader>
-          </Card>
+              </p>
+            </div>
 
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <div className="text-center p-8">
+              <div className="w-16 h-16 bg-purple-50 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Shield className="w-8 h-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <CardTitle>Secure & Private</CardTitle>
-              <CardDescription>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Secure & Private</h3>
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                 Your documents are processed securely and never stored permanently on our servers
-              </CardDescription>
-            </CardHeader>
-          </Card>
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Pricing Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 mb-16">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-gray-600 dark:text-gray-300">Start free, upgrade when you need more</p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Free Plan */}
-            <Card className="border-2 border-gray-200 dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-2xl">Free Plan</CardTitle>
-                <CardDescription>Perfect for getting started</CardDescription>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white">$0<span className="text-lg font-normal text-gray-500">/month</span></div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
+        <div className="bg-gray-50 dark:bg-gray-800/50 py-20">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Simple, Transparent Pricing</h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300">Start free, upgrade when you need more</p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Free Plan */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Free</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mt-2">Perfect for getting started</p>
+                  <div className="text-4xl font-bold text-gray-900 dark:text-white mt-4">$0<span className="text-lg font-normal text-gray-500">/month</span></div>
+                </div>
+                <ul className="space-y-4 mb-8">
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                    <span>3 PDF uploads per month</span>
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">3 PDF uploads per month</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                    <span>Basic AI flashcard generation</span>
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">Basic AI flashcard generation</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                    <span>Export to all formats</span>
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">Export to all formats</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                    <span>Built-in study mode</span>
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">Built-in study mode</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6" variant="outline" onClick={() => setShowAuthModal(true)}>
+                <Button className="w-full" variant="outline" onClick={() => setShowAuthModal(true)}>
                   Get Started Free
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Premium Plan */}
-            <Card className="border-2 border-blue-500 relative">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <div className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center">
-                  <Star className="w-4 h-4 mr-1" />
-                  Most Popular
-                </div>
               </div>
-              <CardHeader>
-                <CardTitle className="text-2xl">Premium Plan</CardTitle>
-                <CardDescription>For serious learners</CardDescription>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white">$9<span className="text-lg font-normal text-gray-500">/month</span></div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
+
+              {/* Premium Plan */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border-2 border-blue-500 relative">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+                    Most Popular
+                  </div>
+                </div>
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Premium</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mt-2">For serious learners</p>
+                  <div className="text-4xl font-bold text-gray-900 dark:text-white mt-4">$9<span className="text-lg font-normal text-gray-500">/month</span></div>
+                </div>
+                <ul className="space-y-4 mb-8">
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                    <span>100 PDF uploads per month</span>
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">100 PDF uploads per month</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                    <span>Advanced AI with multiple providers</span>
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">Advanced AI with multiple providers</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                    <span>OCR for scanned documents</span>
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">OCR for scanned documents</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                    <span>Priority processing</span>
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">Priority processing</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                    <span>Advanced study analytics</span>
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">Advanced study analytics</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6 bg-blue-600 hover:bg-blue-700" onClick={() => setShowAuthModal(true)}>
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowAuthModal(true)}>
                   Start Premium Trial
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* CTA Section */}
-        <div className="text-center bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-white">
-          <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Learning?</h2>
-          <p className="text-xl mb-8 text-blue-100">
-            Join thousands of students and professionals who are already studying smarter with AI-generated flashcards
-          </p>
-          <Button 
-            size="lg" 
-            className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3"
-            onClick={() => setShowAuthModal(true)}
-          >
-            <Brain className="w-5 h-5 mr-2" />
-            Get Started Now - It's Free!
-          </Button>
+        <div className="bg-white dark:bg-gray-900 py-20">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-6">Ready to Transform Your Learning?</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
+              Join thousands of students and professionals who are already studying smarter with AI-generated flashcards
+            </p>
+            <Button 
+              onClick={() => setShowAuthModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 font-medium text-lg"
+            >
+              Get Started Now - It's Free!
+            </Button>
+          </div>
         </div>
       </main>
 

@@ -23,50 +23,33 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <NavigationBar />
       
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-16">
-          <div className="flex justify-center mb-6">
-            <div className="bg-primary text-white rounded-full p-4">
-              <Brain className="w-12 h-12" />
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            Transform PDFs into
-            <span className="block text-primary">Interactive Flashcards</span>
+      <main className="bg-white dark:bg-gray-900">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <h1 className="mb-6 text-5xl font-medium leading-tight text-gray-900 dark:text-white lg:text-7xl">
+            Create flashcards in seconds.
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
-            Upload your educational PDFs and let AI generate personalized flashcards instantly. 
-            Perfect for students, professionals, and lifelong learners.
+          <p className="mx-auto mb-12 max-w-2xl text-xl leading-relaxed text-gray-600 dark:text-gray-300 lg:text-2xl">
+            Upload any PDF and transform it into interactive flashcards with AI. Study smarter, learn faster.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="mb-16">
             {user ? (
               <Link href="/upload">
-                <Button size="lg" className="text-lg px-8 py-3">
-                  <Upload className="w-5 h-5 mr-2" />
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 font-medium text-lg">
                   Start Creating Flashcards
-                  <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
             ) : (
-              <Button size="lg" className="text-lg px-8 py-3" onClick={() => setShowAuthModal(true)}>
-                <Upload className="w-5 h-5 mr-2" />
+              <Button 
+                onClick={() => setShowAuthModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-3 font-medium text-lg"
+              >
                 Get Started Free
-                <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
-            )}
-            
-            {user && (
-              <Link href="/history">
-                <Button variant="outline" size="lg" className="text-lg px-8 py-3">
-                  <FileText className="w-5 h-5 mr-2" />
-                  View My Files
-                </Button>
-              </Link>
             )}
           </div>
         </div>

@@ -53,48 +53,47 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
   if (!user) return null;
 
   return (
-    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex items-center justify-between">
           {/* Logo/Brand */}
-          <div className="flex items-center">
-            <BookOpen className="w-8 h-8 text-primary mr-3" />
-            <span className="text-xl font-bold text-gray-900 dark:text-white">
-              Kardu.io
-            </span>
+          <div className="flex items-center space-x-3">
+            <div className="bg-blue-600 text-white rounded-lg p-2">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kardu.io</h1>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (
               <Link key={item.path} href={item.path}>
                 <Button
-                  variant={isActive(item.path) ? "default" : "ghost"}
-                  size="sm"
-                  className="flex items-center space-x-2"
+                  variant="ghost"
+                  className={`text-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                    isActive(item.path) ? 'text-blue-600' : 'text-gray-700 dark:text-gray-300'
+                  }`}
                 >
-                  <item.icon className="w-4 h-4" />
-                  <span>{item.label}</span>
+                  {item.label}
                 </Button>
               </Link>
             ))}
           </div>
 
-          {/* User Info & Logout (Desktop) */}
-          <div className="hidden md:flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <User className="w-4 h-4 text-gray-500" />
-              <div className="text-sm">
-                <p className="text-gray-900 dark:text-white font-medium max-w-24 truncate">
-                  {user.email?.split('@')[0]}
-                </p>
-                <Badge variant={(user as any)?.isPremium ? "default" : "secondary"} className="text-xs">
-                  {(user as any)?.isPremium ? "Pro" : "Free"}
-                </Badge>
-              </div>
+          {/* User Info & Actions */}
+          <div className="hidden md:flex items-center space-x-6">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              {user.email?.split('@')[0]}
+              <Badge variant={(user as any)?.isPremium ? "default" : "secondary"} className="ml-2 text-xs">
+                {(user as any)?.isPremium ? "Pro" : "Free"}
+              </Badge>
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLogout}
+              className="rounded-full"
+            >
               Logout
             </Button>
           </div>
