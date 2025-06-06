@@ -135,17 +135,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      // Try popup first, fallback to redirect on mobile or if popup fails
+      const isProduction = window.location.hostname === 'kardu.io';
+      const { signInWithRedirect } = await import('firebase/auth');
+      
+      // For production (kardu.io), always use redirect flow
+      if (isProduction) {
+        console.log('Starting Google sign-in redirect for production...');
+        await signInWithRedirect(auth, googleProvider);
+        return; // User will be redirected, function exits here
+      }
+      
+      // For development, try popup first, then fallback to redirect
       let result;
       try {
         result = await signInWithPopup(auth, googleProvider);
       } catch (popupError: any) {
-        // If popup fails due to mobile or other issues, try redirect
+        console.log('Popup failed, trying redirect...', popupError.code);
+        
         if (popupError.code === 'auth/popup-blocked' || 
             popupError.code === 'auth/popup-closed-by-user' ||
             /mobile|android|iphone|ipad/i.test(navigator.userAgent)) {
           
-          const { signInWithRedirect, getRedirectResult } = await import('firebase/auth');
+          const { getRedirectResult } = await import('firebase/auth');
           
           // Check if we're returning from a redirect
           const redirectResult = await getRedirectResult(auth);

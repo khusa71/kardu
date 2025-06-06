@@ -24,3 +24,12 @@ googleProvider.setCustomParameters({
   prompt: 'select_account',
   hd: '' // Allow any domain
 });
+
+// Production-specific configuration for kardu.io
+if (typeof window !== 'undefined' && window.location.hostname === 'kardu.io') {
+  googleProvider.setCustomParameters({
+    prompt: 'select_account',
+    hd: '',
+    redirect_uri: 'https://kardu.io/__/auth/handler'
+  });
+}
