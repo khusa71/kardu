@@ -43,6 +43,14 @@ function LoginRedirect() {
 function Router() {
   const { user, loading } = useFirebaseAuth();
   const { isOnline, isSlowConnection } = useNetworkStatus();
+  const [location, navigate] = useLocation();
+
+  // Handle redirect after successful authentication
+  useEffect(() => {
+    if (!loading && user && location === '/') {
+      navigate('/dashboard');
+    }
+  }, [user, loading, location, navigate]);
 
   if (loading) {
     return (
@@ -66,7 +74,7 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={user ? DashboardRedirect : Landing} />
+      <Route path="/" component={user ? Dashboard : Landing} />
       <Route path="/dashboard" component={user ? Dashboard : LoginRedirect} />
       <Route path="/upload" component={user ? Upload : LoginRedirect} />
       <Route path="/history" component={user ? History : LoginRedirect} />
