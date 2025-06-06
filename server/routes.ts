@@ -686,7 +686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Object Storage download endpoint - simplified for direct access
-  app.get("/api/object-storage/download/:key(*)", async (req: Request, res: Response) => {
+  app.get("/api/object-storage/download/:key(*)", async (req: express.Request, res: express.Response) => {
     try {
       const storageKey = req.params.key as string;
       
@@ -781,6 +781,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Export error:", error);
       res.status(500).json({ message: "Export failed" });
+    }
+  });
+
+  // Regenerate flashcards with custom context
+  app.post("/api/regenerate/:id", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const userId = req.user!.uid;
+      const { customContext, flashcardCount, difficulty, focusAreas } = req.body;
+
+      // Validate input
+      if (!customContext || typeof customContext !== 'string' || customContext.trim().length === 0) {
+        return res.status(400).json({ message: "Custom context is required for regeneration" });
+      }
+
+      // Get original job
+      const originalJob = await storage.getFlashcardJob(jobId);
+      if (!originalJob || originalJob.userId !== userId) {
+        return res.status(404).json({ message: "Original job not found" });
+      }
+
+      if (originalJob.status !== "completed") {
+        return res.status(400).json({ message: "Original job must be completed before regeneration" });
+      }
+
+      // Create new job for regeneration
+      const newJobData = {
+        userId,
+        filename: `${originalJob.filename} (Regenerated)`,
+        fileSize: originalJob.fileSize,
+        pageCount: originalJob.pageCount,
+        pagesProcessed: originalJob.pagesProcessed,
+        apiProvider: originalJob.apiProvider,
+        flashcardCount: flashcardCount || originalJob.flashcardCount,
+        subject: originalJob.subject,
+        difficulty: difficulty || originalJob.difficulty,
+        focusAreas: JSON.stringify(focusAreas || JSON.parse(originalJob.focusAreas || "{}")),
+        status: "pending" as const,
+        progress: 0,
+        currentTask: "Starting regeneration with custom context...",
+        regeneratedFromJobId: originalJob.id
+      };
+
+      const newJob = await storage.createFlashcardJob(newJobData);
+
+      // Start regeneration process asynchronously
+      regenerateFlashcardsProcess(
+        newJob.id,
+        originalJob.id,
+        customContext,
+        originalJob.subject || "General",
+        difficulty || originalJob.difficulty || "intermediate",
+        focusAreas || JSON.parse(originalJob.focusAreas || "{}"),
+        flashcardCount || originalJob.flashcardCount,
+        userId
+      );
+
+      res.json({ 
+        message: "Regeneration started",
+        jobId: newJob.id,
+        originalJobId: originalJob.id
+      });
+
+    } catch (error) {
+      console.error("Regeneration error:", error);
+      res.status(500).json({ message: "Failed to start regeneration" });
     }
   });
 
@@ -1909,6 +1975,147 @@ async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: stri
       status: "failed",
       errorMessage: error instanceof Error ? error.message : "Unknown error occurred during regeneration"
     });
+  }
+}
+
+// Regenerate flashcards process with custom context
+async function regenerateFlashcardsProcess(
+  jobId: number,
+  originalJobId: number,
+  customContext: string,
+  subject: string,
+  difficulty: string,
+  focusAreas: any,
+  flashcardCount: number,
+  userId: string
+) {
+  let tempPdfPath: string | null = null;
+  
+  try {
+    // Update job status
+    await storage.updateFlashcardJob(jobId, {
+      status: "processing",
+      progress: 10,
+      currentTask: "Retrieving original content...",
+    });
+
+    // Get original job content
+    const originalJob = await storage.getFlashcardJob(originalJobId);
+    if (!originalJob || !originalJob.pdfStorageKey) {
+      throw new Error("Original PDF not found");
+    }
+
+    // Download original PDF from object storage
+    tempPdfPath = path.join("/tmp", `regen_${jobId}_${Date.now()}.pdf`);
+    const pdfStream = await objectStorage.downloadFileStream(originalJob.pdfStorageKey);
+    const writeStream = fs.createWriteStream(tempPdfPath);
+    
+    await new Promise((resolve, reject) => {
+      pdfStream.pipe(writeStream);
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    // Extract text from PDF
+    await storage.updateFlashcardJob(jobId, {
+      progress: 25,
+      currentTask: "Re-extracting text from original PDF...",
+    });
+
+    const ocrResult = await extractTextWithOCR(tempPdfPath, originalJob.pagesProcessed);
+    const extractedText = ocrResult.text;
+
+    // Parse focus areas and add custom context
+    let focusAreasObj: any = {};
+    try {
+      if (typeof focusAreas === 'string') {
+        focusAreasObj = JSON.parse(focusAreas);
+      } else {
+        focusAreasObj = focusAreas || {};
+      }
+    } catch (e) {
+      console.warn("Could not parse focus areas, using defaults");
+    }
+
+    // Generate flashcards with custom context
+    await storage.updateFlashcardJob(jobId, {
+      progress: 50,
+      currentTask: "Regenerating flashcards with new context..."
+    });
+
+    // Determine the correct API key for the provider
+    const apiProvider = originalJob.apiProvider as "openai" | "anthropic";
+    const apiKey = apiProvider === "openai" 
+      ? process.env.OPENAI_API_KEY! 
+      : process.env.ANTHROPIC_API_KEY!;
+
+    const flashcards = await generateFlashcards(
+      extractedText,
+      apiProvider,
+      apiKey,
+      flashcardCount,
+      subject,
+      focusAreasObj,
+      difficulty as "beginner" | "intermediate" | "advanced",
+      customContext
+    );
+
+    // Generate and store exports
+    await storage.updateFlashcardJob(jobId, {
+      progress: 80,
+      currentTask: "Generating export formats..."
+    });
+
+    const exportResults = await objectStorage.generateAndUploadExports(userId, jobId, flashcards);
+
+    // Generate Anki deck
+    const ankiDeckPath = await generateAnkiDeck(jobId, flashcards);
+    const ankiResult = ankiDeckPath ? await objectStorage.uploadAnkiDeck(userId, jobId, ankiDeckPath) : null;
+
+    // Update job with results
+    await storage.updateFlashcardJob(jobId, {
+      status: "completed",
+      progress: 100,
+      currentTask: "Regeneration completed!",
+      flashcards: JSON.stringify(flashcards),
+      ankiStorageKey: ankiResult?.key,
+      ankiDownloadUrl: ankiResult?.url,
+      csvStorageKey: exportResults.csv?.key,
+      csvDownloadUrl: exportResults.csv?.url,
+      jsonStorageKey: exportResults.json?.key,
+      jsonDownloadUrl: exportResults.json?.url,
+      quizletStorageKey: exportResults.quizlet?.key,
+      quizletDownloadUrl: exportResults.quizlet?.url,
+      processingTime: Math.floor((Date.now() - new Date(originalJob.createdAt!).getTime()) / 1000)
+    });
+
+    // Clean up temporary files
+    try {
+      if (tempPdfPath && fs.existsSync(tempPdfPath)) {
+        fs.unlinkSync(tempPdfPath);
+      }
+      if (ankiDeckPath && fs.existsSync(ankiDeckPath)) {
+        fs.unlinkSync(ankiDeckPath);
+      }
+    } catch (cleanupError) {
+      console.warn("Failed to clean up temporary files:", cleanupError);
+    }
+
+  } catch (error) {
+    console.error("Error processing regenerated flashcard job:", error);
+    await storage.updateFlashcardJob(jobId, {
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : "Unknown error occurred during regeneration"
+    });
+    
+    // Clean up temporary files on error
+    try {
+      if (tempPdfPath && fs.existsSync(tempPdfPath)) {
+        fs.unlinkSync(tempPdfPath);
+      }
+    } catch (cleanupError) {
+      console.warn("Failed to clean up temporary files:", cleanupError);
+    }
   }
 }
 

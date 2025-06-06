@@ -18,3 +18,9 @@ export const googleProvider = new GoogleAuthProvider();
 // Configure Google provider
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
+
+// Set custom parameters for better production compatibility
+googleProvider.setCustomParameters({
+  prompt: 'select_account',
+  hd: '' // Allow any domain
+});

@@ -77,8 +77,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   };
 
-  // Listen to Firebase auth state changes
+  // Listen to Firebase auth state changes and handle redirect results
   useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // Check for redirect result first
+        const { getRedirectResult } = await import('firebase/auth');
+        const redirectResult = await getRedirectResult(auth);
+        
+        if (redirectResult) {
+          // User signed in via redirect
+          await syncUserWithBackend(redirectResult.user);
+          toast({
+            title: "Success",
+            description: "Signed in with Google successfully!",
+          });
+        }
+      } catch (error: any) {
+        console.error('Redirect result error:', error);
+        if (error.code === 'auth/unauthorized-domain') {
+          toast({
+            title: "Authorization Error",
+            description: "This domain is not authorized for Google sign-in. Please use email sign-in.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    initAuth();
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const backendUserData = await syncUserWithBackend(firebaseUser);
@@ -103,35 +131,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return unsubscribe;
-  }, []);
+  }, [toast]);
 
   const signInWithGoogle = async () => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await syncUserWithBackend(result.user);
-      toast({
-        title: "Success",
-        description: "Signed in with Google successfully!",
-      });
+      // Try popup first, fallback to redirect on mobile or if popup fails
+      let result;
+      try {
+        result = await signInWithPopup(auth, googleProvider);
+      } catch (popupError: any) {
+        // If popup fails due to mobile or other issues, try redirect
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            /mobile|android|iphone|ipad/i.test(navigator.userAgent)) {
+          
+          const { signInWithRedirect, getRedirectResult } = await import('firebase/auth');
+          
+          // Check if we're returning from a redirect
+          const redirectResult = await getRedirectResult(auth);
+          if (redirectResult) {
+            result = redirectResult;
+          } else {
+            // Start redirect flow
+            await signInWithRedirect(auth, googleProvider);
+            return; // Function will exit here, user will be redirected
+          }
+        } else {
+          throw popupError;
+        }
+      }
+      
+      if (result) {
+        await syncUserWithBackend(result.user);
+        toast({
+          title: "Success",
+          description: "Signed in with Google successfully!",
+        });
+      }
     } catch (error: any) {
       let errorMessage = error.message;
       
       // Handle specific Firebase errors with user-friendly messages
       switch (error.code) {
         case 'auth/unauthorized-domain':
-          errorMessage = "Google sign-in is temporarily unavailable. Please try signing in with email and password instead.";
+          errorMessage = "This domain is not authorized for Google sign-in. Please contact support or use email sign-in.";
           break;
         case 'auth/popup-blocked':
-          errorMessage = "Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.";
+          errorMessage = "Pop-up was blocked. Trying alternative sign-in method...";
           break;
         case 'auth/cancelled-popup-request':
-          errorMessage = "Sign-in was cancelled. Please try again.";
-          break;
         case 'auth/popup-closed-by-user':
           errorMessage = "Sign-in was cancelled. Please try again.";
           break;
+        case 'auth/network-request-failed':
+          errorMessage = "Network error. Please check your connection and try again.";
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = "Too many failed attempts. Please try again later.";
+          break;
         default:
-          errorMessage = "Unable to sign in with Google. Please try again or use email sign-in.";
+          errorMessage = "Google sign-in failed. Please try email sign-in instead.";
+          console.error('Google sign-in error:', error);
       }
       
       toast({
