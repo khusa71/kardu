@@ -25,11 +25,17 @@ googleProvider.setCustomParameters({
   hd: '' // Allow any domain
 });
 
-// Production-specific configuration for kardu.io
-if (typeof window !== 'undefined' && window.location.hostname === 'kardu.io') {
-  googleProvider.setCustomParameters({
-    prompt: 'select_account',
-    hd: '',
-    redirect_uri: 'https://kardu.io/__/auth/handler'
-  });
+// Production-specific configuration for any custom domain
+if (typeof window !== 'undefined') {
+  const isProduction = !window.location.hostname.includes('localhost') && 
+                      !window.location.hostname.includes('replit.dev') &&
+                      !window.location.hostname.includes('127.0.0.1');
+  
+  if (isProduction) {
+    googleProvider.setCustomParameters({
+      prompt: 'select_account',
+      hd: '',
+      redirect_uri: `https://${window.location.hostname}/__/auth/handler`
+    });
+  }
 }

@@ -153,7 +153,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      const isProduction = window.location.hostname === 'kardu.io';
+      // Detect production environment (not localhost or replit dev domains)
+      const isProduction = !window.location.hostname.includes('localhost') && 
+                          !window.location.hostname.includes('replit.dev') &&
+                          !window.location.hostname.includes('127.0.0.1');
       const { signInWithRedirect } = await import('firebase/auth');
       
       // Set redirect flag before starting sign-in process

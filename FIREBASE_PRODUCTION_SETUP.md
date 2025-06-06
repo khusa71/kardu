@@ -13,7 +13,7 @@ To fix Google sign-in issues in production, you need to configure Firebase prope
    - Enable Google sign-in
    - Add your production domain to **Authorized domains**
    - Required domain to add:
-     - `kardu.io`
+     - Your production domain (e.g., `kardu.io` or your custom domain)
 
 ### 2. Google Cloud Console Configuration
 
