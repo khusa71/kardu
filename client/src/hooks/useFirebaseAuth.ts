@@ -92,6 +92,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             title: "Success",
             description: "Signed in with Google successfully!",
           });
+          
+          // Set flag to redirect to dashboard after auth state update
+          localStorage.setItem('redirectToDashboard', 'true');
         }
       } catch (error: any) {
         console.error('Redirect result error:', error);
@@ -111,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         const backendUserData = await syncUserWithBackend(firebaseUser);
         
-        setUser({
+        const userData = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
@@ -123,7 +126,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           monthlyUploads: backendUserData?.monthlyUploads || 0,
           monthlyLimit: backendUserData?.monthlyLimit || 3,
           getIdToken: () => firebaseUser.getIdToken()
-        });
+        };
+        
+        setUser(userData);
+        
+        // Handle post-authentication redirect
+        const shouldRedirect = localStorage.getItem('redirectToDashboard');
+        if (shouldRedirect === 'true') {
+          localStorage.removeItem('redirectToDashboard');
+          console.log('Redirecting to dashboard after authentication...');
+          // Use multiple redirect methods for reliability
+          setTimeout(() => {
+            if (window.location.pathname === '/') {
+              window.location.replace('/dashboard');
+            }
+          }, 500);
+        }
       } else {
         setUser(null);
       }
@@ -137,6 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const isProduction = window.location.hostname === 'kardu.io';
       const { signInWithRedirect } = await import('firebase/auth');
+      
+      // Set redirect flag before starting sign-in process
+      localStorage.setItem('redirectToDashboard', 'true');
       
       // For production (kardu.io), always use redirect flow
       if (isProduction) {

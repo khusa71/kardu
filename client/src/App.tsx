@@ -47,8 +47,12 @@ function Router() {
 
   // Handle redirect after successful authentication
   useEffect(() => {
-    if (!loading && user && location === '/') {
-      navigate('/dashboard');
+    if (!loading && user) {
+      const shouldRedirect = localStorage.getItem('redirectToDashboard');
+      if (shouldRedirect === 'true' || location === '/') {
+        localStorage.removeItem('redirectToDashboard');
+        navigate('/dashboard');
+      }
     }
   }, [user, loading, location, navigate]);
 
