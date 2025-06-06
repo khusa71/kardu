@@ -12,9 +12,8 @@ To fix Google sign-in issues in production, you need to configure Firebase prope
 4. **Configure Google provider**:
    - Enable Google sign-in
    - Add your production domain to **Authorized domains**
-   - Example domains to add:
-     - `your-app-name.replit.app`
-     - Any custom domains you're using
+   - Required domain to add:
+     - `kardu.io`
 
 ### 2. Google Cloud Console Configuration
 
@@ -23,11 +22,10 @@ To fix Google sign-in issues in production, you need to configure Firebase prope
 3. **APIs & Services > Credentials**
 4. **Find your OAuth 2.0 client ID**
 5. **Add Authorized JavaScript origins**:
-   - `https://your-app-name.replit.app`
-   - Any custom domains
+   - `https://kardu.io`
 6. **Add Authorized redirect URIs**:
-   - `https://your-app-name.replit.app/__/auth/handler`
-   - `https://your-app-name.replit.app`
+   - `https://kardu.io/__/auth/handler`
+   - `https://kardu.io`
 
 ### 3. Service Account Setup
 

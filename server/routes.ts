@@ -2022,7 +2022,7 @@ async function regenerateFlashcardsProcess(
       currentTask: "Re-extracting text from original PDF...",
     });
 
-    const ocrResult = await extractTextWithOCR(tempPdfPath, originalJob.pagesProcessed);
+    const ocrResult = await extractTextWithOCR(tempPdfPath, originalJob.pagesProcessed ?? undefined);
     const extractedText = ocrResult.text;
 
     // Parse focus areas and add custom context
