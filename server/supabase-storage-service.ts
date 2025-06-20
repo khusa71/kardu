@@ -2,14 +2,16 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseStorageBucket = process.env.SUPABASE_STORAGE_BUCKET;
 
 let supabase: any = null;
 
-if (supabaseUrl && supabaseServiceKey) {
+if (supabaseUrl && supabaseServiceKey && supabaseStorageBucket) {
   supabase = createClient(supabaseUrl, supabaseServiceKey);
-  console.log('✅ Supabase Storage initialized');
+  console.log('✅ Supabase Storage initialized with bucket:', supabaseStorageBucket);
 } else {
-  console.log('⚠️ Supabase Storage not initialized - file storage will be disabled');
+  console.log('⚠️ Supabase Storage not initialized - missing credentials');
+  console.log('   Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET');
 }
 
 export interface StoredFile {
@@ -20,9 +22,10 @@ export interface StoredFile {
 }
 
 export class SupabaseStorageService {
-  private bucketName: string = 'studycards-files';
+  private bucketName: string;
 
   constructor() {
+    this.bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'studycards-files';
     this.initializeBucket();
   }
 

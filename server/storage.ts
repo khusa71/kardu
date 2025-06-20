@@ -66,7 +66,7 @@ export class DatabaseStorage implements IStorage {
           },
         })
         .returning();
-      return user;
+      return profile;
     } catch (error) {
       console.error("Error upserting user:", error);
       throw error;
@@ -75,21 +75,21 @@ export class DatabaseStorage implements IStorage {
 
   async incrementUserUploads(userId: string): Promise<void> {
     const now = new Date();
-    const user = await this.getUser(userId);
+    const user = await this.getUserProfile(userId);
     if (user) {
       await db
-        .update(users)
+        .update(userProfiles)
         .set({
           monthlyUploads: (user.monthlyUploads || 0) + 1,
           lastUploadDate: now,
           updatedAt: now,
         })
-        .where(eq(users.id, userId));
+        .where(eq(userProfiles.id, userId));
     }
   }
 
   async checkUploadLimit(userId: string): Promise<{ canUpload: boolean; uploadsRemaining: number }> {
-    const user = await this.getUser(userId);
+    const user = await this.getUserProfile(userId);
     if (!user) {
       return { canUpload: false, uploadsRemaining: 0 };
     }
@@ -105,12 +105,12 @@ export class DatabaseStorage implements IStorage {
       if (currentMonth > lastUploadMonth) {
         // Reset monthly uploads
         await db
-          .update(users)
+          .update(userProfiles)
           .set({
             monthlyUploads: 0,
             updatedAt: now,
           })
-          .where(eq(users.id, userId));
+          .where(eq(userProfiles.id, userId));
         
         return { canUpload: true, uploadsRemaining: (user.monthlyLimit || 3) - 1 };
       }
@@ -128,34 +128,34 @@ export class DatabaseStorage implements IStorage {
     console.log('Upgrading user to premium with timestamp:', now.toISOString());
     
     await db
-      .update(users)
+      .update(userProfiles)
       .set({
         isPremium: true,
         monthlyLimit: 100,
         updatedAt: now,
       })
-      .where(eq(users.id, userId));
+      .where(eq(userProfiles.id, userId));
   }
 
   async resetMonthlyUploads(userId: string): Promise<void> {
     await db
-      .update(users)
+      .update(userProfiles)
       .set({
         monthlyUploads: 0,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, userId));
+      .where(eq(userProfiles.id, userId));
   }
 
   // Stripe operations
-  async updateStripeCustomerId(userId: string, customerId: string): Promise<User> {
+  async updateStripeCustomerId(userId: string, customerId: string): Promise<typeof userProfiles.$inferSelect> {
     const [user] = await db
-      .update(users)
+      .update(userProfiles)
       .set({
         stripeCustomerId: customerId,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, userId))
+      .where(eq(userProfiles.id, userId))
       .returning();
     
     if (!user) {
@@ -168,9 +168,9 @@ export class DatabaseStorage implements IStorage {
     subscriptionId: string;
     status: string;
     periodEnd: Date;
-  }): Promise<User> {
+  }): Promise<typeof userProfiles.$inferSelect> {
     const [user] = await db
-      .update(users)
+      .update(userProfiles)
       .set({
         stripeSubscriptionId: subscriptionData.subscriptionId,
         subscriptionStatus: subscriptionData.status,
@@ -179,7 +179,7 @@ export class DatabaseStorage implements IStorage {
         monthlyLimit: subscriptionData.status === 'active' ? 100 : 3,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, userId))
+      .where(eq(userProfiles.id, userId))
       .returning();
     
     if (!user) {
@@ -188,16 +188,16 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async cancelUserSubscription(userId: string): Promise<User> {
+  async cancelUserSubscription(userId: string): Promise<typeof userProfiles.$inferSelect> {
     const [user] = await db
-      .update(users)
+      .update(userProfiles)
       .set({
         subscriptionStatus: 'canceled',
         isPremium: false,
         monthlyLimit: 3,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, userId))
+      .where(eq(userProfiles.id, userId))
       .returning();
     
     if (!user) {

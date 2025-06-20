@@ -479,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let deletedFiles = 0;
       for (const fileKey of filesToDelete) {
         try {
-          const deleted = await objectStorage.deleteFile(fileKey as string);
+          const deleted = await supabaseStorage.deleteFile(fileKey as string);
           if (deleted) deletedFiles++;
         } catch (error) {
           console.error(`Failed to delete file ${fileKey}:`, error);
@@ -657,15 +657,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Original file no longer available" });
       }
 
-      if (!(await objectStorage.fileExists(job.pdfStorageKey))) {
-        return res.status(404).json({ message: "Original file no longer available" });
-      }
-
+      const pdfBuffer = await supabaseStorage.downloadFile(job.pdfStorageKey);
       res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
       res.setHeader('Content-Type', 'application/pdf');
-      
-      const stream = await objectStorage.downloadFileStream(job.pdfStorageKey);
-      stream.pipe(res);
+      res.send(pdfBuffer);
     } catch (error) {
       console.error("PDF download error:", error);
       res.status(500).json({ message: "Download failed" });
@@ -726,7 +721,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      if (!(await objectStorage.fileExists(storageKey))) {
+      try {
+        await supabaseStorage.downloadFile(storageKey);
+      } catch (error) {
         return res.status(404).json({ message: "File not found" });
       }
 
@@ -746,10 +743,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Type', contentType);
       
-      const stream = await objectStorage.downloadFileStream(storageKey);
-      stream.pipe(res);
+      const fileBuffer = await supabaseStorage.downloadFile(storageKey);
+      res.send(fileBuffer);
     } catch (error) {
-      console.error("Object Storage download error:", error);
+      console.error("Supabase Storage download error:", error);
       res.status(500).json({ message: "Download failed" });
     }
   });
@@ -1572,10 +1569,12 @@ async function processFlashcardJobWithPageLimits(
     const currentJob = await storage.getFlashcardJob(jobId);
     if (!currentJob) throw new Error("Job not found");
 
-    // Store files in Object Storage
-    const storedPdf = await objectStorage.uploadPDF(userId, jobId, pdfPath, originalFilename);
-    const storedAnki = await objectStorage.uploadAnkiDeck(userId, jobId, ankiDeckPath);
-    const exportFiles = await objectStorage.generateAndUploadExports(userId, jobId, flashcards);
+    // Store files in Supabase Storage
+    const tempPdfBuffer2 = fs.readFileSync(pdfPath);
+    const storedPdf = await supabaseStorage.uploadPDF(userId, jobId, tempPdfBuffer2, originalFilename);
+    const ankiBuffer = fs.readFileSync(ankiDeckPath);
+    const storedAnki = await supabaseStorage.uploadAnkiDeck(userId, jobId, ankiBuffer);
+    const exportFiles = await supabaseStorage.generateAndUploadExports(userId, jobId, flashcards);
 
     // Complete the job
     await storage.updateFlashcardJob(jobId, {
@@ -1744,10 +1743,12 @@ async function processFlashcardJob(
     const currentJob = await storage.getFlashcardJob(jobId);
     if (!currentJob) throw new Error("Job not found");
 
-    // Store files in Object Storage
-    const storedPdf = await objectStorage.uploadPDF(userId, jobId, tempPdfPath, originalFilename);
-    const storedAnki = await objectStorage.uploadAnkiDeck(userId, jobId, ankiDeckPath);
-    const exportFiles = await objectStorage.generateAndUploadExports(userId, jobId, flashcards);
+    // Store files in Supabase Storage
+    const tempPdfBuffer = fs.readFileSync(tempPdfPath);
+    const storedPdf = await supabaseStorage.uploadPDF(userId, jobId, tempPdfBuffer, originalFilename);
+    const ankiBuffer = fs.readFileSync(ankiDeckPath);
+    const storedAnki = await supabaseStorage.uploadAnkiDeck(userId, jobId, ankiBuffer);
+    const exportFiles = await supabaseStorage.generateAndUploadExports(userId, jobId, flashcards);
 
     // Complete the job
     await storage.updateFlashcardJob(jobId, {
@@ -1902,15 +1903,9 @@ async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: stri
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    // Download PDF from object storage
-    const pdfStream = await objectStorage.downloadFileStream(pdfStorageKey);
-    const writeStream = fs.createWriteStream(tempPdfPath);
-    
-    await new Promise((resolve, reject) => {
-      pdfStream.pipe(writeStream);
-      writeStream.on('finish', resolve);
-      writeStream.on('error', reject);
-    });
+    // Download PDF from Supabase storage
+    const pdfBuffer = await supabaseStorage.downloadFile(pdfStorageKey);
+    fs.writeFileSync(tempPdfPath, pdfBuffer);
 
     // Extract text from PDF
     await storage.updateFlashcardJob(jobId, {
@@ -2040,16 +2035,10 @@ async function regenerateFlashcardsProcess(
       throw new Error("Original PDF not found");
     }
 
-    // Download original PDF from object storage
+    // Download original PDF from Supabase storage
     tempPdfPath = path.join("/tmp", `regen_${jobId}_${Date.now()}.pdf`);
-    const pdfStream = await objectStorage.downloadFileStream(originalJob.pdfStorageKey);
-    const writeStream = fs.createWriteStream(tempPdfPath);
-    
-    await new Promise((resolve, reject) => {
-      pdfStream.pipe(writeStream);
-      writeStream.on('finish', resolve);
-      writeStream.on('error', reject);
-    });
+    const pdfBuffer = await supabaseStorage.downloadFile(originalJob.pdfStorageKey);
+    fs.writeFileSync(tempPdfPath, pdfBuffer);
 
     // Extract text from PDF
     await storage.updateFlashcardJob(jobId, {

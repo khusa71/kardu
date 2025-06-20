@@ -26,6 +26,8 @@ export const sessions = pgTable(
 // User profiles table for Supabase Auth (extends auth.users)
 export const userProfiles = pgTable("user_profiles", {
   id: varchar("id").primaryKey().notNull(), // Supabase UID from auth.users
+  email: varchar("email"),
+  isEmailVerified: boolean("is_email_verified").default(false),
   isPremium: boolean("is_premium").default(false),
   role: varchar("role").default("user"), // 'user' | 'admin' | 'moderator'
   monthlyUploads: integer("monthly_uploads").default(0),
