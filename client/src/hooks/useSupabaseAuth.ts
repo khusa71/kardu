@@ -95,6 +95,29 @@ export function useSupabaseAuth() {
     return { data, error };
   };
 
+  const sendVerificationEmail = async () => {
+    if (!user?.email) {
+      throw new Error('No user email found');
+    }
+    
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email: user.email,
+    });
+    
+    if (error) {
+      throw error;
+    }
+    
+    return { data, error };
+  };
+
+  const refreshUserData = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setSession(session as AuthSession);
+    setUser(session?.user as User || null);
+  };
+
   return {
     user,
     session,
@@ -104,5 +127,7 @@ export function useSupabaseAuth() {
     signInWithGoogle,
     signOut,
     resetPassword,
+    sendVerificationEmail,
+    refreshUserData,
   };
 }

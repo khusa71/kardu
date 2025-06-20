@@ -71,12 +71,24 @@ export const verifySupabaseToken = async (req: AuthenticatedRequest, res: Respon
 };
 
 export const requireEmailVerification = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  // Check if user is OAuth-verified (Google) - these users don't need email verification
+  const isOAuthUser = req.user?.app_metadata?.providers?.includes('google') || 
+                     req.user?.user_metadata?.iss === 'https://accounts.google.com';
+  
+  // OAuth users are automatically considered verified
+  if (isOAuthUser) {
+    next();
+    return;
+  }
+  
+  // For email/password users, check email verification
   if (!req.user?.email_verified) {
     return res.status(403).json({
       error: 'Email verification required',
       message: 'Please verify your email address to access this feature'
     });
   }
+  
   next();
 };
 

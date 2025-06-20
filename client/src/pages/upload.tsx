@@ -298,7 +298,12 @@ export default function Upload() {
   const userUploads = (user as any)?.monthlyUploads || 0;
   const userLimit = (user as any)?.monthlyLimit || 3;
   const isPremium = (user as any)?.isPremium || false;
-  const isEmailVerified = (user as any)?.isEmailVerified || false;
+  
+  // Determine if user is OAuth-verified (Google) or email-verified
+  const isOAuthUser = (user as any)?.provider === 'google' || 
+                     (user as any)?.app_metadata?.providers?.includes('google') ||
+                     user?.user_metadata?.iss === 'https://accounts.google.com';
+  const isEmailVerified = isOAuthUser || (user as any)?.isEmailVerified || user?.email_confirmed_at;
   
   const canUpload = user && (isPremium || userUploads < userLimit) && isEmailVerified;
   const isGenerateDisabled = (selectedFiles.length === 0 && !selectedStorageFile) || !canUpload || uploadMutation.isPending;
