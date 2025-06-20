@@ -74,7 +74,7 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 
 ### Storage & Database
 - Neon PostgreSQL for persistent data storage
-- Replit Object Storage for file and export storage
+- Supabase Storage for file and export storage (migrated from Replit Object Storage)
 
 ### Development Tools
 - Vite for development server and build process
@@ -127,6 +127,9 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - June 20, 2025: Enhanced process monitoring with graceful shutdown handling for unhandled exceptions
 - June 20, 2025: Fixed critical application crash in Supabase storage download operations causing "Error code undefined" exceptions
 - June 20, 2025: Enhanced PDF download endpoint with comprehensive error handling and proper buffer validation
+- June 20, 2025: Completed migration from Replit Object Storage to Supabase Storage exclusively
+- June 20, 2025: Removed @replit/object-storage dependency and updated all storage operations to use Supabase Storage
+- June 20, 2025: Streamlined storage architecture with single provider (Supabase) for database, authentication, and file storage
 
 ## Changelog
 - June 20, 2025. Initial setup and migration to Replit environment

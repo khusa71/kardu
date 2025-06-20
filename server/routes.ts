@@ -10,7 +10,6 @@ import { extractTextWithOCR } from "./ocr-service";
 import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
-import { objectStorage } from "./object-storage-service";
 import { supabaseStorage } from "./supabase-storage-service";
 import { verifySupabaseToken, requireEmailVerification, AuthenticatedRequest } from "./supabase-auth";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
@@ -933,7 +932,8 @@ async function processFlashcardJob(jobId: number) {
       res.setHeader('Content-Disposition', `attachment; filename="StudyCards_${jobId}.apkg"`);
       res.setHeader('Content-Type', 'application/vnd.anki');
       
-      const stream = await objectStorage.downloadFileStream(job.ankiStorageKey);
+      const fileBuffer = await supabaseStorage.downloadFile(job.ankiStorageKey);
+      const stream = require('stream').Readable.from(fileBuffer);
       stream.pipe(res);
       
     } catch (error) {
@@ -1162,45 +1162,8 @@ async function processFlashcardJob(jobId: number) {
     }
   });
 
-  // Object Storage download endpoint - simplified for direct access
-  app.get("/api/object-storage/download/:key(*)", async (req: express.Request, res: express.Response) => {
-    try {
-      const storageKey = req.params.key as string;
-      
-      // Only allow downloads from user directories (security check)
-      if (!storageKey.startsWith('users/')) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      try {
-        await supabaseStorage.downloadFile(storageKey);
-      } catch (error) {
-        return res.status(404).json({ message: "File not found" });
-      }
-
-      // Determine content type based on file extension
-      const ext = path.extname(storageKey).toLowerCase();
-      const contentTypes: Record<string, string> = {
-        '.pdf': 'application/pdf',
-        '.apkg': 'application/octet-stream',
-        '.csv': 'text/csv',
-        '.json': 'application/json',
-        '.txt': 'text/plain'
-      };
-
-      const contentType = contentTypes[ext] || 'application/octet-stream';
-      const filename = path.basename(storageKey);
-
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Type', contentType);
-      
-      const fileBuffer = await supabaseStorage.downloadFile(storageKey);
-      res.send(fileBuffer);
-    } catch (error) {
-      console.error("Supabase Storage download error:", error);
-      res.status(500).json({ message: "Download failed" });
-    }
-  });
+  // Note: Object storage downloads now use direct Supabase Storage URLs
+  // No separate download endpoint needed
 
   // Export flashcards in multiple formats (redirects to Object Storage)
   app.get("/api/export/:id/:format", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
@@ -1247,15 +1210,17 @@ async function processFlashcardJob(jobId: number) {
         return res.status(404).json({ message: "Export file not available" });
       }
 
-      if (!(await objectStorage.fileExists(storageKey))) {
+      try {
+        const fileBuffer = await supabaseStorage.downloadFile(storageKey);
+        
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', contentType);
+        
+        res.send(fileBuffer);
+      } catch (downloadError) {
+        console.error("File download error:", downloadError);
         return res.status(404).json({ message: "Export file not found" });
       }
-
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Type', contentType);
-      
-      const stream = await objectStorage.downloadFileStream(storageKey);
-      stream.pipe(res);
       
     } catch (error) {
       console.error("Export error:", error);
@@ -2411,11 +2376,11 @@ async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: stri
       currentTask: "Generating export formats..."
     });
 
-    const exportResults = await objectStorage.generateAndUploadExports(job.userId!, jobId, flashcards);
+    const exportResults = await supabaseStorage.generateAndUploadExports(job.userId!, jobId, flashcards);
 
     // Generate Anki deck
     const ankiDeckPath = await generateAnkiDeck(jobId, flashcards);
-    const ankiResult = ankiDeckPath ? await objectStorage.uploadAnkiDeck(job.userId!, jobId, ankiDeckPath) : null;
+    const ankiResult = ankiDeckPath ? await supabaseStorage.uploadAnkiDeck(job.userId!, jobId, fs.readFileSync(ankiDeckPath)) : null;
 
     // Update job with results
     await storage.updateFlashcardJob(jobId, {
@@ -2537,11 +2502,11 @@ async function regenerateFlashcardsProcess(
       currentTask: "Generating export formats..."
     });
 
-    const exportResults = await objectStorage.generateAndUploadExports(userId, jobId, flashcards);
+    const exportResults = await supabaseStorage.generateAndUploadExports(userId, jobId, flashcards);
 
     // Generate Anki deck
     const ankiDeckPath = await generateAnkiDeck(jobId, flashcards);
-    const ankiResult = ankiDeckPath ? await objectStorage.uploadAnkiDeck(userId, jobId, ankiDeckPath) : null;
+    const ankiResult = ankiDeckPath ? await supabaseStorage.uploadAnkiDeck(userId, jobId, fs.readFileSync(ankiDeckPath)) : null;
 
     // Update job with results
     await storage.updateFlashcardJob(jobId, {
