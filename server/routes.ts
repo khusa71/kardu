@@ -1628,10 +1628,8 @@ async function processFlashcardJobWithPageLimits(
       if (!job) throw new Error("Job not found");
 
       // Map tier to actual provider and get API key
-      const actualProvider = apiProvider === "openai" ? "openai" : "anthropic";
-      const systemApiKey = actualProvider === "openai" 
-        ? process.env.OPENAI_API_KEY 
-        : process.env.ANTHROPIC_API_KEY;
+      const actualProvider = "openai/gpt-4o";
+      const systemApiKey = process.env.OPENROUTER_API_KEY; // actualProvider === "openai" 
       
       if (!systemApiKey) {
         throw new Error(`${actualProvider.toUpperCase()} API key not configured`);
@@ -1639,8 +1637,8 @@ async function processFlashcardJobWithPageLimits(
 
       flashcards = await generateFlashcards(
         preprocessResult.filteredContent,
-        actualProvider,
-        systemApiKey,
+        "openai/gpt-4o",
+        process.env.OPENROUTER_API_KEY,
         parseInt(flashcardCount),
         subject,
         JSON.parse(focusAreas || "{}"),
@@ -1802,10 +1800,8 @@ async function processFlashcardJob(
       if (!job) throw new Error("Job not found");
 
       // Map tier to actual provider and get API key
-      const actualProvider = apiProvider === "openai" ? "openai" : "anthropic";
-      const systemApiKey = actualProvider === "openai" 
-        ? process.env.OPENAI_API_KEY 
-        : process.env.ANTHROPIC_API_KEY;
+      const actualProvider = "openai/gpt-4o";
+      const systemApiKey = process.env.OPENROUTER_API_KEY; // actualProvider === "openai" 
       
       if (!systemApiKey) {
         throw new Error(`${actualProvider.toUpperCase()} API key not configured`);
@@ -1813,8 +1809,8 @@ async function processFlashcardJob(
 
       flashcards = await generateFlashcards(
         preprocessResult.filteredContent,
-        actualProvider,
-        systemApiKey,
+        "openai/gpt-4o",
+        process.env.OPENROUTER_API_KEY,
         parseInt(flashcardCount),
         subject,
         JSON.parse(focusAreas || "{}"),
@@ -2052,7 +2048,7 @@ async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: stri
     // Determine the correct API key for the provider
     const apiProvider = job.apiProvider as "openai" | "anthropic";
     const apiKey = apiProvider === "openai" 
-      ? process.env.OPENAI_API_KEY! 
+      ? process.env.OPENROUTER_API_KEY! 
       : process.env.ANTHROPIC_API_KEY!;
 
     const flashcards = await generateFlashcards(
@@ -2178,7 +2174,7 @@ async function regenerateFlashcardsProcess(
     // Determine the correct API key for the provider
     const apiProvider = originalJob.apiProvider as "openai" | "anthropic";
     const apiKey = apiProvider === "openai" 
-      ? process.env.OPENAI_API_KEY! 
+      ? process.env.OPENROUTER_API_KEY! 
       : process.env.ANTHROPIC_API_KEY!;
 
     const flashcards = await generateFlashcards(
