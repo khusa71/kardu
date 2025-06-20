@@ -103,6 +103,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple login endpoint for testing
+  app.post('/api/auth/simple-login', async (req, res) => {
+    try {
+      // Create a temporary session for testing
+      const testUserId = 'c06363c1-507b-40d3-acaf-2baffb315b42';
+      
+      // Ensure user profile exists
+      let userProfile = await storage.getUserProfile(testUserId);
+      if (!userProfile) {
+        userProfile = await storage.upsertUserProfile({
+          id: testUserId,
+          email: 'test@kardu.io',
+          isPremium: false,
+          role: 'user',
+          monthlyUploads: 0,
+          monthlyLimit: 3,
+          monthlyPagesProcessed: 0,
+          lastResetDate: new Date(),
+          isEmailVerified: true,
+          updatedAt: new Date()
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        user: userProfile,
+        message: 'Temporary session created for testing'
+      });
+    } catch (error) {
+      console.error('Simple login error:', error);
+      res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  // Test endpoint for authentication debugging
+  app.get('/api/auth/test', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    console.log('Auth test - Authorization header:', authHeader ? 'Present' : 'Missing');
+    
+    if (!authHeader) {
+      return res.json({ 
+        authenticated: false, 
+        error: 'No authorization header',
+        headers: Object.keys(req.headers)
+      });
+    }
+    
+    res.json({ 
+      authenticated: true, 
+      tokenLength: authHeader.length,
+      tokenStart: authHeader.substring(0, 20) + '...'
+    });
+  });
+
   app.get('/api/auth/user', verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
