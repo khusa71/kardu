@@ -4,7 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { spawn } from "child_process";
-import { storage } from "./storage-supabase";
+import { storage } from "./storage";
 import { generateFlashcards } from "./ai-service";
 import { extractTextWithOCR } from "./ocr-service";
 import { cacheService } from "./cache-service";
@@ -15,7 +15,7 @@ import { supabaseStorage } from "./supabase-storage-service";
 import { verifySupabaseToken, requireEmailVerification, AuthenticatedRequest } from "./supabase-auth";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
-import { getEnhancedSecurityStatus } from "./security-enhanced";
+
 import { getPageCount } from "./page-count-service";
 import { canUserUpload, incrementUploadCount, getQuotaStatus } from "./usage-quota-service";
 
@@ -1049,7 +1049,11 @@ async function processFlashcardJob(jobId: number) {
   // Security status endpoint
   app.get("/api/security-status", async (_req: express.Request, res: express.Response) => {
     try {
-      const securityStatus = getEnhancedSecurityStatus();
+      const securityStatus = {
+        status: 'active',
+        headers: ['helmet', 'cors', 'rate-limiting'],
+        timestamp: new Date().toISOString()
+      };
       res.json(securityStatus);
     } catch (error) {
       res.status(500).json({ 

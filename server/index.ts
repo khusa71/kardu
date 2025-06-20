@@ -5,7 +5,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
 import { monitoringService } from "./monitoring-service";
-import { enhancedSecurityMiddleware, getEnhancedSecurityStatus } from "./security-enhanced";
+
 import fs from "fs";
 import path from "path";
 
@@ -19,8 +19,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // Custom COEP policy
 }));
 
-// Apply our enhanced security middleware
-app.use(enhancedSecurityMiddleware());
+// Basic security headers handled by helmet
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

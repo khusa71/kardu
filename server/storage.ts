@@ -41,6 +41,7 @@ export interface IStorage {
   // Study progress operations
   getStudyProgress(userId: string, jobId: number): Promise<StudyProgress[]>;
   updateStudyProgress(progress: InsertStudyProgress): Promise<StudyProgress>;
+  upsertStudyProgress(progress: InsertStudyProgress): Promise<StudyProgress>;
   getStudyStats(userId: string, jobId: number): Promise<{ total: number; known: number; reviewing: number }>;
 }
 
@@ -306,6 +307,24 @@ export class DatabaseStorage implements IStorage {
     const reviewing = progress.filter(p => p.status === 'reviewing').length;
 
     return { total, known, reviewing };
+  }
+
+  async upsertStudyProgress(progress: InsertStudyProgress): Promise<StudyProgress> {
+    const [updatedProgress] = await db
+      .insert(studyProgress)
+      .values(progress)
+      .onConflictDoUpdate({
+        target: [studyProgress.userId, studyProgress.jobId, studyProgress.cardIndex],
+        set: {
+          status: progress.status,
+          difficultyRating: progress.difficultyRating,
+          lastReviewedAt: progress.lastReviewedAt,
+          nextReviewDate: progress.nextReviewDate,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return updatedProgress;
   }
 }
 
