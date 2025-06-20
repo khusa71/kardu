@@ -4,6 +4,8 @@
 
 StudyCards AI (kardu.io) is a full-stack web application that transforms PDF documents into AI-generated flashcards. The platform allows users to upload PDFs, process them using AI services, and export the generated flashcards to multiple formats including Anki, Quizlet, CSV, and JSON.
 
+**Current Status**: Fully operational with Supabase Storage integration validated and confirmed working.
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -105,6 +107,8 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - June 20, 2025: Completed Replit environment migration with working server and frontend
 - June 20, 2025: Fixed authentication logic - Google OAuth users bypass email verification
 - June 20, 2025: Updated user management to use Supabase Auth with proper OAuth handling
+- June 20, 2025: Completed migration from Replit Object Storage to Supabase Storage
+- June 20, 2025: Validated S3 bucket functionality - all storage operations working correctly
 
 ## Changelog
 - June 20, 2025. Initial setup and migration to Replit environment
