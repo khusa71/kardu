@@ -48,10 +48,29 @@ export function useSupabaseAuth() {
 
   const signInWithGoogle = async () => {
     console.log('Attempting Google sign in...');
+    
+    // Detect environment and set appropriate redirect URL
+    let redirectTo = `${window.location.origin}/auth/callback`;
+    
+    // Check if we're in Replit dev environment
+    if (window.location.hostname.includes('.replit.dev')) {
+      redirectTo = `${window.location.origin}/auth/callback`;
+    }
+    // Check if we're in production
+    else if (window.location.hostname === 'kardu.io') {
+      redirectTo = 'https://kardu.io/auth/callback';
+    }
+    // For localhost development
+    else if (window.location.hostname === 'localhost') {
+      redirectTo = `${window.location.origin}/auth/callback`;
+    }
+    
+    console.log('Using redirect URL:', redirectTo);
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo
       }
     });
     console.log('Google sign in result:', { data, error });
@@ -64,8 +83,24 @@ export function useSupabaseAuth() {
   };
 
   const resetPassword = async (email: string) => {
+    // Detect environment and set appropriate redirect URL
+    let redirectTo = `${window.location.origin}/reset-password`;
+    
+    // Check if we're in Replit dev environment
+    if (window.location.hostname.includes('.replit.dev')) {
+      redirectTo = `${window.location.origin}/reset-password`;
+    }
+    // Check if we're in production
+    else if (window.location.hostname === 'kardu.io') {
+      redirectTo = 'https://kardu.io/reset-password';
+    }
+    // For localhost development
+    else if (window.location.hostname === 'localhost') {
+      redirectTo = `${window.location.origin}/reset-password`;
+    }
+    
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo,
     });
     return { data, error };
   };
