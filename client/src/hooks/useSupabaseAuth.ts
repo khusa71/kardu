@@ -48,22 +48,12 @@ export function useSupabaseAuth() {
 
   const signInWithGoogle = async () => {
     console.log('Attempting Google sign in...');
+    console.log('Current location:', window.location.href);
+    console.log('Current hostname:', window.location.hostname);
+    console.log('Current origin:', window.location.origin);
     
-    // Detect environment and set appropriate redirect URL
-    let redirectTo = `${window.location.origin}/auth/callback`;
-    
-    // Check if we're in Replit dev environment
-    if (window.location.hostname.includes('.replit.dev')) {
-      redirectTo = `${window.location.origin}/auth/callback`;
-    }
-    // Check if we're in production
-    else if (window.location.hostname === 'kardu.io') {
-      redirectTo = 'https://kardu.io/auth/callback';
-    }
-    // For localhost development
-    else if (window.location.hostname === 'localhost') {
-      redirectTo = `${window.location.origin}/auth/callback`;
-    }
+    // Always use the current origin for redirect
+    const redirectTo = `${window.location.origin}/auth/callback`;
     
     console.log('Using redirect URL:', redirectTo);
     
