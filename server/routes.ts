@@ -1052,7 +1052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let customerId = user.stripeCustomerId;
       if (!customerId) {
         const customer = await stripe.customers.create({
-          email: user.email,
+          ...(user.email && { email: user.email }),
           metadata: {
             supabaseUID: userId,
           },
@@ -1638,7 +1638,7 @@ async function processFlashcardJobWithPageLimits(
       flashcards = await generateFlashcards(
         preprocessResult.filteredContent,
         "openai/gpt-4o",
-        process.env.OPENROUTER_API_KEY,
+        systemApiKey,
         parseInt(flashcardCount),
         subject,
         JSON.parse(focusAreas || "{}"),
@@ -1810,7 +1810,7 @@ async function processFlashcardJob(
       flashcards = await generateFlashcards(
         preprocessResult.filteredContent,
         "openai/gpt-4o",
-        process.env.OPENROUTER_API_KEY,
+        systemApiKey,
         parseInt(flashcardCount),
         subject,
         JSON.parse(focusAreas || "{}"),

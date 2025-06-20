@@ -95,12 +95,12 @@ export function useSupabaseAuth() {
     return { data, error };
   };
 
-  const sendVerificationEmail = async () => {
+  const sendVerificationEmail = async (): Promise<void> => {
     if (!user?.email) {
       throw new Error('No user email found');
     }
     
-    const { data, error } = await supabase.auth.resend({
+    const { error } = await supabase.auth.resend({
       type: 'signup',
       email: user.email,
     });
@@ -108,8 +108,6 @@ export function useSupabaseAuth() {
     if (error) {
       throw error;
     }
-    
-    return { data, error };
   };
 
   const refreshUserData = async () => {

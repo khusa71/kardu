@@ -491,7 +491,9 @@ export default function Upload() {
               userLimit={userLimit}
               isPremium={isPremium}
               onAuthModalOpen={() => setShowAuthModal(true)}
-              onSendVerificationEmail={sendVerificationEmail}
+              onSendVerificationEmail={async () => {
+                await sendVerificationEmail();
+              }}
             />
 
             {/* Step 3: Processing Status */}
@@ -588,7 +590,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => window.open(jobStatus.ankiDownloadUrl, '_blank')}
+                              onClick={() => jobStatus.ankiDownloadUrl && window.open(jobStatus.ankiDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               Anki Deck
@@ -598,7 +600,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => window.open(jobStatus.csvDownloadUrl, '_blank')}
+                              onClick={() => jobStatus.csvDownloadUrl && window.open(jobStatus.csvDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               CSV
@@ -608,7 +610,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => window.open(jobStatus.jsonDownloadUrl, '_blank')}
+                              onClick={() => jobStatus.jsonDownloadUrl && window.open(jobStatus.jsonDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               JSON
@@ -618,7 +620,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => window.open(jobStatus.quizletDownloadUrl, '_blank')}
+                              onClick={() => jobStatus.quizletDownloadUrl && window.open(jobStatus.quizletDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               Quizlet
@@ -628,7 +630,7 @@ export default function Upload() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => window.open(jobStatus.pdfDownloadUrl, '_blank')}
+                              onClick={() => jobStatus.pdfDownloadUrl && window.open(jobStatus.pdfDownloadUrl, '_blank')}
                             >
                               <Download className="w-4 h-4 mr-1" />
                               Original PDF
