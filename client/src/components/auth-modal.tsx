@@ -33,12 +33,19 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useSupabaseAuth();
 
   const handleGoogleSignIn = async () => {
+    setAuthError("");
     try {
       setLoading(true);
-      await signInWithGoogle();
-      onClose();
-    } catch (error) {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        setAuthError(error.message || "Google sign in failed");
+      } else {
+        // Google OAuth redirects automatically, so we don't need onClose() here
+        // The auth callback will handle the redirect
+      }
+    } catch (error: any) {
       console.error("Google sign in error:", error);
+      setAuthError(error?.message || "An error occurred during Google sign in");
     } finally {
       setLoading(false);
     }
@@ -247,24 +254,36 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-blue-600" />
+      <DialogContent className="sm:max-w-md max-w-[95vw] mx-auto">
+        <DialogHeader className="text-center">
+          <DialogTitle className="flex items-center justify-center gap-2 text-lg sm:text-xl">
+            <Brain className="w-6 h-6 text-blue-600" />
             Welcome to Kardu.io
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-gray-600">
             Sign in to start generating AI-powered flashcards
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Notice for Google Sign-in */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-800">
-              <strong>Setup Required:</strong> Google sign-in needs to be configured in your Supabase project. 
-              Please use email authentication below for now.
-            </p>
+          {/* Google Sign In */}
+          <Button
+            variant="outline"
+            className="w-full h-11 text-sm font-medium"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+          >
+            <FcGoogle className="w-5 h-5 mr-3" />
+            Continue with Google
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator className="w-full" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
+            </div>
           </div>
 
           {/* Authentication Error Display */}
@@ -279,24 +298,24 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
           {/* Email/Password Auth */}
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 h-10">
+              <TabsTrigger value="signin" className="text-sm">Sign In</TabsTrigger>
+              <TabsTrigger value="signup" className="text-sm">Sign Up</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="signin" className="space-y-4">
+            <TabsContent value="signin" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="signin-email">Email</Label>
+                <Label htmlFor="signin-email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="signin-email"
                   type="email"
                   placeholder="Enter your email"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
-                  className={errors.email ? "border-red-500" : ""}
+                  className={`h-11 ${errors.email ? "border-red-500" : ""}`}
                 />
                 {errors.email && (
-                  <p className="text-sm text-red-500 flex items-center gap-1">
+                  <p className="text-xs text-red-500 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     {errors.email}
                   </p>
@@ -304,7 +323,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signin-password">Password</Label>
+                <Label htmlFor="signin-password" className="text-sm font-medium">Password</Label>
                 <div className="relative">
                   <Input
                     id="signin-password"
@@ -312,13 +331,13 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     placeholder="Enter your password"
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
-                    className={errors.password ? "border-red-500" : ""}
+                    className={`h-11 pr-10 ${errors.password ? "border-red-500" : ""}`}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-11 w-10 p-0 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -347,24 +366,24 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 </Button>
               </div>
 
-              <Button onClick={handleSignIn} className="w-full" disabled={loading}>
+              <Button onClick={handleSignIn} className="w-full h-11" disabled={loading}>
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </TabsContent>
 
-            <TabsContent value="signup" className="space-y-4">
+            <TabsContent value="signup" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="signup-name">Full Name</Label>
+                <Label htmlFor="signup-name" className="text-sm font-medium">Full Name</Label>
                 <Input
                   id="signup-name"
                   type="text"
                   placeholder="Enter your full name"
                   value={formData.displayName}
                   onChange={(e) => handleInputChange("displayName", e.target.value)}
-                  className={errors.displayName ? "border-red-500" : ""}
+                  className={`h-11 ${errors.displayName ? "border-red-500" : ""}`}
                 />
                 {errors.displayName && (
-                  <p className="text-sm text-red-500 flex items-center gap-1">
+                  <p className="text-xs text-red-500 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     {errors.displayName}
                   </p>
@@ -372,17 +391,17 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
+                <Label htmlFor="signup-email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="signup-email"
                   type="email"
                   placeholder="Enter your email"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
-                  className={errors.email ? "border-red-500" : ""}
+                  className={`h-11 ${errors.email ? "border-red-500" : ""}`}
                 />
                 {errors.email && (
-                  <p className="text-sm text-red-500 flex items-center gap-1">
+                  <p className="text-xs text-red-500 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     {errors.email}
                   </p>
@@ -390,7 +409,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
+                <Label htmlFor="signup-password" className="text-sm font-medium">Password</Label>
                 <div className="relative">
                   <Input
                     id="signup-password"
@@ -398,13 +417,13 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     placeholder="Create a password"
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
-                    className={errors.password ? "border-red-500" : ""}
+                    className={`h-11 pr-10 ${errors.password ? "border-red-500" : ""}`}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-11 w-10 p-0 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -415,7 +434,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </Button>
                 </div>
                 {errors.password && (
-                  <p className="text-sm text-red-500 flex items-center gap-1">
+                  <p className="text-xs text-red-500 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     {errors.password}
                   </p>
@@ -423,28 +442,28 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signup-confirm">Confirm Password</Label>
+                <Label htmlFor="signup-confirm" className="text-sm font-medium">Confirm Password</Label>
                 <Input
                   id="signup-confirm"
                   type="password"
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                  className={errors.confirmPassword ? "border-red-500" : ""}
+                  className={`h-11 ${errors.confirmPassword ? "border-red-500" : ""}`}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-sm text-red-500 flex items-center gap-1">
+                  <p className="text-xs text-red-500 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     {errors.confirmPassword}
                   </p>
                 )}
               </div>
 
-              <Button onClick={handleSignUp} className="w-full" disabled={loading}>
+              <Button onClick={handleSignUp} className="w-full h-11" disabled={loading}>
                 {loading ? "Creating account..." : "Create Account"}
               </Button>
 
-              <p className="text-xs text-gray-500 text-center">
+              <p className="text-xs text-gray-500 text-center leading-relaxed">
                 By creating an account, you'll need to verify your email before generating flashcards.
               </p>
             </TabsContent>

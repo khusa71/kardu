@@ -55,10 +55,6 @@ export function useSupabaseAuth() {
       }
     });
     console.log('Google sign in result:', { data, error });
-    if (error) {
-      console.error('Google sign in error details:', error);
-      throw error;
-    }
     return { data, error };
   };
 
