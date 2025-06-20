@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NavigationBar } from "@/components/navigation-bar";
 import { FlashcardEditor } from "@/components/flashcard-editor";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
@@ -46,7 +46,7 @@ interface StudySession {
 }
 
 export default function StudyMain() {
-  const { user } = useFirebaseAuth();
+  const { user } = useSupabaseAuth();
   const { toast } = useToast();
   
   // State management

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { NavigationBar } from "@/components/navigation-bar";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { 
@@ -32,7 +32,7 @@ interface HistoryItem {
 }
 
 export default function Dashboard() {
-  const { user } = useFirebaseAuth();
+  const { user } = useSupabaseAuth();
   
   // Fetch user's flashcard history
   const { data: history = [], isLoading: historyLoading } = useQuery<HistoryItem[]>({

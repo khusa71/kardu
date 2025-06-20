@@ -11,7 +11,7 @@ import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
 import { objectStorage } from "./object-storage-service";
-import { verifyFirebaseToken, requireEmailVerification, AuthenticatedRequest } from "./firebase-auth";
+import { verifySupabaseToken, requireEmailVerification, AuthenticatedRequest } from "./supabase-auth";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
 import { getEnhancedSecurityStatus } from "./security-enhanced";
@@ -79,13 +79,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // JSON middleware for all other routes
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-  // Firebase Auth routes
-  app.post('/api/auth/sync', verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  // Supabase Auth routes
+  app.post('/api/auth/sync', verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const { uid, email, displayName, photoURL, emailVerified, provider } = req.body;
+      const { id, email, displayName, photoURL, emailVerified, provider } = req.body;
       
       const userData = await storage.upsertUser({
-        id: uid,
+        id: id || req.user!.id,
         email,
         displayName,
         photoURL,
@@ -101,9 +101,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/auth/user', verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/auth/user', verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -135,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced upload validation middleware with page-based limits
   const validateFileUploads = async (req: any, res: any, next: any) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
@@ -253,14 +253,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Upload PDF(s) and start processing (with auth, rate limiting, and API key validation)
-  app.post("/api/upload", verifyFirebaseToken as any, validateFileUploads as any, requireApiKeys, upload.array("pdfs", 10), async (req: any, res) => {
+  app.post("/api/upload", verifySupabaseToken as any, validateFileUploads as any, requireApiKeys, upload.array("pdfs", 10), async (req: any, res) => {
     try {
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
         return res.status(400).json({ message: "No PDF files uploaded" });
       }
 
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const {
         apiProvider,
         flashcardCount,
@@ -422,10 +422,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete job and associated files
-  app.delete("/api/jobs/:id", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.delete("/api/jobs/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.id);
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       
       // Get job to verify ownership and get file keys
       const job = await storage.getFlashcardJob(jobId);
@@ -501,9 +501,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's upload history
-  app.get("/api/history", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/history", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const jobs = await storage.getUserJobs(userId);
       
       // Format the response with essential information
@@ -536,9 +536,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update job filename
-  app.put("/api/jobs/:id/rename", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.put("/api/jobs/:id/rename", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const jobId = parseInt(req.params.id);
       const { filename } = req.body;
 
@@ -567,9 +567,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's flashcard decks for study page
-  app.get("/api/decks", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/decks", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       
       // Get completed jobs with flashcards
       const jobs = await storage.getUserJobs(userId);
@@ -615,10 +615,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download original PDF file
-  app.get("/api/download/pdf/:id", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/download/pdf/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.id);
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const job = await storage.getFlashcardJob(jobId);
       
       if (!job || job.userId !== userId) {
@@ -727,11 +727,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Export flashcards in multiple formats (redirects to Object Storage)
-  app.get("/api/export/:id/:format", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/export/:id/:format", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.id);
       const format = req.params.format as 'csv' | 'json' | 'quizlet';
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const job = await storage.getFlashcardJob(jobId);
       
       if (!job || job.userId !== userId) {
@@ -788,10 +788,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Regenerate flashcards with custom context
-  app.post("/api/regenerate/:id", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/regenerate/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.id);
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const { customContext, flashcardCount, difficulty, focusAreas } = req.body;
 
       // Validate input
@@ -874,9 +874,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's job history
-  app.get("/api/user/jobs", verifyFirebaseToken as any, async (req: any, res) => {
+  app.get("/api/user/jobs", verifySupabaseToken as any, async (req: any, res) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const jobs = await storage.getUserJobs(userId);
       res.json(jobs);
     } catch (error) {
@@ -886,9 +886,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user quota status for dashboard
-  app.get("/api/quota-status", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/quota-status", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const quotaStatus = await getQuotaStatus(userId);
       res.json(quotaStatus);
     } catch (error) {
@@ -898,9 +898,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stripe checkout session creation
-  app.post("/api/create-checkout-session", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/create-checkout-session", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    if (!stripe) {
+      return res.status(503).json({ message: "Payment service unavailable" });
+    }
+    
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -917,7 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const customer = await stripe.customers.create({
           email: user.email,
           metadata: {
-            firebaseUID: userId,
+            supabaseUID: userId,
           },
         });
         customerId = customer.id;
@@ -925,7 +929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create checkout session
-      const session = await stripe.checkout.sessions.create({
+      const session = await stripe!.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
         line_items: [
@@ -948,7 +952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${req.headers.origin}/`,
         metadata: {
-          firebaseUID: userId,
+          supabaseUID: userId,
         },
       });
 
@@ -962,10 +966,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Study progress tracking endpoints
-  app.get("/api/study-progress/:jobId", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/study-progress/:jobId", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.jobId);
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
 
       const progress = await storage.getStudyProgress(userId, jobId);
       const stats = await storage.getStudyStats(userId, jobId);
@@ -977,10 +981,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/study-progress", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/study-progress", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const { jobId, cardIndex, status, difficultyRating } = req.body;
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
 
       const progressData = {
         userId,
@@ -1001,10 +1005,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update flashcards endpoint
-  app.put("/api/jobs/:id/flashcards", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.put("/api/jobs/:id/flashcards", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.id);
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const { flashcards } = req.body;
 
       // Verify job ownership
@@ -1027,10 +1031,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Regenerate flashcards endpoint
-  app.post("/api/regenerate/:jobId", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/regenerate/:jobId", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.jobId);
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const { customContext } = req.body;
 
       // Get original job
@@ -1078,9 +1082,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin metrics endpoint
-  app.get("/api/admin/metrics", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/admin/metrics", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const user = await storage.getUser(userId);
       
       // Check if user has admin role
@@ -1176,7 +1180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       // Verify webhook signature
-      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      event = stripe!.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
       console.log(`✅ Webhook verified: ${event.type} (ID: ${event.id})`);
     } catch (err: any) {
       console.error("❌ Webhook signature verification failed:", err.message);
@@ -1192,30 +1196,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (event.type) {
         case 'checkout.session.completed': {
           const session = event.data.object as Stripe.Checkout.Session;
-          const firebaseUID = session.metadata?.firebaseUID;
+          const supabaseUID = session.metadata?.supabaseUID;
           
-          console.log(`Processing checkout.session.completed for session ${session.id}, Firebase UID: ${firebaseUID}`);
+          console.log(`Processing checkout.session.completed for session ${session.id}, Firebase UID: ${supabaseUID}`);
           
-          if (!firebaseUID) {
+          if (!supabaseUID) {
             console.error("No Firebase UID in session metadata");
             break;
           }
 
           // Get subscription details
           if (session.subscription) {
-            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-            console.log(`Updating subscription for user ${firebaseUID}: ${subscription.id} (${subscription.status})`);
+            const subscription = await stripe!.subscriptions.retrieve(session.subscription as string);
+            console.log(`Updating subscription for user ${supabaseUID}: ${subscription.id} (${subscription.status})`);
             
-            await storage.updateUserSubscription(firebaseUID, {
+            await storage.updateUserSubscription(supabaseUID, {
               subscriptionId: subscription.id,
               status: subscription.status,
               periodEnd: new Date((subscription as any).current_period_end * 1000),
             });
             
-            console.log(`Successfully updated subscription for user ${firebaseUID}`);
+            console.log(`Successfully updated subscription for user ${supabaseUID}`);
           } else {
             // Handle one-time payment
-            console.log(`One-time payment completed for user ${firebaseUID}`);
+            console.log(`One-time payment completed for user ${supabaseUID}`);
           }
           break;
         }
@@ -1225,19 +1229,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Processing invoice.paid: ${invoice.id}`);
           
           if ((invoice as any).subscription) {
-            const subscription = await stripe.subscriptions.retrieve((invoice as any).subscription as string);
-            const customer = await stripe.customers.retrieve(subscription.customer as string);
+            const subscription = await stripe!.subscriptions.retrieve((invoice as any).subscription as string);
+            const customer = await stripe!.customers.retrieve(subscription.customer as string);
             
-            if ('metadata' in customer && customer.metadata?.firebaseUID) {
-              console.log(`Updating subscription from invoice.paid for user ${customer.metadata.firebaseUID}`);
+            if ('metadata' in customer && customer.metadata?.supabaseUID) {
+              console.log(`Updating subscription from invoice.paid for user ${customer.metadata.supabaseUID}`);
               
-              await storage.updateUserSubscription(customer.metadata.firebaseUID, {
+              await storage.updateUserSubscription(customer.metadata.supabaseUID, {
                 subscriptionId: subscription.id,
                 status: subscription.status,
                 periodEnd: new Date((subscription as any).current_period_end * 1000),
               });
               
-              console.log(`Successfully updated subscription from invoice for user ${customer.metadata.firebaseUID}`);
+              console.log(`Successfully updated subscription from invoice for user ${customer.metadata.supabaseUID}`);
             }
           }
           break;
@@ -1245,51 +1249,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case 'customer.subscription.created': {
           const subscription = event.data.object as Stripe.Subscription;
-          const customer = await stripe.customers.retrieve(subscription.customer as string);
+          const customer = await stripe!.customers.retrieve(subscription.customer as string);
           
           console.log(`Processing customer.subscription.created: ${subscription.id}`);
           
-          if ('metadata' in customer && customer.metadata?.firebaseUID) {
-            console.log(`Creating subscription for user ${customer.metadata.firebaseUID}`);
+          if ('metadata' in customer && customer.metadata?.supabaseUID) {
+            console.log(`Creating subscription for user ${customer.metadata.supabaseUID}`);
             
-            await storage.updateUserSubscription(customer.metadata.firebaseUID, {
+            await storage.updateUserSubscription(customer.metadata.supabaseUID, {
               subscriptionId: subscription.id,
               status: subscription.status,
               periodEnd: new Date((subscription as any).current_period_end * 1000),
             });
             
-            console.log(`Successfully created subscription for user ${customer.metadata.firebaseUID}`);
+            console.log(`Successfully created subscription for user ${customer.metadata.supabaseUID}`);
           }
           break;
         }
 
         case 'customer.subscription.updated': {
           const subscription = event.data.object as Stripe.Subscription;
-          const customer = await stripe.customers.retrieve(subscription.customer as string);
+          const customer = await stripe!.customers.retrieve(subscription.customer as string);
           
           console.log(`Processing customer.subscription.updated: ${subscription.id} (${subscription.status})`);
           
-          if ('metadata' in customer && customer.metadata?.firebaseUID) {
-            await storage.updateUserSubscription(customer.metadata.firebaseUID, {
+          if ('metadata' in customer && customer.metadata?.supabaseUID) {
+            await storage.updateUserSubscription(customer.metadata.supabaseUID, {
               subscriptionId: subscription.id,
               status: subscription.status,
               periodEnd: new Date((subscription as any).current_period_end * 1000),
             });
             
-            console.log(`Successfully updated subscription for user ${customer.metadata.firebaseUID}`);
+            console.log(`Successfully updated subscription for user ${customer.metadata.supabaseUID}`);
           }
           break;
         }
 
         case 'customer.subscription.deleted': {
           const subscription = event.data.object as Stripe.Subscription;
-          const customer = await stripe.customers.retrieve(subscription.customer as string);
+          const customer = await stripe!.customers.retrieve(subscription.customer as string);
           
           console.log(`Processing customer.subscription.deleted: ${subscription.id}`);
           
-          if ('metadata' in customer && customer.metadata?.firebaseUID) {
-            await storage.cancelUserSubscription(customer.metadata.firebaseUID);
-            console.log(`Successfully cancelled subscription for user ${customer.metadata.firebaseUID}`);
+          if ('metadata' in customer && customer.metadata?.supabaseUID) {
+            await storage.cancelUserSubscription(customer.metadata.supabaseUID);
+            console.log(`Successfully cancelled subscription for user ${customer.metadata.supabaseUID}`);
           }
           break;
         }
@@ -1320,7 +1324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual subscription verification endpoint (fallback for webhook failures)
-  app.put("/api/jobs/:id/flashcards", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.put("/api/jobs/:id/flashcards", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.id);
       const { flashcards } = req.body;
@@ -1335,7 +1339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(flashcardJobs.id, jobId))
         .limit(1);
 
-      if (!job || job.userId !== req.user!.uid) {
+      if (!job || job.userId !== req.user!.id) {
         return res.status(404).json({ error: "Job not found" });
       }
 
@@ -1354,9 +1358,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/verify-subscription", verifyFirebaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/verify-subscription", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       const { sessionId } = req.body;
       
       if (!sessionId) {
@@ -1364,9 +1368,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Retrieve the checkout session from Stripe
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const session = await stripe!.checkout.sessions.retrieve(sessionId);
       
-      if (session.metadata?.firebaseUID !== userId) {
+      if (session.metadata?.supabaseUID !== userId) {
         return res.status(403).json({ message: "Session does not belong to this user" });
       }
 
@@ -1399,9 +1403,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Legacy upgrade endpoint (for testing)
-  app.post("/api/user/upgrade", verifyFirebaseToken as any, async (req: any, res) => {
+  app.post("/api/user/upgrade", verifySupabaseToken as any, async (req: any, res) => {
     try {
-      const userId = req.user!.uid;
+      const userId = req.user!.id;
       await storage.upgradeToPremium(userId);
       
       const updatedUser = await storage.getUser(userId);

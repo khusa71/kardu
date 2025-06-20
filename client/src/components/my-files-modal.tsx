@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, FileText, Calendar, Download, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { FlashcardJob } from "@shared/schema";
 
@@ -18,7 +18,7 @@ interface MyFilesModalProps {
 
 export function MyFilesModal({ isOpen, onClose, onFileSelect }: MyFilesModalProps) {
   const { toast } = useToast();
-  const { user } = useFirebaseAuth();
+  const { user } = useSupabaseAuth();
   const [selectedJob, setSelectedJob] = useState<FlashcardJob | null>(null);
 
   const { data: userJobs = [], isLoading } = useQuery<FlashcardJob[]>({

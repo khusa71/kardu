@@ -1,5 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { auth } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -16,10 +16,10 @@ export async function apiRequest(
   const isFormData = data instanceof FormData;
   const headers: Record<string, string> = {};
   
-  // Add Firebase ID token for authenticated requests
-  if (auth.currentUser) {
-    const idToken = await auth.currentUser.getIdToken();
-    headers['Authorization'] = `Bearer ${idToken}`;
+  // Add Supabase access token for authenticated requests
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`;
   }
   
   // Add content type for JSON requests
@@ -46,10 +46,10 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const headers: Record<string, string> = {};
     
-    // Add Firebase ID token for authenticated requests
-    if (auth.currentUser) {
-      const idToken = await auth.currentUser.getIdToken();
-      headers['Authorization'] = `Bearer ${idToken}`;
+    // Add Supabase access token for authenticated requests
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
     }
 
     const res = await fetch(queryKey[0] as string, {

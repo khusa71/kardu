@@ -4,7 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import Dashboard from "@/pages/dashboard";
@@ -16,6 +16,7 @@ import NotFound from "@/pages/not-found";
 import Study from "@/pages/study";
 import StudyMain from "@/pages/study-main";
 import Admin from "@/pages/admin";
+import AuthCallback from "@/pages/auth-callback";
 import ResetPassword from "@/pages/reset-password";
 
 // Redirect component for authenticated users visiting root
@@ -41,7 +42,7 @@ function LoginRedirect() {
 }
 
 function Router() {
-  const { user, loading } = useFirebaseAuth();
+  const { user, loading } = useSupabaseAuth();
   const { isOnline, isSlowConnection } = useNetworkStatus();
   const [location, navigate] = useLocation();
 
@@ -87,6 +88,7 @@ function Router() {
       <Route path="/admin" component={user ? Admin : LoginRedirect} />
       <Route path="/success" component={Success} />
       <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/auth/callback" component={AuthCallback} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -96,12 +98,10 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

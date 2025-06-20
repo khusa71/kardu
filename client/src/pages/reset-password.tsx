@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { confirmPasswordReset } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+// Using Supabase auth instead
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,7 +66,8 @@ export default function ResetPasswordPage() {
 
     try {
       setLoading(true);
-      await confirmPasswordReset(auth, resetCode, password);
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
       
       toast({
         title: "Password Reset Successful",

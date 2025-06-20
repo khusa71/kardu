@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FlashcardEditor } from "@/components/flashcard-editor";
 import { StudyMode } from "@/components/study-mode";
@@ -22,7 +22,7 @@ import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 
 export default function Upload() {
   const { toast } = useToast();
-  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, logout, sendVerificationEmail, refreshUserData } = useFirebaseAuth();
+  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, logout, sendVerificationEmail, refreshUserData } = useSupabaseAuth();
   
   // Form state - updated for multiple files
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);

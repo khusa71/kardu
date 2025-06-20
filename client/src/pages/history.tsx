@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -51,7 +51,7 @@ interface HistoryJob {
 }
 
 export default function History() {
-  const { user, loading: authLoading } = useFirebaseAuth();
+  const { user, loading: authLoading } = useSupabaseAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'history' | 'view' | 'study'>('history');

@@ -26,8 +26,8 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 ## Key Components
 
 ### Authentication System
-- Firebase Authentication with Google OAuth and email/password
-- Server-side token verification using Firebase Admin SDK
+- Supabase Authentication with Google OAuth and email/password
+- Server-side token verification using Supabase Auth
 - Role-based access control (user, admin, moderator)
 - Email verification and password reset functionality
 - Premium subscription management with Stripe integration
@@ -67,7 +67,7 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Anthropic API (Claude 3.5 Sonnet) for basic tier processing
 
 ### Authentication & Payments
-- Firebase Authentication for user management
+- Supabase Authentication for user management
 - Stripe for subscription billing and payment processing
 
 ### Storage & Database
@@ -98,9 +98,16 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Error boundary implementation with fallback UI
 - Performance monitoring for AI API usage
 
+## Recent Changes
+- June 20, 2025: Successfully migrated from Firebase to Supabase authentication
+- June 20, 2025: Modified AI service to use OpenRouter instead of multiple API providers
+- June 20, 2025: Made Stripe payments optional for development environment
+- June 20, 2025: Completed Replit environment migration with working server and frontend
+
 ## Changelog
-- June 20, 2025. Initial setup
+- June 20, 2025. Initial setup and migration to Replit environment
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Preferred AI provider: OpenRouter for unified access to multiple models

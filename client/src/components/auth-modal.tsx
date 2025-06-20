@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { Brain, Mail, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
@@ -29,7 +29,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useFirebaseAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useSupabaseAuth();
 
   const handleGoogleSignIn = async () => {
     try {
@@ -90,7 +90,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     try {
       setLoading(true);
-      await signUpWithEmail(formData.email, formData.password, formData.displayName);
+      await signUpWithEmail(formData.email, formData.password);
       setEmailSent(true);
     } catch (error) {
       console.error("Sign up error:", error);

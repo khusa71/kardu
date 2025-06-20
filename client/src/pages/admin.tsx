@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { NavigationBar } from "@/components/navigation-bar";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { Users, FileText, Database, Zap, TrendingUp, Clock } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -23,7 +23,7 @@ interface AdminMetrics {
 }
 
 export default function Admin() {
-  const { user } = useFirebaseAuth();
+  const { user } = useSupabaseAuth();
 
   // Fetch user details to check admin role
   const { data: userData } = useQuery({

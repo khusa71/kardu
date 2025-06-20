@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Menu, X, Home, Upload, History, BookOpen, LogOut, User, Brain, Feather } from "lucide-react";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -13,7 +13,7 @@ interface NavigationBarProps {
 
 export function NavigationBar({ onNavigate }: NavigationBarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, logout } = useFirebaseAuth();
+  const { user, logout } = useSupabaseAuth();
   const [location, setLocation] = useLocation();
 
   const handleNavigation = (path: string) => {

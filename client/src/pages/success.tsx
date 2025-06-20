@@ -3,13 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Crown, Upload, ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function Success() {
   const [, setLocation] = useLocation();
-  const { user, refreshUserData } = useFirebaseAuth();
+  const { user, refreshUserData } = useSupabaseAuth();
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(true);
   const [hasTimedOut, setHasTimedOut] = useState(false);
