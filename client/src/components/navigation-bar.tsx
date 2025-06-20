@@ -13,7 +13,7 @@ interface NavigationBarProps {
 
 export function NavigationBar({ onNavigate }: NavigationBarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, logout } = useSupabaseAuth();
+  const { user, signOut } = useSupabaseAuth();
   const [location, setLocation] = useLocation();
 
   const handleNavigation = (path: string) => {
@@ -23,7 +23,7 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
   };
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     setIsMobileMenuOpen(false);
   };
 
