@@ -211,15 +211,35 @@ export class SupabaseStorageService {
   async downloadFile(key: string): Promise<Buffer> {
     if (!supabase) throw new Error('Supabase storage not initialized');
 
-    const { data, error } = await supabase.storage
-      .from(this.bucketName)
-      .download(key);
+    try {
+      const { data, error } = await supabase.storage
+        .from(this.bucketName)
+        .download(key);
 
-    if (error) {
-      throw new Error(`Failed to download file: ${error.message}`);
+      if (error) {
+        console.error('Supabase storage download error:', error);
+        throw new Error(`File download failed: ${error.message || 'Unknown error'}`);
+      }
+
+      if (!data) {
+        throw new Error('No data received from storage');
+      }
+
+      // Safely convert to buffer with error handling
+      try {
+        const arrayBuffer = await data.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      } catch (conversionError) {
+        console.error('Error converting file data to buffer:', conversionError);
+        throw new Error('Failed to process downloaded file');
+      }
+    } catch (error) {
+      console.error('Download operation failed:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('File download failed');
     }
-
-    return Buffer.from(await data.arrayBuffer());
   }
 
   async deleteFile(key: string): Promise<boolean> {

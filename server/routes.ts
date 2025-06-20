@@ -1061,6 +1061,12 @@ async function processFlashcardJob(jobId: number) {
     try {
       const jobId = parseInt(req.params.id);
       const userId = req.user!.id;
+      
+      // Validate job ID
+      if (isNaN(jobId)) {
+        return res.status(400).json({ message: "Invalid job ID" });
+      }
+
       const job = await storage.getFlashcardJob(jobId);
       
       if (!job || job.userId !== userId) {
@@ -1071,13 +1077,40 @@ async function processFlashcardJob(jobId: number) {
         return res.status(404).json({ message: "Original file no longer available" });
       }
 
-      const pdfBuffer = await supabaseStorage.downloadFile(job.pdfStorageKey);
-      res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
-      res.setHeader('Content-Type', 'application/pdf');
-      res.send(pdfBuffer);
+      // Download file with comprehensive error handling
+      try {
+        const pdfBuffer = await supabaseStorage.downloadFile(job.pdfStorageKey);
+        
+        // Validate buffer
+        if (!pdfBuffer || pdfBuffer.length === 0) {
+          return res.status(404).json({ message: "File is empty or corrupted" });
+        }
+
+        // Set response headers
+        res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Length', pdfBuffer.length.toString());
+        
+        // Send file
+        res.send(pdfBuffer);
+      } catch (downloadError) {
+        console.error("File download failed:", downloadError);
+        
+        // Handle specific storage errors
+        if (downloadError instanceof Error) {
+          if (downloadError.message.includes('not found') || downloadError.message.includes('does not exist')) {
+            return res.status(404).json({ message: "File not found in storage" });
+          }
+          if (downloadError.message.includes('access denied') || downloadError.message.includes('unauthorized')) {
+            return res.status(403).json({ message: "Access denied" });
+          }
+        }
+        
+        return res.status(500).json({ message: "Download failed" });
+      }
     } catch (error) {
-      console.error("PDF download error:", error);
-      res.status(500).json({ message: "Download failed" });
+      console.error("PDF download endpoint error:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

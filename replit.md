@@ -125,6 +125,8 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - June 20, 2025: Fixed memory leaks in file processing pipeline with guaranteed cleanup and timeout protection
 - June 20, 2025: Improved input validation across all API endpoints with proper schema validation
 - June 20, 2025: Enhanced process monitoring with graceful shutdown handling for unhandled exceptions
+- June 20, 2025: Fixed critical application crash in Supabase storage download operations causing "Error code undefined" exceptions
+- June 20, 2025: Enhanced PDF download endpoint with comprehensive error handling and proper buffer validation
 
 ## Changelog
 - June 20, 2025. Initial setup and migration to Replit environment
