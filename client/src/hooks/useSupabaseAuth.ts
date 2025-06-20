@@ -27,28 +27,38 @@ export function useSupabaseAuth() {
   }, []);
 
   const signInWithEmail = async (email: string, password: string) => {
+    console.log('Attempting email sign in...');
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    console.log('Email sign in result:', { data, error });
     return { data, error };
   };
 
   const signUpWithEmail = async (email: string, password: string) => {
+    console.log('Attempting email sign up...');
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
+    console.log('Email sign up result:', { data, error });
     return { data, error };
   };
 
   const signInWithGoogle = async () => {
+    console.log('Attempting Google sign in...');
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`
       }
     });
+    console.log('Google sign in result:', { data, error });
+    if (error) {
+      console.error('Google sign in error details:', error);
+      throw error;
+    }
     return { data, error };
   };
 

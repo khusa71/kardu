@@ -28,6 +28,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     displayName: ""
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [authError, setAuthError] = useState<string>("");
 
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } = useSupabaseAuth();
 
@@ -73,13 +74,19 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   const handleSignIn = async () => {
     if (!validateForm(false)) return;
+    setAuthError("");
 
     try {
       setLoading(true);
-      await signInWithEmail(formData.email, formData.password);
-      onClose();
-    } catch (error) {
+      const { error } = await signInWithEmail(formData.email, formData.password);
+      if (error) {
+        setAuthError(error.message || "Sign in failed");
+      } else {
+        onClose();
+      }
+    } catch (error: any) {
       console.error("Sign in error:", error);
+      setAuthError(error?.message || "An error occurred during sign in");
     } finally {
       setLoading(false);
     }
@@ -87,13 +94,19 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   const handleSignUp = async () => {
     if (!validateForm(true)) return;
+    setAuthError("");
 
     try {
       setLoading(true);
-      await signUpWithEmail(formData.email, formData.password);
-      setEmailSent(true);
-    } catch (error) {
+      const { error } = await signUpWithEmail(formData.email, formData.password);
+      if (error) {
+        setAuthError(error.message || "Sign up failed");
+      } else {
+        setEmailSent(true);
+      }
+    } catch (error: any) {
       console.error("Sign up error:", error);
+      setAuthError(error?.message || "An error occurred during sign up");
     } finally {
       setLoading(false);
     }
@@ -246,33 +259,23 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Google Sign In */}
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-          >
-            <FcGoogle className="w-4 h-4 mr-2" />
-            Continue with Google
-          </Button>
-
           {/* Notice for Google Sign-in */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> If Google sign-in isn't working, please use email sign-in below. 
-              We're working to resolve this issue.
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-sm text-amber-800">
+              <strong>Setup Required:</strong> Google sign-in needs to be configured in your Supabase project. 
+              Please use email authentication below for now.
             </p>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
+          {/* Authentication Error Display */}
+          {authError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-800 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {authError}
+              </p>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
-            </div>
-          </div>
+          )}
 
           {/* Email/Password Auth */}
           <Tabs defaultValue="signin" className="w-full">
