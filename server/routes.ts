@@ -557,6 +557,262 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Restart job endpoint
+  app.post("/api/jobs/:id/restart", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      
+      const job = await storage.getFlashcardJob(jobId);
+      if (!job || job.userId !== userId) {
+        return res.status(404).json({ message: "Job not found or access denied" });
+      }
+
+      // Reset job to pending status
+      await storage.updateFlashcardJob(jobId, {
+        status: "pending",
+        progress: 0,
+        currentTask: "Restarting processing...",
+        errorMessage: null,
+        updatedAt: new Date()
+      });
+
+      // Start processing in background
+      processFlashcardJob(jobId);
+
+      res.json({ message: "Job restart initiated", jobId });
+    } catch (error) {
+      console.error("Job restart error:", error);
+      res.status(500).json({ message: "Failed to restart job" });
+    }
+  });
+
+  // Test endpoint for direct job processing
+  app.post("/api/test-process-job", async (req, res) => {
+    try {
+      const { jobId } = req.body;
+      if (!jobId) {
+        return res.status(400).json({ error: "Job ID required" });
+      }
+      
+      // Start processing in background
+      processFlashcardJob(jobId);
+      
+      res.json({ message: "Job processing started", jobId });
+    } catch (error) {
+      console.error("Test processing error:", error);
+      res.status(500).json({ error: "Failed to start processing" });
+    }
+  });
+
+  // Test endpoint for JSON parsing validation
+  app.post("/api/test-json-parser", async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content) {
+        return res.status(400).json({ error: "Content required" });
+      }
+      
+      // Use the same parsing logic from ai-service.ts
+      let jsonContent = content.trim();
+      
+      // Method 1: Extract from markdown code blocks
+      const markdownMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      if (markdownMatch) {
+        jsonContent = markdownMatch[1].trim();
+      }
+      
+      // Method 2: Clean up any remaining markdown artifacts
+      jsonContent = jsonContent
+        .replace(/^```json\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .replace(/^```\s*/i, '')
+        .trim();
+      
+      // Method 3: Handle cases where JSON is embedded in text
+      const embeddedJsonMatch = jsonContent.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
+      if (embeddedJsonMatch && !jsonContent.startsWith('[') && !jsonContent.startsWith('{')) {
+        jsonContent = embeddedJsonMatch[1];
+      }
+      
+      const parsed = JSON.parse(jsonContent);
+      const flashcards = Array.isArray(parsed) ? parsed : parsed.flashcards || [];
+      
+      if (!Array.isArray(flashcards) || flashcards.length === 0) {
+        return res.status(400).json({ error: "No valid flashcards found in content" });
+      }
+      
+      res.json({ 
+        success: true, 
+        flashcards,
+        originalLength: content.length,
+        parsedLength: jsonContent.length
+      });
+    } catch (error: any) {
+      res.status(400).json({ 
+        error: "JSON parsing failed",
+        message: error.message,
+        content: req.body.content?.substring(0, 200) + "..."
+      });
+    }
+  });
+
+// Background processing function for flashcard jobs
+async function processFlashcardJob(jobId: number) {
+  try {
+    const job = await storage.getFlashcardJob(jobId);
+    if (!job) {
+      console.error(`Job ${jobId} not found`);
+      return;
+    }
+
+    await storage.updateFlashcardJob(jobId, {
+      status: "processing",
+      progress: 10,
+      currentTask: "Loading document...",
+      updatedAt: new Date()
+    });
+
+    // Extract text from stored PDF
+    let extractedText = "";
+    if (job.pdfStorageKey) {
+      const pdfBuffer = await supabaseStorage.downloadFile(job.pdfStorageKey);
+      
+      // Save to temp file for processing
+      const tempFilePath = path.join("/tmp", `job_${jobId}_${Date.now()}.pdf`);
+      fs.writeFileSync(tempFilePath, pdfBuffer);
+
+      await storage.updateFlashcardJob(jobId, {
+        progress: 30,
+        currentTask: "Extracting text from document...",
+        updatedAt: new Date()
+      });
+
+      // Extract text using Python processor
+      const result = await new Promise<{ text: string }>((resolve, reject) => {
+        const pythonProcess = spawn('python', [
+          path.join(__dirname, 'pdf-processor.py'),
+          tempFilePath,
+          (job.pagesProcessed || 20).toString()
+        ]);
+
+        let output = '';
+        let errorOutput = '';
+
+        pythonProcess.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+          errorOutput += data.toString();
+        });
+
+        pythonProcess.on('close', (code) => {
+          // Clean up temp file
+          try {
+            fs.unlinkSync(tempFilePath);
+          } catch (e) {
+            console.warn('Failed to cleanup temp file:', e);
+          }
+
+          if (code !== 0) {
+            console.error('Python script error:', errorOutput);
+            reject(new Error(`Text extraction failed: ${errorOutput}`));
+          } else {
+            try {
+              const result = JSON.parse(output);
+              resolve(result);
+            } catch (parseError) {
+              reject(new Error('Failed to parse extraction result'));
+            }
+          }
+        });
+
+        pythonProcess.on('error', (error) => {
+          reject(new Error(`Failed to start Python process: ${error.message}`));
+        });
+      });
+
+      extractedText = result.text;
+    }
+
+    if (!extractedText || extractedText.trim().length < 50) {
+      throw new Error("Insufficient text content extracted from document");
+    }
+
+    await storage.updateFlashcardJob(jobId, {
+      progress: 50,
+      currentTask: "Generating flashcards with AI...",
+      updatedAt: new Date()
+    });
+
+    // Parse focus areas
+    let focusAreas = {};
+    try {
+      focusAreas = JSON.parse(job.focusAreas || "{}");
+    } catch (e) {
+      focusAreas = { concepts: true, definitions: true };
+    }
+
+    // Generate flashcards using AI service
+    const model = job.apiProvider === "openai" ? "openai/gpt-4o" : "anthropic/claude-3.5-sonnet";
+    const apiKey = process.env.OPENROUTER_API_KEY!;
+    
+    const flashcards = await generateFlashcards(
+      extractedText,
+      model,
+      apiKey,
+      job.flashcardCount,
+      job.subject || "general",
+      focusAreas,
+      job.difficulty || "intermediate",
+      undefined // customContext
+    );
+
+    await storage.updateFlashcardJob(jobId, {
+      progress: 80,
+      currentTask: "Generating export files...",
+      updatedAt: new Date()
+    });
+
+    // Generate and store export files
+    const exports = await supabaseStorage.generateAndUploadExports(
+      job.userId!,
+      jobId,
+      flashcards
+    );
+
+    // Complete the job
+    await storage.updateFlashcardJob(jobId, {
+      status: "completed",
+      progress: 100,
+      currentTask: "Processing complete",
+      flashcards: JSON.stringify(flashcards),
+      csvStorageKey: exports.csv?.key,
+      csvDownloadUrl: exports.csv?.url,
+      jsonStorageKey: exports.json?.key,
+      jsonDownloadUrl: exports.json?.url,
+      quizletStorageKey: exports.quizlet?.key,
+      quizletDownloadUrl: exports.quizlet?.url,
+      processingTime: Math.floor((Date.now() - (job.updatedAt ? new Date(job.updatedAt).getTime() : Date.now())) / 1000),
+      updatedAt: new Date()
+    });
+
+    console.log(`Job ${jobId} completed successfully with ${flashcards.length} flashcards`);
+
+  } catch (error: any) {
+    console.error(`Job ${jobId} failed:`, error);
+    
+    await storage.updateFlashcardJob(jobId, {
+      status: "failed",
+      progress: 0,
+      currentTask: "Processing failed",
+      errorMessage: error.message || "Unknown error occurred",
+      updatedAt: new Date()
+    });
+  }
+}
+
   // Delete job and associated files
   app.delete("/api/jobs/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {

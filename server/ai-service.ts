@@ -225,19 +225,43 @@ async function generateWithOpenRouter(prompt: string, model: string, apiKey: str
       throw new Error("Empty response from API");
     }
 
+    // Implement comprehensive JSON extraction and parsing
+    let jsonContent = content.trim();
+    
+    // Method 1: Extract from markdown code blocks
+    const markdownMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (markdownMatch) {
+      jsonContent = markdownMatch[1].trim();
+    }
+    
+    // Method 2: Clean up any remaining markdown artifacts
+    jsonContent = jsonContent
+      .replace(/^```json\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .replace(/^```\s*/i, '')
+      .trim();
+    
+    // Method 3: Handle cases where JSON is embedded in text
+    const embeddedJsonMatch = jsonContent.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
+    if (embeddedJsonMatch && !jsonContent.startsWith('[') && !jsonContent.startsWith('{')) {
+      jsonContent = embeddedJsonMatch[1];
+    }
+    
     try {
-      // Handle markdown code blocks - extract JSON from ```json blocks
-      let jsonContent = content.trim();
-      const jsonMatch = jsonContent.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        jsonContent = jsonMatch[1].trim();
-      }
-      
       const parsed = JSON.parse(jsonContent);
       const flashcards = Array.isArray(parsed) ? parsed : parsed.flashcards || [];
+      
+      if (!Array.isArray(flashcards) || flashcards.length === 0) {
+        console.error("No valid flashcards found in response");
+        throw new Error("No valid flashcards in API response");
+      }
+      
       return validateAndFormatFlashcards(flashcards);
-    } catch (parseError) {
-      console.error("Failed to parse OpenRouter response as JSON:", content);
+    } catch (parseError: any) {
+      console.error("Comprehensive JSON parsing failed");
+      console.error("Parse error:", parseError?.message || parseError);
+      console.error("Content attempted:", jsonContent.substring(0, 500));
+      console.error("Original response:", content.substring(0, 500));
       throw new Error("Invalid JSON response from API");
     }
   }, 'openrouter');
@@ -310,19 +334,33 @@ function getSubjectContext(subject: string) {
 }
 
 function validateAndFormatFlashcards(flashcards: any[]): FlashcardPair[] {
+  console.log("validateAndFormatFlashcards called with:", typeof flashcards, Array.isArray(flashcards), flashcards?.length);
+  
   if (!Array.isArray(flashcards)) {
+    console.error("Validation failed: not an array:", flashcards);
     throw new Error("Response must be an array of flashcards");
   }
 
-  return flashcards
-    .filter(card => card && (card.question || card.front) && (card.answer || card.back))
-    .map(card => ({
+  try {
+    const filtered = flashcards.filter(card => card && (card.question || card.front) && (card.answer || card.back));
+    console.log("After filtering:", filtered.length, "valid cards");
+    
+    const mapped = filtered.map(card => ({
       front: String(card.question || card.front || "").trim(),
       back: String(card.answer || card.back || "").trim(),
       subject: String(card.topic || card.subject || "General").trim(),
       difficulty: (card.difficulty || "intermediate") as "beginner" | "intermediate" | "advanced"
-    }))
-    .filter(card => card.front.length > 0 && card.back.length > 0);
+    }));
+    console.log("After mapping:", mapped.length, "cards");
+    
+    const final = mapped.filter(card => card.front.length > 0 && card.back.length > 0);
+    console.log("Final validated cards:", final.length);
+    
+    return final;
+  } catch (error) {
+    console.error("Error in validateAndFormatFlashcards:", error);
+    throw error;
+  }
 }
 
 function chunkText(text: string, maxChunkSize: number): string[] {
