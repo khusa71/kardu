@@ -36,21 +36,44 @@ doc.close()
     const result = await new Promise<string>((resolve, reject) => {
       const process = spawn('python3', [tempScript, pdfPath]);
       let output = '';
+      let stderr = '';
+      
+      // Set timeout to prevent hanging processes
+      const timeout = setTimeout(() => {
+        process.kill('SIGTERM');
+        reject(new Error('PDF detection timed out'));
+      }, 30000);
       
       process.stdout.on('data', (data) => {
         output += data.toString();
       });
       
+      process.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+      
       process.on('close', (code) => {
+        clearTimeout(timeout);
         if (code === 0) {
           resolve(output.trim());
         } else {
-          reject(new Error(`Detection failed with code ${code}`));
+          reject(new Error(`Detection failed with code ${code}: ${stderr}`));
         }
+      });
+      
+      process.on('error', (error) => {
+        clearTimeout(timeout);
+        reject(new Error(`Process error: ${error.message}`));
       });
     });
     
-    await unlink(tempScript);
+    // Ensure cleanup even if process fails
+    try {
+      await unlink(tempScript);
+    } catch (cleanupError) {
+      console.warn('Failed to cleanup temp script:', cleanupError);
+    }
+    
     return result === 'true';
   } catch (error) {
     console.error('Error detecting if PDF is scanned:', error);
@@ -136,6 +159,12 @@ print(f"TEXT:{final_text}")
       let output = '';
       let error = '';
       
+      // Set timeout for OCR operations (can be slow)
+      const timeout = setTimeout(() => {
+        process.kill('SIGTERM');
+        reject(new Error('OCR processing timed out'));
+      }, 120000); // 2 minutes timeout
+      
       process.stdout.on('data', (data) => {
         output += data.toString();
       });
@@ -145,15 +174,26 @@ print(f"TEXT:{final_text}")
       });
       
       process.on('close', (code) => {
+        clearTimeout(timeout);
         if (code === 0) {
           resolve(output);
         } else {
           reject(new Error(`OCR failed: ${error}`));
         }
       });
+      
+      process.on('error', (processError) => {
+        clearTimeout(timeout);
+        reject(new Error(`OCR process error: ${processError.message}`));
+      });
     });
     
-    await unlink(tempScript);
+    // Ensure cleanup even if process fails
+    try {
+      await unlink(tempScript);
+    } catch (cleanupError) {
+      console.warn('Failed to cleanup OCR temp script:', cleanupError);
+    }
     
     // Parse the result
     const lines = result.split('\n');

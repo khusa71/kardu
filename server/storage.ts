@@ -76,52 +76,62 @@ export class DatabaseStorage implements IStorage {
 
   async incrementUserUploads(userId: string): Promise<void> {
     const now = new Date();
-    const user = await this.getUserProfile(userId);
-    if (user) {
+    try {
       await db
         .update(userProfiles)
         .set({
-          monthlyUploads: (user.monthlyUploads || 0) + 1,
+          monthlyUploads: sql`COALESCE(${userProfiles.monthlyUploads}, 0) + 1`,
           lastUploadDate: now,
           updatedAt: now,
         })
         .where(eq(userProfiles.id, userId));
+    } catch (error) {
+      console.error(`Failed to increment uploads for user ${userId}:`, error);
+      throw new Error('Upload count update failed');
     }
   }
 
   async checkUploadLimit(userId: string): Promise<{ canUpload: boolean; uploadsRemaining: number }> {
-    const user = await this.getUserProfile(userId);
-    if (!user) {
-      return { canUpload: false, uploadsRemaining: 0 };
-    }
-
-    // Reset monthly uploads if it's a new month
-    const now = new Date();
-    const lastUpload = user.lastUploadDate;
-    
-    if (lastUpload) {
-      const currentMonth = now.getFullYear() * 12 + now.getMonth();
-      const lastUploadMonth = lastUpload.getFullYear() * 12 + lastUpload.getMonth();
-      
-      if (currentMonth > lastUploadMonth) {
-        // Reset monthly uploads
-        await db
-          .update(userProfiles)
-          .set({
-            monthlyUploads: 0,
-            updatedAt: now,
-          })
-          .where(eq(userProfiles.id, userId));
-        
-        return { canUpload: true, uploadsRemaining: (user.monthlyLimit || 3) - 1 };
+    try {
+      const user = await this.getUserProfile(userId);
+      if (!user) {
+        return { canUpload: false, uploadsRemaining: 0 };
       }
+
+      const now = new Date();
+      const lastUpload = user.lastUploadDate;
+      
+      // Check if monthly reset is needed
+      if (lastUpload) {
+        const currentMonth = now.getFullYear() * 12 + now.getMonth();
+        const lastUploadMonth = lastUpload.getFullYear() * 12 + lastUpload.getMonth();
+        
+        if (currentMonth > lastUploadMonth) {
+          // Atomic reset with updated data retrieval
+          await db
+            .update(userProfiles)
+            .set({
+              monthlyUploads: 0,
+              lastResetDate: now,
+              updatedAt: now,
+            })
+            .where(eq(userProfiles.id, userId));
+          
+          const monthlyLimit = user.monthlyLimit || (user.isPremium ? 100 : 3);
+          return { canUpload: true, uploadsRemaining: monthlyLimit };
+        }
+      }
+
+      const uploadsUsed = user.monthlyUploads || 0;
+      const monthlyLimit = user.monthlyLimit || (user.isPremium ? 100 : 3);
+      const uploadsRemaining = Math.max(0, monthlyLimit - uploadsUsed);
+      const canUpload = uploadsRemaining > 0;
+
+      return { canUpload, uploadsRemaining };
+    } catch (error) {
+      console.error(`Failed to check upload limit for user ${userId}:`, error);
+      throw new Error('Upload limit check failed');
     }
-
-    const uploadsUsed = user.monthlyUploads || 0;
-    const uploadsRemaining = Math.max(0, (user.monthlyLimit || 3) - uploadsUsed);
-    const canUpload = uploadsRemaining > 0;
-
-    return { canUpload, uploadsRemaining };
   }
 
   async upgradeToPremium(userId: string): Promise<void> {

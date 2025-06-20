@@ -21,8 +21,8 @@ app.use(helmet({
 
 // Basic security headers handled by helmet
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -55,6 +55,40 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+// Global error handling middleware
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  console.error('Global error handler:', err);
+  
+  // Log error details for monitoring
+  if (monitoringService) {
+    monitoringService.recordRequest(0, true);
+  }
+  
+  // Don't expose internal errors in production
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'File too large',
+      message: 'Please upload a smaller file'
+    });
+  }
+  
+  if (err.code === 'ENOENT') {
+    return res.status(404).json({
+      error: 'File not found',
+      message: 'The requested file could not be found'
+    });
+  }
+  
+  // Default error response
+  res.status(500).json({
+    error: 'Internal server error',
+    message: isDevelopment ? err.message : 'Something went wrong',
+    ...(isDevelopment && { stack: err.stack })
+  });
 });
 
 // Cleanup function to remove temporary files
@@ -117,15 +151,27 @@ function cleanupTempFiles() {
     });
   });
 
-  // Handle unhandled promise rejections
+  // Handle unhandled promise rejections with proper logging
   process.on('unhandledRejection', (reason, promise) => {
-    log(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+    console.error('Unhandled Promise Rejection:', reason);
+    console.error('Promise:', promise);
+    // Log to monitoring service if available
+    if (monitoringService) {
+      monitoringService.recordRequest(0, true);
+    }
   });
 
   process.on('uncaughtException', (err) => {
-    log(`Uncaught Exception: ${err.message}`);
-    console.error(err);
-    process.exit(1);
+    console.error('Uncaught Exception:', err.message);
+    console.error('Stack:', err.stack);
+    // Attempt graceful shutdown
+    server.close(() => {
+      process.exit(1);
+    });
+    // Force exit after 5 seconds if graceful shutdown fails
+    setTimeout(() => {
+      process.exit(1);
+    }, 5000);
   });
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

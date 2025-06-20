@@ -105,59 +105,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple login endpoint for testing
-  app.post('/api/auth/simple-login', async (req, res) => {
-    try {
-      // Create a temporary session for testing
-      const testUserId = 'c06363c1-507b-40d3-acaf-2baffb315b42';
+  // Development-only endpoint (disabled in production)
+  if (process.env.NODE_ENV === 'development') {
+    app.post('/api/auth/simple-login', async (req, res) => {
+      try {
+        const testUserId = 'c06363c1-507b-40d3-acaf-2baffb315b42';
+        
+        let userProfile = await storage.getUserProfile(testUserId);
+        if (!userProfile) {
+          userProfile = await storage.upsertUserProfile({
+            id: testUserId,
+            email: 'test@kardu.io',
+            isPremium: false,
+            role: 'user',
+            monthlyUploads: 0,
+            monthlyLimit: 3,
+            monthlyPagesProcessed: 0,
+            lastResetDate: new Date(),
+            isEmailVerified: true,
+            updatedAt: new Date()
+          });
+        }
+        
+        res.json({ 
+          success: true, 
+          user: userProfile,
+          message: 'Development session created'
+        });
+      } catch (error) {
+        console.error('Development login error:', error);
+        res.status(500).json({ error: 'Login failed' });
+      }
+    });
+  }
+
+  // Development-only auth test endpoint
+  if (process.env.NODE_ENV === 'development') {
+    app.get('/api/auth/test', async (req, res) => {
+      const authHeader = req.headers.authorization;
       
-      // Ensure user profile exists
-      let userProfile = await storage.getUserProfile(testUserId);
-      if (!userProfile) {
-        userProfile = await storage.upsertUserProfile({
-          id: testUserId,
-          email: 'test@kardu.io',
-          isPremium: false,
-          role: 'user',
-          monthlyUploads: 0,
-          monthlyLimit: 3,
-          monthlyPagesProcessed: 0,
-          lastResetDate: new Date(),
-          isEmailVerified: true,
-          updatedAt: new Date()
+      if (!authHeader) {
+        return res.json({ 
+          authenticated: false, 
+          error: 'No authorization header'
         });
       }
       
       res.json({ 
-        success: true, 
-        user: userProfile,
-        message: 'Temporary session created for testing'
+        authenticated: true, 
+        tokenPresent: true
       });
-    } catch (error) {
-      console.error('Simple login error:', error);
-      res.status(500).json({ error: 'Login failed' });
-    }
-  });
-
-  // Test endpoint for authentication debugging
-  app.get('/api/auth/test', async (req, res) => {
-    const authHeader = req.headers.authorization;
-    console.log('Auth test - Authorization header:', authHeader ? 'Present' : 'Missing');
-    
-    if (!authHeader) {
-      return res.json({ 
-        authenticated: false, 
-        error: 'No authorization header',
-        headers: Object.keys(req.headers)
-      });
-    }
-    
-    res.json({ 
-      authenticated: true, 
-      tokenLength: authHeader.length,
-      tokenStart: authHeader.substring(0, 20) + '...'
     });
-  });
+  }
 
   app.get('/api/auth/user', verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
@@ -451,76 +450,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Process files using page-based validation results
+      // Process files using page-based validation results with transaction safety
       const createdJobs = [];
       const fileValidations = req.fileValidations;
       
-      console.log('DEBUG: Starting job creation process');
-      console.log('DEBUG: File validations length:', fileValidations?.length || 0);
-      console.log('DEBUG: Request has files:', req.files?.length || 0);
-      console.log('DEBUG: Request fileValidations:', req.fileValidations ? 'Present' : 'Missing');
+      // Validate input data integrity
+      if (!fileValidations || fileValidations.length === 0) {
+        return res.status(400).json({ message: "No valid files to process" });
+      }
       
-      for (let i = 0; i < fileValidations.length; i++) {
-        const validation = fileValidations[i];
-        const file = validation.file;
-        
-        console.log(`DEBUG: Processing file ${i + 1}: ${file.originalname}`);
-        console.log('DEBUG: Validation data:', {
-          pageCount: validation.pageInfo?.pageCount,
-          pagesWillProcess: validation.pagesWillProcess
-        });
-        
-        // Create job with page information
-        const jobData = {
-          userId,
-          filename: file.originalname,
-          fileSize: file.size,
-          pageCount: validation.pageInfo.pageCount,
-          pagesProcessed: validation.pagesWillProcess,
-          apiProvider: enforcedProvider,
-          flashcardCount: parseInt(flashcardCount),
-          subject: subject || "general",
-          difficulty: difficulty || "intermediate",
-          focusAreas: JSON.stringify(focusAreas || {}),
-          status: "pending" as const,
-          progress: 0,
-          currentTask: validation.pagesWillProcess < validation.pageInfo.pageCount 
-            ? `Processing first ${validation.pagesWillProcess} of ${validation.pageInfo.pageCount} pages...`
-            : enforcedProvider !== selectedProvider 
-              ? `Starting processing with ${selectedProvider} (fallback from ${enforcedProvider})...`
-              : "Starting processing...",
-        };
+      try {
+        // Process each file with proper error handling
+        for (let i = 0; i < fileValidations.length; i++) {
+          const validation = fileValidations[i];
+          const file = validation.file;
+          
+          // Validate file data integrity
+          if (!file || !validation.pageInfo) {
+            throw new Error(`Invalid file validation data for file ${i + 1}`);
+          }
+          
+          const jobData = {
+            userId,
+            filename: file.originalname,
+            fileSize: file.size,
+            pageCount: validation.pageInfo.pageCount,
+            pagesProcessed: validation.pagesWillProcess,
+            apiProvider: enforcedProvider,
+            flashcardCount: parseInt(flashcardCount),
+            subject: subject || "general",
+            difficulty: difficulty || "intermediate",
+            focusAreas: JSON.stringify(focusAreas || {}),
+            status: "pending" as const,
+            progress: 0,
+            currentTask: validation.pagesWillProcess < validation.pageInfo.pageCount 
+              ? `Processing first ${validation.pagesWillProcess} of ${validation.pageInfo.pageCount} pages...`
+              : enforcedProvider !== selectedProvider 
+                ? `Starting processing with ${selectedProvider} (fallback from ${enforcedProvider})...`
+                : "Starting processing...",
+          };
 
-        console.log('DEBUG: Job data prepared:', jobData);
-
-        try {
-          // Create job record
+          // Create job record with error handling
           const job = await storage.createFlashcardJob(jobData);
-          console.log('DEBUG: Job created successfully:', job.id);
           createdJobs.push(job);
 
-          // Start processing asynchronously with page limits
-          processFlashcardJobWithPageLimits(
-            job.id, 
-            validation.tempFilePath, 
-            file.originalname, 
-            selectedProvider, 
-            subject, 
-            focusAreas, 
-            difficulty, 
-            userId, 
-            flashcardCount, 
-            customContext,
-            validation.pagesWillProcess || validation.pageInfo.pageCount
-          );
-        } catch (error) {
-          console.error('DEBUG: Failed to create job:', error);
-          throw error;
+          // Start processing asynchronously with proper error isolation
+          setImmediate(() => {
+            processFlashcardJobWithPageLimits(
+              job.id, 
+              validation.tempFilePath, 
+              file.originalname, 
+              selectedProvider, 
+              subject, 
+              focusAreas, 
+              difficulty, 
+              userId, 
+              flashcardCount, 
+              customContext,
+              validation.pagesWillProcess || validation.pageInfo.pageCount
+            ).catch(error => {
+              console.error(`Async processing failed for job ${job.id}:`, error);
+              // Update job status to failed
+              storage.updateFlashcardJob(job.id, {
+                status: "failed",
+                errorMessage: error.message,
+                currentTask: "Processing failed"
+              }).catch(updateError => {
+                console.error(`Failed to update job ${job.id} status:`, updateError);
+              });
+            });
+          });
         }
-      }
 
-      // Increment user quotas
-      await incrementUploadCount(userId, req.totalPagesWillProcess);
+        // Atomic increment of user quotas
+        await incrementUploadCount(userId, req.totalPagesWillProcess);
+        
+      } catch (error) {
+        // Clean up any created jobs on failure
+        for (const job of createdJobs) {
+          try {
+            await storage.deleteFlashcardJob(job.id);
+          } catch (cleanupError) {
+            console.error(`Failed to cleanup job ${job.id}:`, cleanupError);
+          }
+        }
+        throw error;
+      }
 
       res.json({ 
         jobs: createdJobs.map(job => ({
@@ -688,7 +703,7 @@ async function processFlashcardJob(jobId: number) {
         updatedAt: new Date()
       });
 
-      // Extract text using Python processor
+      // Extract text using Python processor with proper resource management
       const result = await new Promise<{ text: string }>((resolve, reject) => {
         const pythonProcess = spawn('python', [
           path.join(__dirname, 'pdf-processor.py'),
@@ -698,6 +713,22 @@ async function processFlashcardJob(jobId: number) {
 
         let output = '';
         let errorOutput = '';
+        let isResolved = false;
+
+        // Set timeout to prevent hanging processes
+        const timeout = setTimeout(() => {
+          if (!isResolved) {
+            isResolved = true;
+            pythonProcess.kill('SIGTERM');
+            // Force cleanup temp file
+            try {
+              fs.unlinkSync(tempFilePath);
+            } catch (e) {
+              console.warn('Failed to cleanup temp file on timeout:', e);
+            }
+            reject(new Error('Text extraction timed out'));
+          }
+        }, 180000); // 3 minutes timeout
 
         pythonProcess.stdout.on('data', (data) => {
           output += data.toString();
@@ -708,7 +739,11 @@ async function processFlashcardJob(jobId: number) {
         });
 
         pythonProcess.on('close', (code) => {
-          // Clean up temp file
+          if (isResolved) return;
+          isResolved = true;
+          clearTimeout(timeout);
+
+          // Always clean up temp file
           try {
             fs.unlinkSync(tempFilePath);
           } catch (e) {
@@ -721,7 +756,11 @@ async function processFlashcardJob(jobId: number) {
           } else {
             try {
               const result = JSON.parse(output);
-              resolve(result);
+              if (!result || !result.text) {
+                reject(new Error('Invalid extraction result format'));
+              } else {
+                resolve(result);
+              }
             } catch (parseError) {
               reject(new Error('Failed to parse extraction result'));
             }
@@ -729,6 +768,17 @@ async function processFlashcardJob(jobId: number) {
         });
 
         pythonProcess.on('error', (error) => {
+          if (isResolved) return;
+          isResolved = true;
+          clearTimeout(timeout);
+          
+          // Cleanup on process error
+          try {
+            fs.unlinkSync(tempFilePath);
+          } catch (e) {
+            console.warn('Failed to cleanup temp file on process error:', e);
+          }
+          
           reject(new Error(`Failed to start Python process: ${error.message}`));
         });
       });
