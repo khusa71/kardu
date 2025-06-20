@@ -4,7 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { spawn } from "child_process";
-import { storage } from "./storage";
+import { storage } from "./storage-supabase";
 import { generateFlashcards } from "./ai-service";
 import { extractTextWithOCR } from "./ocr-service";
 import { cacheService } from "./cache-service";
@@ -41,7 +41,7 @@ function enforceAIModelAccess(userIsPremium: boolean, requestedTier: string): "o
   // Default to basic for any invalid input
   return modelMap.basic;
 }
-import { insertFlashcardJobSchema, users, flashcardJobs } from "@shared/schema";
+import { insertFlashcardJobSchema, userProfiles, flashcardJobs } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, and } from "drizzle-orm";
 import { z } from "zod";
@@ -84,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id, email, displayName, photoURL, emailVerified, provider } = req.body;
       
-      const userData = await storage.upsertUser({
+      const userData = await storage.upsertUserProfile({
         id: id || req.user!.id,
         email,
         displayName,
@@ -104,15 +104,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
-      const user = await storage.getUser(userId);
+      let userProfile = await storage.getUserProfile(userId);
       
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
+      // Create profile if it doesn't exist (first login)
+      if (!userProfile) {
+        userProfile = await storage.upsertUserProfile({
+          id: userId,
+          isPremium: false,
+          role: 'user',
+          monthlyUploads: 0,
+          monthlyLimit: 3,
+          monthlyPagesProcessed: 0,
+          lastResetDate: new Date(),
+        });
       }
 
       // Check current monthly usage and reset if needed
       const { uploadsRemaining } = await storage.checkUploadLimit(userId);
-      const updatedUser = await storage.getUser(userId); // Get fresh data after potential reset
+      const updatedUser = await storage.getUserProfile(userId); // Get fresh data after potential reset
       
       // Calculate correct monthly usage data
       const currentUploads = updatedUser?.monthlyUploads || 0;
@@ -140,7 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const user = await storage.getUser(userId);
+      const user = await storage.getUserProfile(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -304,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get user for premium status check
-      const user = await storage.getUser(userId);
+      const user = await storage.getUserProfile(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -905,7 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const userId = req.user!.id;
-      const user = await storage.getUser(userId);
+      const user = await storage.getUserProfile(userId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -996,7 +1005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         nextReviewDate: calculateNextReviewDate(status, difficultyRating)
       };
 
-      const updatedProgress = await storage.updateStudyProgress(progressData);
+      const updatedProgress = await storage.upsertStudyProgress(progressData);
       res.json(updatedProgress);
     } catch (error) {
       console.error("Error updating study progress:", error);
@@ -1085,7 +1094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/metrics", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
-      const user = await storage.getUser(userId);
+      const user = await storage.getUserProfile(userId);
       
       // Check if user has admin role
       if (!user || user.role !== 'admin') {
@@ -1093,7 +1102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all users count
-      const totalUsersResult = await db.select({ count: sql<number>`count(*)` }).from(users);
+      const totalUsersResult = await db.select({ count: sql<number>`count(*)` }).from(userProfiles);
       const totalUsers = totalUsersResult[0]?.count || 0;
 
       // Get total jobs count
@@ -1105,8 +1114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const recentUsersResult = await db.select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(sql`${users.createdAt} >= ${thirtyDaysAgo}`);
+        .from(userProfiles)
+        .where(sql`${userProfiles.createdAt} >= ${thirtyDaysAgo}`);
       
       const recentJobsResult = await db.select({ count: sql<number>`count(*)` })
         .from(flashcardJobs)
@@ -1387,7 +1396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`Manual subscription verification successful for user ${userId}`);
         
-        const updatedUser = await storage.getUser(userId);
+        const updatedUser = await storage.getUserProfile(userId);
         res.json({ 
           message: "Subscription verified and activated", 
           isPremium: true,
@@ -1408,7 +1417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       await storage.upgradeToPremium(userId);
       
-      const updatedUser = await storage.getUser(userId);
+      const updatedUser = await storage.getUserProfile(userId);
       res.json({ message: "Successfully upgraded to premium", user: updatedUser });
     } catch (error) {
       console.error("Upgrade error:", error);

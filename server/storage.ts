@@ -1,9 +1,9 @@
 import {
-  users,
+  userProfiles,
   flashcardJobs,
   studyProgress,
-  type User,
-  type UpsertUser,
+  type UserProfile,
+  type UpsertUserProfile,
   type FlashcardJob,
   type InsertFlashcardJob,
   type StudyProgress,
@@ -13,22 +13,22 @@ import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations for Firebase Auth
-  getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  // User profile operations for Supabase Auth
+  getUserProfile(id: string): Promise<UserProfile | undefined>;
+  upsertUserProfile(user: UpsertUserProfile): Promise<UserProfile>;
   incrementUserUploads(userId: string): Promise<void>;
   checkUploadLimit(userId: string): Promise<{ canUpload: boolean; uploadsRemaining: number }>;
   upgradeToPremium(userId: string): Promise<void>;
   resetMonthlyUploads(userId: string): Promise<void>;
   
   // Stripe operations
-  updateStripeCustomerId(userId: string, customerId: string): Promise<User>;
+  updateStripeCustomerId(userId: string, customerId: string): Promise<UserProfile>;
   updateUserSubscription(userId: string, subscriptionData: {
     subscriptionId: string;
     status: string;
     periodEnd: Date;
-  }): Promise<User>;
-  cancelUserSubscription(userId: string): Promise<User>;
+  }): Promise<UserProfile>;
+  cancelUserSubscription(userId: string): Promise<UserProfile>;
   
   // Flashcard job operations
   createFlashcardJob(job: InsertFlashcardJob): Promise<FlashcardJob>;
@@ -45,24 +45,22 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // User operations
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+  // User profile operations for Supabase Auth
+  async getUserProfile(id: string): Promise<UserProfile | undefined> {
+    const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.id, id));
+    return profile || undefined;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
+  async upsertUserProfile(userData: UpsertUserProfile): Promise<UserProfile> {
     try {
-      const [user] = await db
-        .insert(users)
+      const [profile] = await db
+        .insert(userProfiles)
         .values(userData)
         .onConflictDoUpdate({
-          target: users.id,
+          target: userProfiles.id,
           set: {
-            email: userData.email,
-            displayName: userData.displayName,
-            photoURL: userData.photoURL,
-            provider: userData.provider,
+            isPremium: userData.isPremium,
+            role: userData.role,
             isEmailVerified: userData.isEmailVerified,
             updatedAt: new Date(),
           },

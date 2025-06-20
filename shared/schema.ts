@@ -23,14 +23,9 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for Firebase Auth
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(), // Firebase UID
-  email: varchar("email").unique().notNull(),
-  displayName: varchar("display_name"),
-  photoURL: varchar("photo_url"),
-  provider: varchar("provider").notNull(), // 'google' | 'email'
-  isEmailVerified: boolean("is_email_verified").default(false),
+// User profiles table for Supabase Auth (extends auth.users)
+export const userProfiles = pgTable("user_profiles", {
+  id: varchar("id").primaryKey().notNull(), // Supabase UID from auth.users
   isPremium: boolean("is_premium").default(false),
   role: varchar("role").default("user"), // 'user' | 'admin' | 'moderator'
   monthlyUploads: integer("monthly_uploads").default(0),
@@ -49,7 +44,7 @@ export const users = pgTable("users", {
 
 export const flashcardJobs = pgTable("flashcard_jobs", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id),
+  userId: varchar("user_id").references(() => userProfiles.id),
   filename: text("filename").notNull(),
   fileSize: integer("file_size").notNull(),
   pageCount: integer("page_count"), // Number of pages in the PDF
@@ -82,7 +77,7 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
 
 export const studyProgress = pgTable("study_progress", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull().references(() => userProfiles.id),
   jobId: integer("job_id").notNull().references(() => flashcardJobs.id, { onDelete: "cascade" }),
   cardIndex: integer("card_index").notNull(),
   status: text("status").notNull(), // 'known', 'unknown', 'reviewing'
@@ -108,8 +103,8 @@ export const insertStudyProgressSchema = createInsertSchema(studyProgress).omit(
 
 export type InsertFlashcardJob = z.infer<typeof insertFlashcardJobSchema>;
 export type FlashcardJob = typeof flashcardJobs.$inferSelect;
-export type UpsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
+export type UpsertUserProfile = typeof userProfiles.$inferInsert;
+export type UserProfile = typeof userProfiles.$inferSelect;
 export type StudyProgress = typeof studyProgress.$inferSelect;
 export type InsertStudyProgress = z.infer<typeof insertStudyProgressSchema>;
 

@@ -1,5 +1,5 @@
 import { db } from './db';
-import { users } from '../shared/schema';
+import { userProfiles } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 
 export interface UsageQuota {
@@ -31,8 +31,8 @@ export function getQuotaLimits(isPremium: boolean): QuotaLimits {
  * Get current usage quota for a user
  */
 export async function getUserQuota(userId: string): Promise<UsageQuota> {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId)
+  const user = await db.query.userProfiles.findFirst({
+    where: eq(userProfiles.id, userId)
   });
 
   if (!user) {
@@ -77,7 +77,7 @@ export async function resetUserQuota(userId: string): Promise<void> {
       lastResetDate: new Date(),
       updatedAt: new Date()
     })
-    .where(eq(users.id, userId));
+    .where(eq(userProfiles.id, userId));
 }
 
 /**
@@ -97,7 +97,7 @@ export async function incrementUploadCount(userId: string, pagesProcessed: numbe
       lastUploadDate: new Date(),
       updatedAt: new Date()
     })
-    .where(eq(users.id, userId));
+    .where(eq(userProfiles.id, userId));
 }
 
 /**
@@ -113,8 +113,8 @@ export async function canUserUpload(
   limits: QuotaLimits;
   pagesWillProcess?: number;
 }> {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId)
+  const user = await db.query.userProfiles.findFirst({
+    where: eq(userProfiles.id, userId)
   });
 
   if (!user) {
@@ -177,8 +177,8 @@ export async function getQuotaStatus(userId: string): Promise<{
   isPremium: boolean;
   needsReset: boolean;
 }> {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId)
+  const user = await db.query.userProfiles.findFirst({
+    where: eq(userProfiles.id, userId)
   });
 
   if (!user) {
