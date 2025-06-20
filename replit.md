@@ -103,6 +103,8 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - June 20, 2025: Modified AI service to use OpenRouter instead of multiple API providers
 - June 20, 2025: Made Stripe payments optional for development environment
 - June 20, 2025: Completed Replit environment migration with working server and frontend
+- June 20, 2025: Fixed authentication logic - Google OAuth users bypass email verification
+- June 20, 2025: Updated user management to use Supabase Auth with proper OAuth handling
 
 ## Changelog
 - June 20, 2025. Initial setup and migration to Replit environment

@@ -19,6 +19,17 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email?: string;
     email_verified?: boolean;
+    email_confirmed_at?: string | null;
+    app_metadata?: {
+      providers?: string[];
+      [key: string]: any;
+    };
+    user_metadata?: {
+      name?: string;
+      avatar_url?: string;
+      iss?: string;
+      [key: string]: any;
+    };
   };
 }
 
@@ -46,7 +57,10 @@ export const verifySupabaseToken = async (req: AuthenticatedRequest, res: Respon
     req.user = {
       id: user.id,
       email: user.email,
-      email_verified: user.email_confirmed_at ? true : false
+      email_verified: user.email_confirmed_at ? true : false,
+      email_confirmed_at: user.email_confirmed_at,
+      app_metadata: user.app_metadata || {},
+      user_metadata: user.user_metadata || {}
     };
 
     next();

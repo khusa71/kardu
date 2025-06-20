@@ -127,11 +127,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUploads = updatedUser?.monthlyUploads || 0;
       const monthlyLimit = updatedUser?.monthlyLimit || (updatedUser?.isPremium ? 100 : 3);
       
+      // Determine if user is OAuth-verified (Google) or email-verified
+      const isOAuthUser = req.user!.app_metadata?.providers?.includes('google') || 
+                         req.user!.user_metadata?.iss === 'https://accounts.google.com';
+      const isEmailVerified = isOAuthUser || !!req.user!.email_confirmed_at;
+
       const userWithUsage = {
-        ...updatedUser,
-        uploadsThisMonth: currentUploads,
-        uploadsRemaining: uploadsRemaining,
-        monthlyLimit: monthlyLimit
+        id: updatedUser?.id,
+        email: req.user!.email,
+        displayName: req.user!.user_metadata?.name || req.user!.email?.split('@')[0],
+        photoURL: req.user!.user_metadata?.avatar_url,
+        provider: isOAuthUser ? 'google' : 'email',
+        isEmailVerified,
+        isPremium: updatedUser?.isPremium || false,
+        role: updatedUser?.role || 'user',
+        monthlyUploads: currentUploads,
+        monthlyLimit,
+        uploadsRemaining,
+        stripeCustomerId: updatedUser?.stripeCustomerId,
+        subscriptionStatus: updatedUser?.subscriptionStatus,
       };
       
       res.json(userWithUsage);
@@ -154,8 +168,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check email verification
-      if (!user.isEmailVerified) {
+      // Check email verification (skip for OAuth users as they're pre-verified)
+      const isOAuthUser = req.user!.app_metadata?.providers?.includes('google') || 
+                         req.user!.user_metadata?.iss === 'https://accounts.google.com';
+      
+      if (!isOAuthUser && !req.user!.email_confirmed_at) {
         return res.status(403).json({ 
           message: "Please verify your email to continue",
           requiresEmailVerification: true 
