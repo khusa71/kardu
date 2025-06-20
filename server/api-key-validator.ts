@@ -1,29 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
 
 interface ApiKeyValidationResult {
-  hasOpenAI: boolean;
-  hasAnthropic: boolean;
-  availableProviders: ('openai' | 'anthropic')[];
+  hasOpenRouter: boolean;
+  availableProviders: string[];
   canProcess: boolean;
 }
 
 /**
  * Validates that required API keys are available for AI processing
- * Checks both OpenAI and Anthropic API keys and determines available providers
+ * Checks OpenRouter API key and determines available models
  */
 export function validateApiKeys(): ApiKeyValidationResult {
-  const hasOpenAI = !!(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim());
-  const hasAnthropic = !!(process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY.trim());
+  const hasOpenRouter = !!(process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim());
   
-  const availableProviders: ('openai' | 'anthropic')[] = [];
-  if (hasOpenAI) availableProviders.push('openai');
-  if (hasAnthropic) availableProviders.push('anthropic');
+  const availableProviders: string[] = [];
+  if (hasOpenRouter) {
+    availableProviders.push('openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.1-70b-instruct');
+  }
   
   return {
-    hasOpenAI,
-    hasAnthropic,
+    hasOpenRouter,
     availableProviders,
-    canProcess: availableProviders.length > 0
+    canProcess: hasOpenRouter
   };
 }
 
@@ -52,15 +50,15 @@ export function requireApiKeys(req: Request, res: Response, next: NextFunction) 
  * Falls back to available provider if requested one is not available
  */
 export function getAvailableProvider(
-  requestedProvider: string, 
+  requestedModel: string, 
   validation: ApiKeyValidationResult
-): 'openai' | 'anthropic' | null {
-  // If requested provider is available, use it
-  if (validation.availableProviders.includes(requestedProvider as 'openai' | 'anthropic')) {
-    return requestedProvider as 'openai' | 'anthropic';
+): string | null {
+  // If requested model is available, use it
+  if (validation.availableProviders.includes(requestedModel)) {
+    return requestedModel;
   }
   
-  // Fallback to any available provider
+  // Fallback to any available model
   if (validation.availableProviders.length > 0) {
     return validation.availableProviders[0];
   }
@@ -74,12 +72,11 @@ export function getAvailableProvider(
 export function logApiKeyStatus() {
   const validation = validateApiKeys();
   console.log('🔑 API Key Configuration:');
-  console.log(`  OpenAI: ${validation.hasOpenAI ? '✅ Configured' : '❌ Missing'}`);
-  console.log(`  Anthropic: ${validation.hasAnthropic ? '✅ Configured' : '❌ Missing'}`);
-  console.log(`  Available providers: [${validation.availableProviders.join(', ')}]`);
+  console.log(`  OpenRouter: ${validation.hasOpenRouter ? '✅ Configured' : '❌ Missing'}`);
+  console.log(`  Available models: [${validation.availableProviders.join(', ')}]`);
   
   if (!validation.canProcess) {
     console.warn('⚠️  WARNING: No AI API keys configured. Flashcard generation will fail.');
-    console.warn('   Please set OPENAI_API_KEY and/or ANTHROPIC_API_KEY environment variables.');
+    console.warn('   Please set OPENROUTER_API_KEY environment variable.');
   }
 }

@@ -1,9 +1,7 @@
 import OpenAI from "openai";
-import Anthropic from '@anthropic-ai/sdk';
 import type { FlashcardPair } from "@shared/schema";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-// the newest Anthropic model is "claude-sonnet-4-20250514" which was released May 14, 2025. Use this by default unless user has already selected claude-3-7-sonnet-20250219
+// Using OpenRouter for unified AI access
 
 interface FocusAreas {
   concepts?: boolean;
@@ -61,7 +59,7 @@ function categorizeError(error: any, provider: string): ApiError {
         apiError.retryable = false;
     }
     apiError.statusCode = status;
-  } else if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT') {
+  } else if (error?.code === 'ECONNRESET' || error?.code === 'ENOTFOUND') {
     apiError.type = 'network_error';
     apiError.retryable = true;
   } else {
@@ -115,7 +113,7 @@ async function withRetry<T>(
 
 export async function generateFlashcards(
   text: string,
-  provider: "openai" | "anthropic",
+  model: string,
   apiKey: string,
   count: number,
   subject: string,
@@ -123,45 +121,19 @@ export async function generateFlashcards(
   difficulty: string,
   customContext?: string
 ): Promise<FlashcardPair[]> {
-  // Try primary provider first, fallback to alternative if available
-  const primaryProvider = provider;
-  const fallbackProvider = provider === "openai" ? "anthropic" : "openai";
-  const fallbackApiKey = fallbackProvider === "openai" 
-    ? process.env.OPENAI_API_KEY 
-    : process.env.ANTHROPIC_API_KEY;
-
-  let lastError: ApiError;
-  
-  // Try primary provider
   try {
-    console.log(`Attempting flashcard generation with ${primaryProvider}`);
-    return await generateFlashcardsWithProvider(text, primaryProvider, apiKey, count, subject, focusAreas, difficulty);
+    console.log(`Attempting flashcard generation with model: ${model}`);
+    return await generateFlashcardsWithOpenRouter(text, model, apiKey, count, subject, focusAreas, difficulty, customContext);
   } catch (error) {
-    lastError = categorizeError(error, primaryProvider);
-    console.error(`${primaryProvider} failed:`, lastError.type, lastError.message);
-    
-    // Only attempt fallback if we have the API key and error suggests provider issue
-    if (fallbackApiKey && (lastError.type === 'rate_limit' || lastError.type === 'quota_exceeded' || lastError.type === 'api_error')) {
-      try {
-        console.log(`Attempting fallback to ${fallbackProvider}`);
-        return await generateFlashcardsWithProvider(text, fallbackProvider, fallbackApiKey, count, subject, focusAreas, difficulty, customContext);
-      } catch (fallbackError) {
-        const categorizedFallbackError = categorizeError(fallbackError, fallbackProvider);
-        console.error(`${fallbackProvider} fallback also failed:`, categorizedFallbackError.type, categorizedFallbackError.message);
-        
-        // Throw the more informative error
-        throw new Error(`Both AI providers failed. Primary (${primaryProvider}): ${lastError.message}. Fallback (${fallbackProvider}): ${categorizedFallbackError.message}`);
-      }
-    }
-    
-    // Re-throw original error if no fallback available
-    throw lastError;
+    const apiError = categorizeError(error, 'openrouter');
+    console.error(`OpenRouter API failed:`, apiError.type, apiError.message);
+    throw apiError;
   }
 }
 
-async function generateFlashcardsWithProvider(
+async function generateFlashcardsWithOpenRouter(
   text: string,
-  provider: "openai" | "anthropic",
+  model: string,
   apiKey: string,
   count: number,
   subject: string,
@@ -169,21 +141,17 @@ async function generateFlashcardsWithProvider(
   difficulty: string,
   customContext?: string
 ): Promise<FlashcardPair[]> {
-  // Chunk the text if it's too large
-  const chunks = chunkText(text, 8000); // Conservative chunk size
-  const flashcardsPerChunk = Math.ceil(count / chunks.length);
+  const chunks = chunkText(text, 8000);
+  const allFlashcards: FlashcardPair[] = [];
   
-  let allFlashcards: FlashcardPair[] = [];
-  
-  for (let i = 0; i < chunks.length && allFlashcards.length < count; i++) {
+  for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    const remainingCount = count - allFlashcards.length;
-    const currentChunkCount = Math.min(flashcardsPerChunk, remainingCount);
+    const currentChunkCount = Math.ceil(count / chunks.length);
     
     try {
       const chunkFlashcards = await generateFlashcardsForChunk(
         chunk,
-        provider,
+        model,
         apiKey,
         currentChunkCount,
         subject,
@@ -194,21 +162,17 @@ async function generateFlashcardsWithProvider(
       
       allFlashcards.push(...chunkFlashcards);
     } catch (error) {
-      console.error(`Error processing chunk ${i + 1} with ${provider}:`, error);
-      // Continue with other chunks even if one fails, but track the error
+      console.error(`Error processing chunk ${i + 1}:`, error);
       if (i === 0) {
-        // If the first chunk fails, this might be a systematic issue
         throw error;
       }
     }
   }
   
-  // Ensure we have at least some flashcards
   if (allFlashcards.length === 0) {
-    throw new Error(`Failed to generate any flashcards with ${provider}`);
+    throw new Error(`Failed to generate any flashcards`);
   }
   
-  // Ensure we have exactly the requested count and add metadata
   const finalFlashcards = allFlashcards.slice(0, count);
   
   return finalFlashcards.map((card: any) => ({
@@ -221,7 +185,7 @@ async function generateFlashcardsWithProvider(
 
 async function generateFlashcardsForChunk(
   text: string,
-  provider: "openai" | "anthropic",
+  model: string,
   apiKey: string,
   count: number,
   subject: string,
@@ -230,86 +194,46 @@ async function generateFlashcardsForChunk(
   customContext?: string
 ): Promise<FlashcardPair[]> {
   const prompt = createFlashcardPrompt(text, count, subject, focusAreas, difficulty, customContext);
-  
-  if (provider === "openai") {
-    return generateWithOpenAI(prompt, apiKey);
-  } else {
-    return generateWithAnthropic(prompt, apiKey);
-  }
+  return generateWithOpenRouter(prompt, model, apiKey);
 }
 
-async function generateWithOpenAI(prompt: string, apiKey: string): Promise<FlashcardPair[]> {
-  const openai = new OpenAI({ apiKey });
-  
-  return await withRetry(async () => {
+async function generateWithOpenRouter(prompt: string, model: string, apiKey: string): Promise<FlashcardPair[]> {
+  const openai = new OpenAI({ 
+    apiKey: apiKey,
+    baseURL: "https://openrouter.ai/api/v1"
+  });
+
+  return withRetry(async () => {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: model,
       messages: [
         {
           role: "system",
-          content: "You are an expert educational content creator specializing in creating precise, subject-specific flashcards. You must follow the exact count, difficulty level, and subject requirements provided. Always respond with valid JSON containing exactly the requested number of flashcards."
+          content: "You are an expert educator creating high-quality flashcards. Always respond with valid JSON containing an array of flashcard objects."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      response_format: { type: "json_object" },
       temperature: 0.7,
-      max_tokens: 4000
-    });
-
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error("No content received from OpenAI");
-    }
-
-    // Clean the response text to handle markdown code blocks
-    let cleanedText = content.trim();
-    if (cleanedText.startsWith('```json')) {
-      cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanedText.startsWith('```')) {
-      cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
-    
-    const result = JSON.parse(cleanedText);
-    return validateAndFormatFlashcards(result.flashcards || []);
-  }, "openai");
-}
-
-async function generateWithAnthropic(prompt: string, apiKey: string): Promise<FlashcardPair[]> {
-  const anthropic = new Anthropic({ apiKey });
-  
-  return await withRetry(async () => {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      system: "You are an expert Python instructor creating educational flashcards. Generate high-quality question-answer pairs focused specifically on Python syntax, code structure, and programming concepts. Always respond with valid JSON in the exact format requested.",
       max_tokens: 4000,
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error("Unexpected response format from Anthropic");
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("Empty response from API");
     }
 
-    // Clean the response text to handle markdown code blocks
-    let cleanedText = content.text.trim();
-    if (cleanedText.startsWith('```json')) {
-      cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanedText.startsWith('```')) {
-      cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    try {
+      const parsed = JSON.parse(content);
+      const flashcards = Array.isArray(parsed) ? parsed : parsed.flashcards || [];
+      return validateAndFormatFlashcards(flashcards);
+    } catch (parseError) {
+      console.error("Failed to parse OpenRouter response as JSON:", content);
+      throw new Error("Invalid JSON response from API");
     }
-    
-    const result = JSON.parse(cleanedText);
-    return validateAndFormatFlashcards(result.flashcards || []);
-  }, "anthropic");
+  }, 'openrouter');
 }
 
 function createFlashcardPrompt(
@@ -320,281 +244,123 @@ function createFlashcardPrompt(
   difficulty: string,
   customContext?: string
 ): string {
-  const focusAreasText = Object.entries(focusAreas)
+  const subjectContext = getSubjectContext(subject);
+  const focusText = Object.entries(focusAreas)
     .filter(([_, enabled]) => enabled)
-    .map(([area, _]) => {
-      switch (area) {
-        case 'concepts': return 'Key concepts and theories';
-        case 'definitions': return 'Definitions and terminology';
-        case 'examples': return 'Examples and case studies';
-        case 'procedures': return 'Procedures and methods';
-        default: return area;
-      }
-    })
-    .join(', ');
+    .map(([area]) => area)
+    .join(", ");
 
-  // Use custom context if provided, otherwise use subject-based context
-  const basePrompt = customContext && customContext.trim() 
-    ? `CUSTOM CONTEXT PROVIDED:
-${customContext}
+  let prompt = `Create exactly ${count} high-quality flashcards from the following ${subject} content.
 
-Apply the following requirements to the custom context above:`
-    : `SUBJECT CONTEXT:
-Subject: ${getSubjectContext(subject).name}
-Focus areas: ${focusAreasText || 'General concepts and knowledge'}
+${subjectContext}
 
-Apply subject-specific requirements:`;
-
-  return `
-${basePrompt}
-
-STRICT REQUIREMENTS:
-- Generate EXACTLY ${count} flashcards, no more, no less
-- Difficulty: ${difficulty} level
-
-Content to analyze:
-"""
+**Content to process:**
 ${text}
-"""
 
-DIFFICULTY LEVEL GUIDELINES:
-${difficulty === 'beginner' ? 
-  '- Use simple, clear language and basic concepts\n- Focus on definitions and fundamental principles\n- Avoid complex terminology' :
-  difficulty === 'intermediate' ?
-  '- Include moderate complexity and some technical terms\n- Combine multiple concepts in questions\n- Require some analysis and application' :
-  '- Use advanced terminology and complex concepts\n- Require synthesis and critical thinking\n- Include edge cases and nuanced scenarios'
-}
+**Requirements:**
+- Generate exactly ${count} flashcards
+- Difficulty level: ${difficulty}
+- Focus areas: ${focusText || "all aspects"}
+- Questions should be clear and specific
+- Answers should be comprehensive but concise
+- Include examples where appropriate
+- Use proper formatting and terminology for ${subject}`;
 
-SUBJECT-SPECIFIC FOCUS:
-1. Create flashcards that test understanding and application
-2. Focus on key concepts and practical knowledge
-3. Provide complete and accurate answers
-4. Use appropriate terminology and examples
-5. Ensure practical applicability
+  if (customContext) {
+    prompt += `\n- Additional context: ${customContext}`;
+  }
 
-CRITICAL: Return EXACTLY ${count} flashcards in valid JSON format:
-{
-  "flashcards": [
-    {
-      "question": "Specific ${difficulty}-level question",
-      "answer": "Complete answer with proper context",
-      "topic": "topic area",
-      "difficulty": "${difficulty}"
-    }
-  ]
-}
+  prompt += `
 
-COUNT VERIFICATION: The JSON response must contain exactly ${count} flashcard objects.
-`;
+**Response format (JSON only):**
+[
+  {
+    "question": "Clear, specific question here",
+    "answer": "Comprehensive but concise answer here",
+    "topic": "${subject}",
+    "difficulty": "${difficulty}"
+  }
+]`;
+
+  return prompt;
 }
 
 function getSubjectContext(subject: string) {
-  const contexts = {
-    programming: {
-      name: "Programming & Computer Science",
-      testingFocus: "practical coding knowledge and programming concepts",
-      contentFocus: "code structure, syntax, algorithms, and programming patterns",
-      answerStyle: "Include code examples in answers when appropriate",
-      example: `{
-  "question": "What is the correct syntax to define a function that takes two parameters and returns their sum?",
-  "answer": "def function_name(param1, param2):\\n    return param1 + param2",
-  "topic": "Functions",
-  "difficulty": "intermediate"
-}`
-    },
-    mathematics: {
-      name: "Mathematics & Statistics",
-      testingFocus: "mathematical concepts, formulas, and problem-solving techniques",
-      contentFocus: "theorems, definitions, formulas, and mathematical reasoning",
-      answerStyle: "Include mathematical notation and step-by-step explanations when relevant",
-      example: `{
-  "question": "What is the quadratic formula and when is it used?",
-  "answer": "x = (-b ± √(b² - 4ac)) / 2a\\nUsed to find the roots of quadratic equations ax² + bx + c = 0",
-  "topic": "Quadratic Equations",
-  "difficulty": "intermediate"
-}`
-    },
-    science: {
-      name: "Science & Engineering",
-      testingFocus: "scientific principles, processes, and engineering concepts",
-      contentFocus: "theories, laws, experimental procedures, and applications",
-      answerStyle: "Include scientific explanations and real-world applications",
-      example: `{
-  "question": "What is Newton's second law of motion?",
-  "answer": "F = ma\\nThe acceleration of an object is directly proportional to the net force acting on it and inversely proportional to its mass",
-  "topic": "Classical Mechanics",
-  "difficulty": "intermediate"
-}`
-    },
-    medicine: {
-      name: "Medicine & Health Sciences",
-      testingFocus: "medical knowledge, anatomy, diseases, and treatments",
-      contentFocus: "anatomical structures, physiological processes, pathology, and clinical applications",
-      answerStyle: "Include clinical relevance and medical terminology",
-      example: `{
-  "question": "What are the main functions of the liver?",
-  "answer": "1. Detoxification of blood\\n2. Protein synthesis\\n3. Bile production\\n4. Glucose metabolism\\n5. Storage of vitamins and minerals",
-  "topic": "Hepatology",
-  "difficulty": "intermediate"
-}`
-    },
-    business: {
-      name: "Business & Economics",
-      testingFocus: "business concepts, economic principles, and management strategies",
-      contentFocus: "theories, models, case studies, and practical applications",
-      answerStyle: "Include real-world business examples and economic implications",
-      example: `{
-  "question": "What is the difference between fixed costs and variable costs?",
-  "answer": "Fixed costs remain constant regardless of production volume (rent, salaries)\\nVariable costs change with production volume (materials, labor per unit)",
-  "topic": "Cost Analysis",
-  "difficulty": "intermediate"
-}`
-    },
-    history: {
-      name: "History & Social Studies",
-      testingFocus: "historical events, social movements, and cultural developments",
-      contentFocus: "dates, causes and effects, key figures, and historical context",
-      answerStyle: "Include historical context and significance",
-      example: `{
-  "question": "What were the main causes of World War I?",
-  "answer": "1. Militarism and arms race\\n2. Alliance system\\n3. Imperialism\\n4. Nationalism\\n5. Assassination of Archduke Franz Ferdinand (immediate trigger)",
-  "topic": "World War I",
-  "difficulty": "intermediate"
-}`
-    },
-    language: {
-      name: "Language & Literature",
-      testingFocus: "language skills, literary analysis, and linguistic concepts",
-      contentFocus: "grammar, vocabulary, literary devices, and cultural context",
-      answerStyle: "Include examples from literature and proper linguistic terminology",
-      example: `{
-  "question": "What is a metaphor and how does it differ from a simile?",
-  "answer": "A metaphor directly compares two things without using 'like' or 'as' (Life is a journey)\\nA simile uses 'like' or 'as' to compare (Life is like a journey)",
-  "topic": "Literary Devices",
-  "difficulty": "intermediate"
-}`
-    },
-    law: {
-      name: "Law & Legal Studies",
-      testingFocus: "legal principles, case law, and procedural knowledge",
-      contentFocus: "statutes, precedents, legal reasoning, and practical applications",
-      answerStyle: "Include legal terminology and cite relevant cases or statutes when appropriate",
-      example: `{
-  "question": "What is the doctrine of stare decisis?",
-  "answer": "The legal principle that courts should follow precedents set by previous decisions\\nLiterally means 'to stand by things decided'\\nProvides consistency and predictability in legal decisions",
-  "topic": "Legal Precedent",
-  "difficulty": "intermediate"
-}`
-    },
-    psychology: {
-      name: "Psychology & Behavioral Sciences",
-      testingFocus: "psychological theories, research methods, and behavioral patterns",
-      contentFocus: "theories, experiments, cognitive processes, and applications",
-      answerStyle: "Include research findings and psychological terminology",
-      example: `{
-  "question": "What is classical conditioning?",
-  "answer": "A learning process where a neutral stimulus becomes associated with a meaningful stimulus\\nExample: Pavlov's dogs learned to salivate at the sound of a bell paired with food",
-  "topic": "Learning Theory",
-  "difficulty": "intermediate"
-}`
-    },
-    general: {
-      name: "General Education",
-      testingFocus: "broad educational concepts and interdisciplinary knowledge",
-      contentFocus: "key facts, concepts, and connections across disciplines",
-      answerStyle: "Include clear explanations and relevant examples",
-      example: `{
-  "question": "What is the scientific method?",
-  "answer": "1. Observation\\n2. Question\\n3. Hypothesis\\n4. Experiment\\n5. Analysis\\n6. Conclusion\\nA systematic approach to understanding the natural world",
-  "topic": "Scientific Inquiry",
-  "difficulty": "intermediate"
-}`
-    }
+  const contexts: Record<string, string> = {
+    "Mathematics": "Focus on key theorems, formulas, problem-solving steps, and mathematical concepts. Include worked examples where helpful.",
+    "Science": "Emphasize scientific principles, processes, key terms, and cause-effect relationships. Include experimental details where relevant.",
+    "History": "Focus on dates, events, key figures, causes and consequences, and historical significance.",
+    "Language": "Include vocabulary, grammar rules, sentence structures, and cultural context where applicable.",
+    "Medicine": "Focus on symptoms, diagnoses, treatments, anatomical structures, and physiological processes.",
+    "Law": "Emphasize legal principles, case law, statutes, legal procedures, and key terminology.",
+    "Business": "Focus on concepts, strategies, case studies, financial principles, and management practices.",
+    "Literature": "Include themes, literary devices, character analysis, plot elements, and historical context.",
+    "Computer Science": "Focus on algorithms, data structures, programming concepts, and system design principles.",
+    "General": "Create well-structured questions covering key concepts, definitions, and important details."
   };
 
-  return contexts[subject as keyof typeof contexts] || contexts.general;
+  return contexts[subject] || contexts["General"];
 }
 
 function validateAndFormatFlashcards(flashcards: any[]): FlashcardPair[] {
-  const validFlashcards: FlashcardPair[] = [];
-  
-  for (const card of flashcards) {
-    const front = card.question || card.front;
-    const back = card.answer || card.back;
-    
-    if (
-      typeof front === 'string' &&
-      typeof back === 'string' &&
-      front.trim() &&
-      back.trim()
-    ) {
-      validFlashcards.push({
-        front: front.trim(),
-        back: back.trim(),
-        subject: typeof card.topic === 'string' ? card.topic.trim() : 
-                typeof card.subject === 'string' ? card.subject.trim() : undefined,
-        difficulty: typeof card.difficulty === 'string' ? 
-          card.difficulty as 'beginner' | 'intermediate' | 'advanced' : 
-          undefined
-      });
-    }
+  if (!Array.isArray(flashcards)) {
+    throw new Error("Response must be an array of flashcards");
   }
-  
-  if (validFlashcards.length === 0) {
-    throw new Error("No valid flashcards were generated");
-  }
-  
-  return validFlashcards;
+
+  return flashcards
+    .filter(card => card && (card.question || card.front) && (card.answer || card.back))
+    .map(card => ({
+      front: String(card.question || card.front || "").trim(),
+      back: String(card.answer || card.back || "").trim(),
+      subject: String(card.topic || card.subject || "General").trim(),
+      difficulty: (card.difficulty || "intermediate") as "beginner" | "intermediate" | "advanced"
+    }))
+    .filter(card => card.front.length > 0 && card.back.length > 0);
 }
 
 function chunkText(text: string, maxChunkSize: number): string[] {
   if (text.length <= maxChunkSize) {
     return [text];
   }
-  
+
   const chunks: string[] = [];
-  const paragraphs = text.split('\n\n');
-  let currentChunk = '';
-  
-  for (const paragraph of paragraphs) {
-    // If adding this paragraph would exceed the limit, start a new chunk
-    if (currentChunk.length + paragraph.length + 2 > maxChunkSize && currentChunk.length > 0) {
-      chunks.push(currentChunk.trim());
-      currentChunk = paragraph;
-    } else {
-      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
-    }
-  }
-  
-  // Add the last chunk if it has content
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
-  }
-  
-  // If we still have chunks that are too large, split them more aggressively
-  const finalChunks: string[] = [];
-  for (const chunk of chunks) {
-    if (chunk.length <= maxChunkSize) {
-      finalChunks.push(chunk);
-    } else {
-      // Split by sentences or lines
-      const sentences = chunk.split(/[.!?]\s+/);
-      let sentenceChunk = '';
-      
-      for (const sentence of sentences) {
-        if (sentenceChunk.length + sentence.length > maxChunkSize && sentenceChunk.length > 0) {
-          finalChunks.push(sentenceChunk.trim());
-          sentenceChunk = sentence;
-        } else {
-          sentenceChunk += (sentenceChunk ? '. ' : '') + sentence;
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  let currentChunk = "";
+
+  for (const sentence of sentences) {
+    const trimmedSentence = sentence.trim();
+    if (currentChunk.length + trimmedSentence.length + 1 > maxChunkSize) {
+      if (currentChunk) {
+        chunks.push(currentChunk.trim());
+        currentChunk = trimmedSentence;
+      } else {
+        // Sentence is too long, split by words
+        const words = trimmedSentence.split(' ');
+        let wordChunk = "";
+        for (const word of words) {
+          if (wordChunk.length + word.length + 1 > maxChunkSize) {
+            if (wordChunk) {
+              chunks.push(wordChunk.trim());
+              wordChunk = word;
+            } else {
+              chunks.push(word);
+            }
+          } else {
+            wordChunk += (wordChunk ? ' ' : '') + word;
+          }
+        }
+        if (wordChunk) {
+          currentChunk = wordChunk;
         }
       }
-      
-      if (sentenceChunk.trim()) {
-        finalChunks.push(sentenceChunk.trim());
-      }
+    } else {
+      currentChunk += (currentChunk ? '. ' : '') + trimmedSentence;
     }
   }
-  
-  return finalChunks.length > 0 ? finalChunks : [text.substring(0, maxChunkSize)];
+
+  if (currentChunk) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks.length > 0 ? chunks : [text];
 }
