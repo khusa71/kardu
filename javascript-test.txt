@@ -1,0 +1,32 @@
+JavaScript Fundamentals
+
+Variables in JavaScript are containers for storing data values. JavaScript has several primitive data types:
+
+1. String: Represents text data
+   Example: let name = 'John';
+
+2. Number: Represents both integers and floating-point numbers  
+   Example: let age = 25;
+
+3. Boolean: Represents true or false values
+   Example: let isActive = true;
+
+Functions are reusable blocks of code designed to perform a particular task.
+
+Function Declaration:
+function greet(name) {
+    return 'Hello, ' + name + '!';
+}
+
+Arrays are used to store multiple values in a single variable.
+Creating an array: let fruits = ['apple', 'banana', 'orange'];
+
+Objects are collections of key-value pairs.
+let person = { name: 'John', age: 30, city: 'New York' };
+
+Key Concepts:
+- Variables store data values
+- Functions perform specific tasks
+- Arrays hold multiple values
+- Objects contain key-value pairs
+- JavaScript is dynamically typed
