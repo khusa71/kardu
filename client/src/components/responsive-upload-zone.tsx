@@ -133,8 +133,11 @@ export function ResponsiveUploadZone({
               <p className="text-base lg:text-lg font-medium text-neutral dark:text-white mb-2">
                 Drop your PDF here, or tap to browse
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                 {isPremium ? "Up to 100 pages per file • 10MB max" : "Up to 20 pages per file • 10MB max"}
+              </p>
+              <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                📄 PDF files only - Other formats not supported
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-xs text-gray-400">

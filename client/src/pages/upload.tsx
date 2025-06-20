@@ -110,6 +110,12 @@ export default function Upload() {
           variant: "destructive",
         });
         setShowAuthModal(true);
+      } else if (error.message?.includes('Only PDF files are allowed')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload PDF files only. Other file types are not supported.",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Upload failed",

@@ -56,10 +56,12 @@ const upload = multer({
     files: 10, // Maximum 10 files (will be restricted by user role)
   },
   fileFilter: (req, file, cb) => {
+    console.log('DEBUG: File upload attempt:', file.originalname, 'Type:', file.mimetype);
     if (file.mimetype === "application/pdf") {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF files are allowed"));
+      console.log('DEBUG: File rejected - not PDF. Attempted type:', file.mimetype);
+      cb(new Error(`Only PDF files are allowed. You uploaded: ${file.mimetype}`));
     }
   },
 });
@@ -214,8 +216,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced upload validation middleware with page-based limits
   const validateFileUploads = async (req: any, res: any, next: any) => {
     try {
+      console.log('DEBUG: validateFileUploads middleware started');
       const userId = req.user!.id;
+      console.log('DEBUG: userId:', userId);
+      
       if (!userId) {
+        console.log('DEBUG: No userId found');
         return res.status(401).json({ message: "Authentication required" });
       }
 
@@ -280,17 +286,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalPagesWillProcess = 0;
       const fileValidations = [];
 
+      console.log('DEBUG: Starting validation for', files.length, 'files');
+      
       for (const file of files) {
+        console.log('DEBUG: Processing file:', file.originalname, 'Size:', file.size);
+        
         // Save file temporarily to check page count
         const tempFilePath = path.join(tempDir, `temp_${Date.now()}_${file.originalname}`);
         fs.writeFileSync(tempFilePath, file.buffer);
+        console.log('DEBUG: Temp file saved at:', tempFilePath);
 
         try {
           // Get page count
+          console.log('DEBUG: Getting page count for:', file.originalname);
           const pageInfo = await getPageCount(tempFilePath);
+          console.log('DEBUG: Page info:', pageInfo);
           
           // Check if user can upload this file
+          console.log('DEBUG: Checking user upload permissions for', pageInfo.pageCount, 'pages');
           const uploadCheck = await canUserUpload(userId, pageInfo.pageCount);
+          console.log('DEBUG: Upload check result:', uploadCheck);
           
           if (!uploadCheck.canUpload) {
             // Clean up temp file
@@ -316,6 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           // Clean up temp file on error
           fs.unlinkSync(tempFilePath);
+          console.error('DEBUG: Page validation error for', file.originalname, ':', error);
           return res.status(400).json({
             message: `Failed to analyze PDF: ${file.originalname}`,
             error: error instanceof Error ? error.message : 'Unknown error'
@@ -327,6 +343,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.fileValidations = fileValidations;
       req.totalPagesWillProcess = totalPagesWillProcess;
       req.userType = user.isPremium ? "premium" : "free";
+      
+      console.log('DEBUG: File validation complete');
+      console.log('DEBUG: Validated files count:', fileValidations.length);
+      console.log('DEBUG: Total pages to process:', totalPagesWillProcess);
+      
       next();
     } catch (error) {
       console.error("File upload validation error:", error);
@@ -335,7 +356,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Upload PDF(s) and start processing (with auth, rate limiting, and API key validation)
-  app.post("/api/upload", verifySupabaseToken as any, validateFileUploads as any, requireApiKeys, upload.array("pdfs", 10), async (req: any, res) => {
+  app.post("/api/upload", verifySupabaseToken as any, requireApiKeys, (req, res, next) => {
+    upload.array("pdfs", 10)(req, res, (err) => {
+      if (err) {
+        console.log('DEBUG: Upload error:', err.message, err.code);
+        if (err.code === 'LIMIT_UNEXPECTED_FILE' || err.message.includes('Only PDF files are allowed')) {
+          return res.status(400).json({ 
+            message: "Only PDF files are allowed. Please upload PDF documents only.",
+            error: "INVALID_FILE_TYPE"
+          });
+        }
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  }, validateFileUploads as any, async (req: any, res) => {
     try {
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
@@ -420,9 +455,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const createdJobs = [];
       const fileValidations = req.fileValidations;
       
+      console.log('DEBUG: Starting job creation process');
+      console.log('DEBUG: File validations length:', fileValidations?.length || 0);
+      console.log('DEBUG: Request has files:', req.files?.length || 0);
+      console.log('DEBUG: Request fileValidations:', req.fileValidations ? 'Present' : 'Missing');
+      
       for (let i = 0; i < fileValidations.length; i++) {
         const validation = fileValidations[i];
         const file = validation.file;
+        
+        console.log(`DEBUG: Processing file ${i + 1}: ${file.originalname}`);
+        console.log('DEBUG: Validation data:', {
+          pageCount: validation.pageInfo?.pageCount,
+          pagesWillProcess: validation.pagesWillProcess
+        });
         
         // Create job with page information
         const jobData = {
@@ -445,24 +491,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
               : "Starting processing...",
         };
 
-        // Create job record
-        const job = await storage.createFlashcardJob(jobData);
-        createdJobs.push(job);
+        console.log('DEBUG: Job data prepared:', jobData);
 
-        // Start processing asynchronously with page limits
-        processFlashcardJobWithPageLimits(
-          job.id, 
-          validation.tempFilePath, 
-          file.originalname, 
-          selectedProvider, 
-          subject, 
-          focusAreas, 
-          difficulty, 
-          userId, 
-          flashcardCount, 
-          customContext,
-          validation.pagesWillProcess || validation.pageInfo.pageCount
-        );
+        try {
+          // Create job record
+          const job = await storage.createFlashcardJob(jobData);
+          console.log('DEBUG: Job created successfully:', job.id);
+          createdJobs.push(job);
+
+          // Start processing asynchronously with page limits
+          processFlashcardJobWithPageLimits(
+            job.id, 
+            validation.tempFilePath, 
+            file.originalname, 
+            selectedProvider, 
+            subject, 
+            focusAreas, 
+            difficulty, 
+            userId, 
+            flashcardCount, 
+            customContext,
+            validation.pagesWillProcess || validation.pageInfo.pageCount
+          );
+        } catch (error) {
+          console.error('DEBUG: Failed to create job:', error);
+          throw error;
+        }
       }
 
       // Increment user quotas
