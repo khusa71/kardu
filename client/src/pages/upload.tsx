@@ -22,7 +22,7 @@ import type { FlashcardJob, FlashcardPair } from "@shared/schema";
 
 export default function Upload() {
   const { toast } = useToast();
-  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, logout, sendVerificationEmail, refreshUserData } = useSupabaseAuth();
+  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, sendVerificationEmail, refreshUserData } = useSupabaseAuth();
   
   // Form state - updated for multiple files
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -302,8 +302,8 @@ export default function Upload() {
   // Determine if user is OAuth-verified (Google) or email-verified
   const isOAuthUser = (user as any)?.provider === 'google' || 
                      (user as any)?.app_metadata?.providers?.includes('google') ||
-                     user?.user_metadata?.iss === 'https://accounts.google.com';
-  const isEmailVerified = isOAuthUser || (user as any)?.isEmailVerified || user?.email_confirmed_at;
+                     (user as any)?.user_metadata?.iss === 'https://accounts.google.com';
+  const isEmailVerified = isOAuthUser || (user as any)?.isEmailVerified || !!(user as any)?.email_confirmed_at;
   
   const canUpload = user && (isPremium || userUploads < userLimit) && isEmailVerified;
   const isGenerateDisabled = (selectedFiles.length === 0 && !selectedStorageFile) || !canUpload || uploadMutation.isPending;

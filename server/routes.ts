@@ -11,6 +11,7 @@ import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
 import { objectStorage } from "./object-storage-service";
+import { supabaseStorage } from "./supabase-storage-service";
 import { verifySupabaseToken, requireEmailVerification, AuthenticatedRequest } from "./supabase-auth";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
 import { healthMonitor } from "./health-monitor";
@@ -86,11 +87,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userData = await storage.upsertUserProfile({
         id: id || req.user!.id,
-        email,
-        displayName,
-        photoURL,
-        provider,
-        isEmailVerified: emailVerified,
+        isPremium: false,
+        role: 'user',
+        monthlyUploads: 0,
+        monthlyLimit: 3,
+        monthlyPagesProcessed: 0,
+        lastResetDate: new Date(),
         updatedAt: new Date()
       });
       

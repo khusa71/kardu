@@ -70,7 +70,7 @@ function shouldResetQuota(lastResetDate: Date, currentDate: Date): boolean {
  * Reset user quota (typically called monthly)
  */
 export async function resetUserQuota(userId: string): Promise<void> {
-  await db.update(users)
+  await db.update(userProfiles)
     .set({
       monthlyUploads: 0,
       monthlyPagesProcessed: 0,
@@ -90,7 +90,7 @@ export async function incrementUploadCount(userId: string, pagesProcessed: numbe
     await resetUserQuota(userId);
   }
 
-  await db.update(users)
+  await db.update(userProfiles)
     .set({
       monthlyUploads: (quota.needsReset ? 0 : quota.monthlyUploads) + 1,
       monthlyPagesProcessed: (quota.needsReset ? 0 : quota.monthlyPagesProcessed) + pagesProcessed,

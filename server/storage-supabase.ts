@@ -35,6 +35,8 @@ export interface IStorage {
   getFlashcardJob(id: number): Promise<FlashcardJob | undefined>;
   getUserJobs(userId: string): Promise<FlashcardJob[]>;
   updateFlashcardJob(id: number, updates: Partial<FlashcardJob>): Promise<void>;
+  deleteFlashcardJob(id: number): Promise<void>;
+  updateJobFilename(id: number, filename: string): Promise<void>;
   getFlashcardJobs(limit?: number): Promise<FlashcardJob[]>;
 
   // Study progress operations
@@ -204,6 +206,14 @@ export class SupabaseStorage implements IStorage {
       .update(flashcardJobs)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(flashcardJobs.id, id));
+  }
+
+  async deleteFlashcardJob(id: number): Promise<void> {
+    await db.delete(flashcardJobs).where(eq(flashcardJobs.id, id));
+  }
+
+  async updateJobFilename(id: number, filename: string): Promise<void> {
+    await db.update(flashcardJobs).set({ filename, updatedAt: new Date() }).where(eq(flashcardJobs.id, id));
   }
 
   async getFlashcardJobs(limit: number = 50): Promise<FlashcardJob[]> {
