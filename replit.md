@@ -111,6 +111,10 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - June 20, 2025: Validated S3 bucket functionality - all storage operations working correctly
 - June 20, 2025: Completed comprehensive testing of PDF upload to flashcard creation flow
 - June 20, 2025: Validated all pipeline components including text processing, AI generation, and exports
+- June 20, 2025: Fixed critical database deletion errors causing 500 status responses
+- June 20, 2025: Reset user upload quotas to resolve monthly limit blocks
+- June 20, 2025: Fixed JSON parsing issue with OpenRouter API markdown code block responses
+- June 20, 2025: Resolved TypeScript compilation errors and authentication token mismatches
 
 ## Changelog
 - June 20, 2025. Initial setup and migration to Replit environment

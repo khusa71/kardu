@@ -226,7 +226,14 @@ async function generateWithOpenRouter(prompt: string, model: string, apiKey: str
     }
 
     try {
-      const parsed = JSON.parse(content);
+      // Handle markdown code blocks - extract JSON from ```json blocks
+      let jsonContent = content.trim();
+      const jsonMatch = jsonContent.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1].trim();
+      }
+      
+      const parsed = JSON.parse(jsonContent);
       const flashcards = Array.isArray(parsed) ? parsed : parsed.flashcards || [];
       return validateAndFormatFlashcards(flashcards);
     } catch (parseError) {
