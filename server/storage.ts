@@ -78,21 +78,23 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('Attempting to upsert user profile:', userData);
       
+      // Use only columns that exist in current database
+      const dbUserData = {
+        id: userData.id,
+        email: userData.email,
+        isPremium: userData.isPremium || false,
+        createdAt: userData.createdAt || new Date(),
+        updatedAt: userData.updatedAt || new Date(),
+      };
+
       const [profile] = await db
         .insert(userProfiles)
-        .values({
-          ...userData,
-          createdAt: userData.createdAt || new Date(),
-          updatedAt: userData.updatedAt || new Date(),
-        })
+        .values(dbUserData)
         .onConflictDoUpdate({
           target: userProfiles.id,
           set: {
-            email: userData.email,
-            isPremium: userData.isPremium,
-            role: userData.role,
-            isEmailVerified: userData.isEmailVerified,
-            monthlyLimit: userData.monthlyLimit,
+            email: dbUserData.email,
+            isPremium: dbUserData.isPremium,
             updatedAt: new Date(),
           },
         })

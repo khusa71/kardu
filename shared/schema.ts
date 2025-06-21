@@ -24,23 +24,11 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User profiles table for Supabase Auth (extends auth.users)
+// User profiles table - exact column names from current database
 export const userProfiles = pgTable("user_profiles", {
-  id: varchar("id").primaryKey().notNull(), // Supabase UID from auth.users
+  id: varchar("id").primaryKey().notNull(),
   email: varchar("email"),
-  isEmailVerified: boolean("is_email_verified").default(false),
   isPremium: boolean("is_premium").default(false),
-  role: varchar("role").default("user"), // 'user' | 'admin' | 'moderator'
-  monthlyUploads: integer("monthly_uploads").default(0),
-  monthlyLimit: integer("monthly_limit").default(3),
-  monthlyPagesProcessed: integer("monthly_pages_processed").default(0),
-  lastUploadDate: timestamp("last_upload_date"),
-  lastResetDate: timestamp("last_reset_date").defaultNow(),
-  // Stripe fields
-  stripeCustomerId: varchar("stripe_customer_id"),
-  stripeSubscriptionId: varchar("stripe_subscription_id"),
-  subscriptionStatus: varchar("subscription_status"), // 'active' | 'canceled' | 'past_due' | null
-  subscriptionPeriodEnd: timestamp("subscription_period_end"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
