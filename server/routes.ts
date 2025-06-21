@@ -11,6 +11,25 @@ import { cacheService } from "./cache-service";
 import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
 import { supabaseStorage } from "./supabase-storage-service";
+import { OnDemandDownloadService } from "./on-demand-downloads";
+
+const onDemandDownloadService = new OnDemandDownloadService();
+
+// Helper function for content types
+function getContentType(format: string): string {
+  switch (format) {
+    case 'csv': return 'text/csv';
+    case 'json': return 'application/json';
+    case 'quizlet': 
+    case 'anki': return 'text/plain';
+    default: return 'application/octet-stream';
+  }
+}
+
+// Serve temporary files
+function serveTemporaryFiles(app: Express) {
+  app.use('/temp', express.static(path.join(process.cwd(), 'temp')));
+}
 import { verifySupabaseToken, requireEmailVerification, AuthenticatedRequest } from "./supabase-auth";
 import { createNormalizedFlashcards, executeNormalizedMigration, getFlashcardsWithProgress } from "./normalized-migration";
 import { updateJobProgressWithNormalizedFlashcards } from "./flashcard-migration-complete";
@@ -1293,12 +1312,6 @@ async function processFlashcardJob(jobId: number) {
       status: "completed",
       progress: 100,
       currentTask: "Processing complete",
-      csvStorageKey: exports.csv?.key,
-      csvDownloadUrl: exports.csv?.url,
-      jsonStorageKey: exports.json?.key,
-      jsonDownloadUrl: exports.json?.url,
-      quizletStorageKey: exports.quizlet?.key,
-      quizletDownloadUrl: exports.quizlet?.url,
       processingTime: Math.floor((Date.now() - (job.updatedAt ? new Date(job.updatedAt).getTime() : Date.now())) / 1000),
       updatedAt: new Date()
     });
@@ -1336,23 +1349,12 @@ async function processFlashcardJob(jobId: number) {
         return res.status(403).json({ message: "Access denied. You can only delete your own jobs." });
       }
       
-      // Delete files from object storage
-      const filesToDelete = [
-        job.pdfStorageKey,
-        job.ankiStorageKey,
-        job.csvStorageKey,
-        job.jsonStorageKey,
-        job.quizletStorageKey
-      ].filter(Boolean); // Remove null/undefined values
-      
-      let deletedFiles = 0;
-      for (const fileKey of filesToDelete) {
+      // Delete PDF file from object storage
+      if (job.pdfStorageKey) {
         try {
-          const deleted = await supabaseStorage.deleteFile(fileKey as string);
-          if (deleted) deletedFiles++;
+          await supabaseStorage.deleteFile(job.pdfStorageKey);
         } catch (error) {
-          console.error(`Failed to delete file ${fileKey}:`, error);
-          // Continue with other files even if one fails
+          console.error(`Failed to delete PDF file ${job.pdfStorageKey}:`, error);
         }
       }
       
@@ -1364,9 +1366,7 @@ async function processFlashcardJob(jobId: number) {
       }
       
       res.json({ 
-        message: "Job deleted successfully",
-        deletedFiles,
-        totalFiles: filesToDelete.length
+        message: "Job deleted successfully"
       });
       
     } catch (error) {
@@ -1375,24 +1375,13 @@ async function processFlashcardJob(jobId: number) {
     }
   });
 
-  // Download Anki deck
+  // Download Anki deck (legacy endpoint - redirects to new export system)
   app.get("/api/download/:id", async (req, res) => {
     try {
       const jobId = parseInt(req.params.id);
-      const job = await storage.getFlashcardJob(jobId);
-      
-      if (!job || !job.ankiStorageKey) {
-        return res.status(404).json({ message: "Anki deck not ready" });
-      }
-
-      res.setHeader('Content-Disposition', `attachment; filename="StudyCards_${jobId}.apkg"`);
-      res.setHeader('Content-Type', 'application/vnd.anki');
-      
-      const fileBuffer = await supabaseStorage.downloadFile(job.ankiStorageKey);
-      const stream = require('stream').Readable.from(fileBuffer);
-      stream.pipe(res);
-      
-    } catch (error) {
+      // Redirect to new export endpoint for Anki format
+      res.redirect(`/api/export/${jobId}/anki`);
+    } catch (error: any) {
       console.error("Download error:", error);
       res.status(500).json({ message: "Download failed" });
     }
@@ -1419,10 +1408,7 @@ async function processFlashcardJob(jobId: number) {
         updatedAt: job.updatedAt,
         processingTime: job.processingTime,
         hasFlashcards: job.flashcardCount > 0,
-        hasAnkiDeck: !!job.ankiStorageKey,
-        hasCsvExport: !!job.csvStorageKey,
-        hasJsonExport: !!job.jsonStorageKey,
-        hasQuizletExport: !!job.quizletStorageKey,
+        canExport: job.status === 'completed' && job.flashcardCount > 0,
         errorMessage: job.errorMessage
       }));
 
@@ -1628,42 +1614,37 @@ async function processFlashcardJob(jobId: number) {
       }
 
       // Get the appropriate storage key based on format
-      let storageKey: string | undefined;
-      let filename: string;
-      let contentType: string;
-
-      switch (format) {
-        case 'csv':
-          storageKey = job.csvStorageKey ?? undefined;
-          filename = `StudyCards_${jobId}.csv`;
-          contentType = 'text/csv';
-          break;
-        case 'json':
-          storageKey = job.jsonStorageKey ?? undefined;
-          filename = `StudyCards_${jobId}.json`;
-          contentType = 'application/json';
-          break;
-        case 'quizlet':
-          storageKey = job.quizletStorageKey ?? undefined;
-          filename = `StudyCards_${jobId}_quizlet.txt`;
-          contentType = 'text/plain';
-          break;
-        default:
-          return res.status(400).json({ message: "Unsupported format" });
+      if (!['csv', 'json', 'quizlet', 'anki'].includes(format)) {
+        return res.status(400).json({ message: "Unsupported format" });
       }
 
-      if (!storageKey) {
-        return res.status(404).json({ message: "Export file not available" });
+      if (job.status !== 'completed') {
+        return res.status(400).json({ message: "Job not completed yet" });
       }
 
       try {
-        const fileBuffer = await supabaseStorage.downloadFile(storageKey);
+        // Generate file on-demand using normalized flashcard data
+        const downloadResult = await onDemandDownloadService.generateDownload(
+          userId, 
+          jobId, 
+          format as 'csv' | 'json' | 'quizlet' | 'anki'
+        );
         
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `attachment; filename="${downloadResult.filename}"`);
+        res.setHeader('Content-Type', getContentType(format));
         
+        const fileBuffer = require('fs').readFileSync(downloadResult.filePath);
         res.send(fileBuffer);
-      } catch (downloadError) {
+        
+        // Clean up temp file after sending
+        setTimeout(() => {
+          try {
+            require('fs').unlinkSync(downloadResult.filePath);
+          } catch (e) {
+            console.error('Failed to cleanup temp file:', e);
+          }
+        }, 1000);
+      } catch (downloadError: any) {
         console.error("File download error:", downloadError);
         return res.status(404).json({ message: "Export file not found" });
       }
@@ -1917,6 +1898,7 @@ async function processFlashcardJob(jobId: number) {
       const progressData = {
         userId,
         jobId,
+        cardIndex, // Keep for compatibility with storage interface
         flashcardId: flashcardRecords[0].id,
         status,
         difficultyRating,
@@ -1963,6 +1945,7 @@ async function processFlashcardJob(jobId: number) {
       const batchData = progressUpdates.map((update: any) => ({
         userId,
         jobId: parseInt(jobId),
+        cardIndex: update.cardIndex, // Keep for compatibility with storage interface
         flashcardId: cardIndexToFlashcardId.get(update.cardIndex),
         status: update.status,
         difficultyRating: update.difficultyRating,
@@ -2623,14 +2606,6 @@ async function processFlashcardJobWithPageLimits(
       pagesProcessed: finalPagesToProcess, // Ensure final count is saved
       pdfStorageKey: storedPdf.key,
       pdfDownloadUrl: storedPdf.url,
-      ankiStorageKey: storedAnki.key,
-      ankiDownloadUrl: storedAnki.url,
-      csvStorageKey: exportFiles.csv?.key,
-      csvDownloadUrl: exportFiles.csv?.url,
-      jsonStorageKey: exportFiles.json?.key,
-      jsonDownloadUrl: exportFiles.json?.url,
-      quizletStorageKey: exportFiles.quizlet?.key,
-      quizletDownloadUrl: exportFiles.quizlet?.url,
       updatedAt: new Date()
     });
 
@@ -2803,14 +2778,7 @@ async function processFlashcardJob(
       currentTask: "All files ready for download",
       pdfStorageKey: storedPdf.key,
       pdfDownloadUrl: storedPdf.url,
-      ankiStorageKey: storedAnki.key,
-      ankiDownloadUrl: storedAnki.url,
-      csvStorageKey: exportFiles.csv?.key,
-      csvDownloadUrl: exportFiles.csv?.url,
-      jsonStorageKey: exportFiles.json?.key,
-      jsonDownloadUrl: exportFiles.json?.url,
-      quizletStorageKey: exportFiles.quizlet?.key,
-      quizletDownloadUrl: exportFiles.quizlet?.url,
+
     });
 
     // Clean up temporary files
@@ -3040,14 +3008,6 @@ async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: stri
       progress: 100,
       currentTask: "Regeneration completed!",
       flashcardCount: flashcards.length,
-      ankiStorageKey: ankiResult?.key,
-      ankiDownloadUrl: ankiResult?.url,
-      csvStorageKey: exportResults.csv?.key,
-      csvDownloadUrl: exportResults.csv?.url,
-      jsonStorageKey: exportResults.json?.key,
-      jsonDownloadUrl: exportResults.json?.url,
-      quizletStorageKey: exportResults.quizlet?.key,
-      quizletDownloadUrl: exportResults.quizlet?.url,
       processingTime: Math.floor((Date.now() - new Date(job.createdAt!).getTime()) / 1000)
     });
 
@@ -3166,14 +3126,6 @@ async function regenerateFlashcardsProcess(
       progress: 100,
       currentTask: "Regeneration completed!",
       flashcardCount: flashcards.length,
-      ankiStorageKey: ankiResult?.key,
-      ankiDownloadUrl: ankiResult?.url,
-      csvStorageKey: exportResults.csv?.key,
-      csvDownloadUrl: exportResults.csv?.url,
-      jsonStorageKey: exportResults.json?.key,
-      jsonDownloadUrl: exportResults.json?.url,
-      quizletStorageKey: exportResults.quizlet?.key,
-      quizletDownloadUrl: exportResults.quizlet?.url,
       processingTime: Math.floor((Date.now() - new Date(originalJob.createdAt!).getTime()) / 1000)
     });
 

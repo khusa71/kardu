@@ -62,15 +62,7 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   status: text("status").notNull(), // 'pending' | 'processing' | 'completed' | 'failed'
   progress: integer("progress").default(0), // 0-100
   currentTask: text("current_task"),
-  // Removed flashcards JSON field - now normalized in flashcards table
-  ankiStorageKey: text("anki_storage_key"), // Object Storage key for Anki deck
-  ankiDownloadUrl: text("anki_download_url"), // Download URL for Anki deck
-  csvStorageKey: text("csv_storage_key"), // Object Storage key for CSV export
-  csvDownloadUrl: text("csv_download_url"), // Download URL for CSV export
-  jsonStorageKey: text("json_storage_key"), // Object Storage key for JSON export
-  jsonDownloadUrl: text("json_download_url"), // Download URL for JSON export
-  quizletStorageKey: text("quizlet_storage_key"), // Object Storage key for Quizlet export
-  quizletDownloadUrl: text("quizlet_download_url"), // Download URL for Quizlet export
+  // Removed permanent export storage - files generated on-demand
   errorMessage: text("error_message"),
   processingTime: integer("processing_time"), // Time taken in seconds
   createdAt: timestamp("created_at").defaultNow(),
@@ -142,6 +134,22 @@ export const studySessions = pgTable("study_sessions", {
   index("idx_study_sessions_date").on(table.createdAt),
 ]);
 
+// Temporary downloads table for on-demand file generation
+export const temporaryDownloads = pgTable("temporary_downloads", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => userProfiles.id),
+  jobId: integer("job_id").notNull().references(() => flashcardJobs.id, { onDelete: "cascade" }),
+  format: text("format").notNull(), // 'anki' | 'csv' | 'json' | 'quizlet'
+  storageKey: text("storage_key").notNull(),
+  downloadUrl: text("download_url").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_temporary_downloads_user").on(table.userId),
+  index("idx_temporary_downloads_job").on(table.jobId),
+  index("idx_temporary_downloads_expires").on(table.expiresAt),
+]);
+
 export const insertFlashcardJobSchema = createInsertSchema(flashcardJobs).omit({
   id: true,
   createdAt: true,
@@ -162,6 +170,11 @@ export const insertStudyProgressSchema = createInsertSchema(studyProgress).omit(
 
 export const insertStudySessionSchema = createInsertSchema(studySessions);
 
+export const insertTemporaryDownloadSchema = createInsertSchema(temporaryDownloads).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertFlashcardJob = z.infer<typeof insertFlashcardJobSchema>;
 export type FlashcardJob = typeof flashcardJobs.$inferSelect;
 export type Flashcard = typeof flashcards.$inferSelect;
@@ -172,6 +185,8 @@ export type StudyProgress = typeof studyProgress.$inferSelect;
 export type InsertStudyProgress = z.infer<typeof insertStudyProgressSchema>;
 export type StudySession = typeof studySessions.$inferSelect;
 export type InsertStudySession = z.infer<typeof insertStudySessionSchema>;
+export type TemporaryDownload = typeof temporaryDownloads.$inferSelect;
+export type InsertTemporaryDownload = z.infer<typeof insertTemporaryDownloadSchema>;
 
 export interface FlashcardPair {
   id?: number;
