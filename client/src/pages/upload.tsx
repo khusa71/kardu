@@ -53,18 +53,10 @@ export default function Upload() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentJobId, setCurrentJobId] = useState<number | null>(null);
 
-  // Deep state debugging
-  useEffect(() => {
-    console.log('🔄 currentStep changed to:', currentStep);
-  }, [currentStep]);
-
-  useEffect(() => {
-    console.log('🔄 isProcessing changed to:', isProcessing);
-  }, [isProcessing]);
-
-  useEffect(() => {
-    console.log('🔄 currentJobId changed to:', currentJobId);
-  }, [currentJobId]);
+  // Performance monitoring
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState<string>('');
+  const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   // Configuration state
@@ -101,20 +93,19 @@ export default function Upload() {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log('=== UPLOAD SUCCESS ===');
-      console.log('Full upload response:', JSON.stringify(data, null, 2));
-      
       const jobId = data.jobs && data.jobs.length > 0 ? data.jobs[0].jobId : data.jobId;
-      console.log('Extracted job ID:', jobId);
-      console.log('Setting currentJobId state to:', jobId);
-      console.log('Setting currentStep to: 3');
-      console.log('Setting isProcessing to: true');
       
       setCurrentJobId(jobId);
       setCurrentStep(3);
       setIsProcessing(true);
+      setUploadProgress(10);
+      setProcessingStage('Upload complete, analyzing PDF...');
       
-      console.log('State update complete, upload success toast showing');
+      // Calculate estimated processing time
+      const fileSize = selectedFiles[0]?.size || 0;
+      const estimatedMinutes = Math.ceil((fileSize / 1024 / 1024) * 0.3);
+      setEstimatedTime(Math.max(estimatedMinutes, 1));
+      
       toast({
         title: "Upload successful!",
         description: "Your PDF is being processed. This may take a few minutes.",
@@ -727,29 +718,41 @@ export default function Upload() {
             </Card>
           )}
 
-          {/* Step 3: Processing */}
+          {/* Step 3: Enhanced Processing with Progress Tracking */}
           {currentStep === 3 && (
-            <Card className="shadow-xl border-0">
-              <CardContent className="py-12">
+            <Card className="border border-border">
+              <CardContent className="py-8">
                 <div className="text-center space-y-6">
-                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                    <Loader2 className="w-8 h-8 text-foreground animate-spin" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-foreground mb-2">
+                    <h3 className="text-xl font-bold text-foreground mb-2">
                       Creating Your Flashcards
                     </h3>
-                    <p className="text-muted-foreground text-lg">
-                      Our AI is analyzing your PDF and generating smart flashcards...
+                    <p className="text-sm text-muted-foreground">
+                      AI is analyzing your PDF and generating smart flashcards
                     </p>
                   </div>
                   
                   <div className="max-w-md mx-auto space-y-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">{jobStatus ? (jobStatus as any)?.progress || 0 : 0}%</span>
+                      <span className="font-medium">{uploadProgress}%</span>
                     </div>
-                    <Progress value={jobStatus ? (jobStatus as any)?.progress || 0 : 0} className="h-3" />
+                    <Progress value={uploadProgress} className="h-2" />
+                    
+                    {/* Processing Stage Indicator */}
+                    <div className="text-xs text-muted-foreground">
+                      {processingStage}
+                    </div>
+                    
+                    {/* Estimated Time Remaining */}
+                    {estimatedTime && (
+                      <div className="text-xs text-muted-foreground">
+                        Estimated time: ~{estimatedTime} minute{estimatedTime !== 1 ? 's' : ''}
+                      </div>
+                    )}
                     <p className="text-sm text-muted-foreground">
                       Status: {jobStatus ? (jobStatus as any)?.status || 'Processing...' : 'Processing...'}
                     </p>
