@@ -58,7 +58,6 @@ export class PerformanceOptimizer {
       const batch = items.slice(i, i + batchSize);
       const batchPromises = batch.map(item => 
         processor(item).catch(error => {
-          console.error('Batch processing error:', error);
           return null;
         })
       );
@@ -104,11 +103,11 @@ Requirements:
     const result = computation();
     this.computationCache.set(key, result);
     
-    // Clean cache if it gets too large - more aggressive cleanup
-    if (this.computationCache.size > 50) {
-      // Remove oldest 10 entries
+    // Clean cache aggressively to prevent memory bloat
+    if (this.computationCache.size > 25) {
+      // Remove oldest 15 entries
       const keys = Array.from(this.computationCache.keys());
-      for (let i = 0; i < 10 && keys.length > 0; i++) {
+      for (let i = 0; i < 15 && keys.length > 0; i++) {
         this.computationCache.delete(keys[i]);
       }
     }

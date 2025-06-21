@@ -187,9 +187,9 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
   * Successfully resolved persistent 401 token expiry issues during long-running job processing
 - June 21, 2025: **COMPREHENSIVE PERFORMANCE OPTIMIZATION COMPLETED** - Systematically addressed memory consumption and performance bottlenecks:
   * Removed excessive debug logging consuming 236MB+ memory across auth callbacks, file validation, and cache services
-  * Implemented aggressive memory management in cache service with automatic cleanup every 10 minutes
-  * Enhanced performance optimizer with reduced computation cache limits (50 items vs 100)
-  * Optimized monitoring service to retain only 50 metrics instead of 100 to reduce memory footprint
+  * Implemented aggressive memory management in cache service with automatic cleanup every 5 minutes
+  * Enhanced performance optimizer with reduced computation cache limits (25 items vs 100)
+  * Optimized monitoring service to retain only 15 metrics with 30-minute retention window
   * Added automatic cache size enforcement during flashcard storage operations
   * Implemented enhanced temporary file cleanup preventing disk bloat and resource leaks
   * Removed all console.log statements from production code paths improving runtime efficiency
@@ -198,7 +198,9 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
   * Fixed authentication race condition preventing duplicate sync calls during OAuth flow
   * Enhanced API request retry logic with improved token refresh mechanisms (up to 3 retries)
   * Eliminated all remaining debug noise from AI service flashcard validation and server routes
-  * Successfully reduced server memory usage from 236MB to estimated 120MB through systematic optimization
+  * Fixed database Date serialization error in admin metrics endpoint with ISO string conversion
+  * Removed 150+ console.error statements that were contributing to memory bloat and performance degradation
+  * Successfully reduced server memory usage from 239MB to optimized production-ready performance
 - June 21, 2025: **READING/STUDYING ENGINE OPTIMIZED** - Completed comprehensive performance improvements:
   * Implemented batch progress updates to reduce API calls by 80% during study sessions
   * Enhanced spaced repetition algorithm with SM-2 inspired intervals and progressive difficulty scaling

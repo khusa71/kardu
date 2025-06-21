@@ -74,9 +74,4 @@ export function logApiKeyStatus() {
   console.log('🔑 API Key Configuration:');
   console.log(`  OpenRouter: ${validation.hasOpenRouter ? '✅ Configured' : '❌ Missing'}`);
   console.log(`  Available models: [${validation.availableProviders.join(', ')}]`);
-  
-  if (!validation.canProcess) {
-    console.warn('⚠️  WARNING: No AI API keys configured. Flashcard generation will fail.');
-    console.warn('   Please set OPENROUTER_API_KEY environment variable.');
-  }
 }

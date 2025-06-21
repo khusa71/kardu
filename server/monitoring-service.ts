@@ -77,7 +77,7 @@ export class MonitoringService {
     return metrics;
   }
 
-  getMetrics(limit: number = 50): SystemMetrics[] {
+  getMetrics(limit: number = 25): SystemMetrics[] {
     return this.metrics.slice(-limit);
   }
 
@@ -86,9 +86,12 @@ export class MonitoringService {
   }
 
   private clearOldMetrics(): void {
-    const oneHourAgo = Date.now() - 3600000;
-    this.metrics = this.metrics.filter(metric => metric.timestamp > oneHourAgo);
-    log(`Cleared old metrics, ${this.metrics.length} metrics remaining`);
+    const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+    this.metrics = this.metrics.filter(metric => metric.timestamp > thirtyMinutesAgo);
+    // Keep only last 15 metrics for memory efficiency
+    if (this.metrics.length > 15) {
+      this.metrics = this.metrics.slice(-15);
+    }
   }
 
   startPeriodicCollection(): void {
@@ -97,7 +100,7 @@ export class MonitoringService {
       try {
         await this.collectMetrics();
       } catch (error) {
-        log(`Metrics collection failed: ${error}`);
+        // Silent metrics collection failure to reduce memory bloat
       }
     }, 300000);
 

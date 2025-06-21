@@ -43,10 +43,10 @@ export class HealthMonitor {
     const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
     let memoryStatus: 'normal' | 'high' | 'critical' = 'normal';
     
-    if (heapUsedMB > 500) {
+    if (heapUsedMB > 300) {
       memoryStatus = 'critical';
       errors.push(`Critical memory usage: ${heapUsedMB.toFixed(2)}MB`);
-    } else if (heapUsedMB > 200) {
+    } else if (heapUsedMB > 150) {
       memoryStatus = 'high';
       errors.push(`High memory usage: ${heapUsedMB.toFixed(2)}MB`);
     }

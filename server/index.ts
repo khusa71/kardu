@@ -21,8 +21,8 @@ app.use(helmet({
 
 // Basic security headers handled by helmet
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: false, limit: '25mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -104,8 +104,8 @@ function cleanupTempFiles() {
         const stats = fs.statSync(filePath);
         const age = Date.now() - stats.mtime.getTime();
         
-        // Remove files older than 1 hour
-        if (age > 3600000) {
+        // Remove files older than 30 minutes for aggressive cleanup
+        if (age > 1800000) {
           fs.unlinkSync(filePath);
           log(`Cleaned up old temp file: ${file}`);
         }
@@ -129,8 +129,19 @@ function cleanupTempFiles() {
   // Start performance monitoring
   monitoringService.startPeriodicCollection();
   
-  // Run cleanup every hour
-  setInterval(cleanupTempFiles, 3600000);
+  // Run cleanup every 30 minutes for aggressive memory management
+  setInterval(cleanupTempFiles, 1800000);
+  
+  // Force garbage collection every 10 minutes to reduce memory usage
+  if (typeof global !== 'undefined' && 'gc' in global && typeof global.gc === 'function') {
+    setInterval(() => {
+      try {
+        (global as any).gc();
+      } catch (error) {
+        // Garbage collection not available
+      }
+    }, 600000);
+  }
   
   const server = await registerRoutes(app);
 

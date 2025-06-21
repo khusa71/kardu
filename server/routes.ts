@@ -123,7 +123,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profileData = await storage.upsertUserProfile(profileDataToInsert);
       res.json(profileData);
     } catch (error: any) {
-      console.error("Auth sync error:", error?.message || error);
       res.status(500).json({ error: "Database error saving new user" });
     }
   });
@@ -355,7 +354,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       next();
     } catch (error) {
-      console.error("File upload validation error:", error);
       res.status(500).json({ message: "Failed to validate file uploads" });
     }
   };
@@ -515,14 +513,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               customContext,
               validation.pagesWillProcess || validation.pageInfo.pageCount
             ).catch(error => {
-              console.error(`Async processing failed for job ${job.id}:`, error);
               // Update job status to failed
               storage.updateFlashcardJob(job.id, {
                 status: "failed",
                 errorMessage: error.message,
                 currentTask: "Processing failed"
               }).catch(updateError => {
-                console.error(`Failed to update job ${job.id} status:`, updateError);
+                // Silent failure - avoid memory bloat
               });
             });
           });
@@ -556,7 +553,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userType: req.userType
       });
     } catch (error) {
-      console.error("Upload error:", error);
       res.status(500).json({ message: "Upload failed" });
     }
   });
@@ -1619,14 +1615,15 @@ async function processFlashcardJob(jobId: number) {
       // Get recent activity (last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
       const recentUsersResult = await db.select({ count: sql<number>`count(*)` })
         .from(userProfiles)
-        .where(sql`${userProfiles.createdAt} >= ${thirtyDaysAgo}`);
+        .where(sql`${userProfiles.createdAt} >= ${thirtyDaysAgoISO}`);
       
       const recentJobsResult = await db.select({ count: sql<number>`count(*)` })
         .from(flashcardJobs)
-        .where(sql`${flashcardJobs.createdAt} >= ${thirtyDaysAgo}`);
+        .where(sql`${flashcardJobs.createdAt} >= ${thirtyDaysAgoISO}`);
 
       // Get API provider usage (simplified calculation)
       const openaiJobsResult = await db.select({ count: sql<number>`count(*)` })

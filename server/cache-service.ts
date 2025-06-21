@@ -22,19 +22,19 @@ export class CacheService {
     this.memoryCache = new Map();
     this.ensureCacheDir();
     
-    // Implement automatic memory cleanup every 10 minutes
-    setInterval(() => this.enforceMemoryLimits(), 10 * 60 * 1000);
+    // Implement aggressive memory cleanup every 5 minutes
+    setInterval(() => this.enforceMemoryLimits(), 5 * 60 * 1000);
   }
 
   // Enforce memory limits to prevent excessive usage
   private enforceMemoryLimits(): void {
-    // Limit memory cache to 100 items maximum
-    if (this.memoryCache.size > 100) {
+    // Limit memory cache to 50 items maximum for better memory efficiency
+    if (this.memoryCache.size > 50) {
       const entries = Array.from(this.memoryCache.entries());
       entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
       
-      // Remove oldest 20 entries
-      for (let i = 0; i < 20; i++) {
+      // Remove oldest 25 entries aggressively
+      for (let i = 0; i < 25; i++) {
         this.memoryCache.delete(entries[i][0]);
       }
     }

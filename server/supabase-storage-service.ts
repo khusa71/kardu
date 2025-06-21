@@ -8,10 +8,7 @@ let supabase: any = null;
 
 if (supabaseUrl && supabaseServiceKey && supabaseStorageBucket) {
   supabase = createClient(supabaseUrl, supabaseServiceKey);
-  console.log('✅ Supabase Storage initialized with bucket:', supabaseStorageBucket);
-} else {
-  console.log('⚠️ Supabase Storage not initialized - missing credentials');
-  console.log('   Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET');
+
 }
 
 export interface StoredFile {
