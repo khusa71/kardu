@@ -97,4 +97,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Grant execute permission to authenticated users and service role
 GRANT EXECUTE ON FUNCTION cleanup_expired_storage_files() TO authenticated, service_role;
 
-SELECT 'Storage buckets and policies configured successfully!' as status;
+SELECT 'Storage buckets and policies configured successfully!' as staatus;

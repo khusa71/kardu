@@ -26,7 +26,7 @@ CREATE TABLE user_profiles (
   max_monthly_uploads INTEGER DEFAULT 3,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   CONSTRAINT fk_user_profiles_auth FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
@@ -61,12 +61,13 @@ CREATE TABLE flashcard_jobs (
   ai_model TEXT DEFAULT 'openai/gpt-4o',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  regenerated_from_job_id INTEGER REFERENCES flashcard_jobs(id) ON DELETE SET NULL,
-  
-  INDEX idx_flashcard_jobs_user_id ON flashcard_jobs(user_id),
-  INDEX idx_flashcard_jobs_status ON flashcard_jobs(status),
-  INDEX idx_flashcard_jobs_created_at ON flashcard_jobs(created_at DESC)
+  regenerated_from_job_id INTEGER REFERENCES flashcard_jobs(id) ON DELETE SET NULL
 );
+
+-- Create indexes for flashcard_jobs
+CREATE INDEX idx_flashcard_jobs_user_id ON flashcard_jobs(user_id);
+CREATE INDEX idx_flashcard_jobs_status ON flashcard_jobs(status);
+CREATE INDEX idx_flashcard_jobs_created_at ON flashcard_jobs(created_at DESC);
 
 -- Flashcards Table (normalized individual flashcard storage)
 CREATE TABLE flashcards (
@@ -81,12 +82,14 @@ CREATE TABLE flashcards (
   confidence_score REAL DEFAULT 0.0 CHECK (confidence_score >= 0.0 AND confidence_score <= 1.0),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  UNIQUE(job_id, card_index),
-  INDEX idx_flashcards_job_id ON flashcards(job_id),
-  INDEX idx_flashcards_subject ON flashcards(subject),
-  INDEX idx_flashcards_difficulty ON flashcards(difficulty)
+
+  UNIQUE(job_id, card_index)
 );
+
+-- Create indexes for flashcards
+CREATE INDEX idx_flashcards_job_id ON flashcards(job_id);
+CREATE INDEX idx_flashcards_subject ON flashcards(subject);
+CREATE INDEX idx_flashcards_difficulty ON flashcards(difficulty);
 
 -- Study Progress Table (individual card progress tracking)
 CREATE TABLE study_progress (
@@ -105,13 +108,15 @@ CREATE TABLE study_progress (
   correct_reviews INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  UNIQUE(user_id, job_id, flashcard_id),
-  INDEX idx_study_progress_user_job ON study_progress(user_id, job_id),
-  INDEX idx_study_progress_flashcard ON study_progress(flashcard_id),
-  INDEX idx_study_progress_next_review ON study_progress(next_review_date),
-  INDEX idx_study_progress_status ON study_progress(status)
+
+  UNIQUE(user_id, job_id, flashcard_id)
 );
+
+-- Create indexes for study_progress
+CREATE INDEX idx_study_progress_user_job ON study_progress(user_id, job_id);
+CREATE INDEX idx_study_progress_flashcard ON study_progress(flashcard_id);
+CREATE INDEX idx_study_progress_next_review ON study_progress(next_review_date);
+CREATE INDEX idx_study_progress_status ON study_progress(status);
 
 -- Study Sessions Table (session tracking)
 CREATE TABLE study_sessions (
@@ -125,12 +130,13 @@ CREATE TABLE study_sessions (
   cards_correct INTEGER DEFAULT 0,
   accuracy_percentage REAL DEFAULT 0.0 CHECK (accuracy_percentage >= 0.0 AND accuracy_percentage <= 100.0),
   session_type TEXT DEFAULT 'review',
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  INDEX idx_study_sessions_user_id ON study_sessions(user_id),
-  INDEX idx_study_sessions_job_id ON study_sessions(job_id),
-  INDEX idx_study_sessions_started_at ON study_sessions(started_at DESC)
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Create indexes for study_sessions
+CREATE INDEX idx_study_sessions_user_id ON study_sessions(user_id);
+CREATE INDEX idx_study_sessions_job_id ON study_sessions(job_id);
+CREATE INDEX idx_study_sessions_started_at ON study_sessions(started_at DESC);
 
 -- Temporary Downloads Table (on-demand file generation)
 CREATE TABLE temporary_downloads (
@@ -141,12 +147,13 @@ CREATE TABLE temporary_downloads (
   storage_key TEXT NOT NULL,
   download_url TEXT NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  INDEX idx_temporary_downloads_user_job ON temporary_downloads(user_id, job_id),
-  INDEX idx_temporary_downloads_expires_at ON temporary_downloads(expires_at),
-  INDEX idx_temporary_downloads_format ON temporary_downloads(format)
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Create indexes for temporary_downloads
+CREATE INDEX idx_temporary_downloads_user_job ON temporary_downloads(user_id, job_id);
+CREATE INDEX idx_temporary_downloads_expires_at ON temporary_downloads(expires_at);
+CREATE INDEX idx_temporary_downloads_format ON temporary_downloads(format);
 
 -- Enable Row Level Security on all tables
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
@@ -232,12 +239,14 @@ CREATE POLICY "System can cleanup expired downloads" ON temporary_downloads
 
 -- Triggers for updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = ''
+AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -256,7 +265,9 @@ CREATE TRIGGER update_study_progress_updated_at BEFORE UPDATE ON study_progress
 
 -- Function to automatically create user profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+SET search_path = ''
+AS $$
 BEGIN
   INSERT INTO public.user_profiles (id, email, full_name, avatar_url)
   VALUES (
@@ -277,15 +288,36 @@ CREATE TRIGGER on_auth_user_created
 
 -- Function to cleanup expired temporary downloads
 CREATE OR REPLACE FUNCTION cleanup_expired_downloads()
-RETURNS INTEGER AS $$
+RETURNS INTEGER 
+SET search_path = ''
+AS $$
 DECLARE
   deleted_count INTEGER;
 BEGIN
-  DELETE FROM temporary_downloads WHERE expires_at < NOW();
+  DELETE FROM public.temporary_downloads WHERE expires_at < NOW();
   GET DIAGNOSTICS deleted_count = ROW_COUNT;
   RETURN deleted_count;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to cleanup expired storage files (if you have this function)
+CREATE OR REPLACE FUNCTION public.cleanup_expired_storage_files()
+RETURNS INTEGER 
+SET search_path = ''
+AS $$
+DECLARE
+  deleted_count INTEGER;
+BEGIN
+  -- Add your cleanup logic here for storage files
+  -- This is a placeholder - implement based on your storage cleanup needs
+  DELETE FROM storage.objects 
+  WHERE bucket_id IN ('studycards-files', 'exports') 
+  AND created_at < NOW() - INTERVAL '30 days';
+
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
