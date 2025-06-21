@@ -102,11 +102,25 @@ export default function Upload() {
     queryKey: ['/api/jobs', currentJobId],
     enabled: !!currentJobId && isProcessing,
     refetchInterval: 2000,
+    queryFn: async () => {
+      if (!currentJobId) return null;
+      try {
+        const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
+        const data = await response.json();
+        console.log('Job status response:', data);
+        return data;
+      } catch (error) {
+        console.error('Job status polling error:', error);
+        throw error;
+      }
+    },
   });
 
   // Handle job completion
   useEffect(() => {
     console.log('Job status update:', jobStatus);
+    console.log('Current processing state:', isProcessing);
+    console.log('Current job ID:', currentJobId);
     
     if (jobStatus && (jobStatus as any).status === 'completed') {
       console.log('Job completed, processing flashcards...');
@@ -146,7 +160,7 @@ export default function Upload() {
         variant: "destructive",
       });
     }
-  }, [jobStatus, toast]);
+  }, [jobStatus, toast, isProcessing, currentJobId]);
 
   // File selection handler
   const handleFileSelect = useCallback((files: FileList | null) => {
@@ -642,6 +656,36 @@ export default function Upload() {
                     <p className="text-sm text-muted-foreground">
                       Status: {jobStatus ? (jobStatus as any)?.status || 'Processing...' : 'Processing...'}
                     </p>
+                    
+                    {currentJobId && (
+                      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                          Job ID: {currentJobId} • Taking longer than expected?
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setLocation('/history')}
+                            className="flex-1"
+                          >
+                            Check History
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setIsProcessing(false);
+                              setCurrentStep(1);
+                              setCurrentJobId(null);
+                            }}
+                            className="flex-1"
+                          >
+                            Start Over
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
