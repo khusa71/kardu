@@ -12,13 +12,22 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  retryCount = 0
 ): Promise<Response> {
   const isFormData = data instanceof FormData;
   const headers: Record<string, string> = {};
   
-  // Add Supabase access token for authenticated requests
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.access_token) {
+  // Get fresh session with automatic refresh
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error) {
+    // Attempt to refresh session if there's an error
+    await supabase.auth.refreshSession();
+    const { data: refreshedSession } = await supabase.auth.getSession();
+    if (refreshedSession?.session?.access_token) {
+      headers['Authorization'] = `Bearer ${refreshedSession.session.access_token}`;
+    }
+  } else if (session?.access_token) {
     headers['Authorization'] = `Bearer ${session.access_token}`;
   }
   
@@ -33,6 +42,13 @@ export async function apiRequest(
     body: data ? (isFormData ? data : JSON.stringify(data)) : undefined,
     credentials: "include",
   });
+
+  // Handle 401 errors with automatic retry
+  if (res.status === 401 && retryCount < 2) {
+    // Refresh session and retry
+    await supabase.auth.refreshSession();
+    return apiRequest(method, url, data, retryCount + 1);
+  }
 
   await throwIfResNotOk(res);
   return res;

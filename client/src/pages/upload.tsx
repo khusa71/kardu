@@ -121,19 +121,40 @@ export default function Upload() {
     },
   });
 
-  // Real-time job status polling with proper state management
+  // Enhanced job status polling with authentication recovery
   const { data: jobStatus, error: jobStatusError } = useQuery({
     queryKey: ['/api/jobs', currentJobId],
     queryFn: async () => {
       if (!currentJobId) throw new Error('No job ID');
-      const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
-      return response.json();
+      try {
+        const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
+        return response.json();
+      } catch (error: any) {
+        // Handle authentication errors gracefully
+        if (error.message?.includes('401')) {
+          setProcessingStage('Reconnecting...');
+          throw new Error('Authentication expired');
+        }
+        throw error;
+      }
     },
-    enabled: !!currentJobId && isProcessing,
-    refetchInterval: 3000, // Poll every 3 seconds
-    refetchIntervalInBackground: true,
-    retry: 3,
-    retryDelay: 1000,
+    enabled: !!currentJobId && isProcessing && !!user,
+    refetchInterval: (data) => {
+      // Stop polling if job is complete or failed
+      if (data && ((data as any)?.status === 'completed' || (data as any)?.status === 'failed')) {
+        return false;
+      }
+      return 3000; // Poll every 3 seconds for active jobs
+    },
+    refetchIntervalInBackground: false,
+    retry: (failureCount, error: any) => {
+      // Don't retry authentication errors more than once
+      if (error.message?.includes('401') || error.message?.includes('Authentication expired')) {
+        return failureCount < 1;
+      }
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 
   // Monitor job status changes from React Query polling
@@ -825,9 +846,37 @@ export default function Upload() {
                         Estimated time: ~{estimatedTime} minute{estimatedTime !== 1 ? 's' : ''}
                       </div>
                     )}
-                    <p className="text-sm text-muted-foreground">
-                      Status: {jobStatus ? (jobStatus as any)?.status || 'Processing...' : 'Processing...'}
-                    </p>
+                    
+                    {/* Connection Status & Error Recovery */}
+                    {jobStatusError && (
+                      <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <X className="w-4 h-4 text-destructive" />
+                          <span className="text-sm font-medium text-destructive">Connection Issue</span>
+                        </div>
+                        <p className="text-xs text-destructive/80 mb-3">
+                          Lost connection during processing. Your job is still running on our servers.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.location.reload()}
+                            className="h-8 text-xs"
+                          >
+                            Reconnect
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation('/history')}
+                            className="h-8 text-xs"
+                          >
+                            Check History
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="mt-6 p-6 bg-muted/30 rounded-xl border border-border">
                       <div className="space-y-5">
