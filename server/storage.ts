@@ -78,16 +78,17 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('Attempting to upsert user profile:', userData);
       
-      // Use columns that exist in current database including quota tracking
+      // Use columns that exist in actual database schema
       const dbUserData = {
         id: userData.id,
         email: userData.email,
+        fullName: userData.fullName,
+        avatarUrl: userData.avatarUrl,
         isPremium: userData.isPremium || false,
-        monthlyUploads: userData.monthlyUploads || 0,
-        monthlyPagesProcessed: userData.monthlyPagesProcessed || 0,
-        monthlyLimit: userData.monthlyLimit || (userData.isPremium ? 100 : 3),
-        lastResetDate: userData.lastResetDate || new Date(),
-        lastUploadDate: userData.lastUploadDate,
+        subscriptionStatus: userData.subscriptionStatus,
+        subscriptionTier: userData.subscriptionTier || "free",
+        uploadsThisMonth: userData.uploadsThisMonth || 0,
+        maxMonthlyUploads: userData.maxMonthlyUploads || (userData.isPremium ? 100 : 3),
         createdAt: userData.createdAt || new Date(),
         updatedAt: userData.updatedAt || new Date(),
       };
@@ -100,7 +101,7 @@ export class DatabaseStorage implements IStorage {
           set: {
             email: dbUserData.email,
             isPremium: dbUserData.isPremium,
-            monthlyLimit: dbUserData.monthlyLimit,
+            maxMonthlyUploads: dbUserData.maxMonthlyUploads,
             updatedAt: new Date(),
           },
         })

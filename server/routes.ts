@@ -39,7 +39,7 @@ import { inArray } from "drizzle-orm";
 import { healthMonitor } from "./health-monitor";
 
 import { getPageCount } from "./page-count-service";
-import { canUserUpload, incrementUploadCount, getQuotaStatus } from "./usage-quota-service";
+import { canUserUpload, incrementUploadCount, getQuotaStatus } from "./usage-quota-service-fixed";
 
 // AI Model mapping for quality tiers
 const modelMap = {
@@ -647,6 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userProfile) {
         userProfile = await storage.upsertUserProfile({
           id: userId,
+          email: req.user!.email || '',
           isPremium: false,
         });
       }
@@ -656,8 +657,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.getUserProfile(userId); // Get fresh data after potential reset
       
       // Get actual monthly usage data from database
-      const currentUploads = updatedUser?.monthlyUploads || 0;
-      const monthlyLimit = updatedUser?.monthlyLimit || (updatedUser?.isPremium ? 100 : 3);
+      const currentUploads = updatedUser?.uploadsThisMonth || 0;
+      const monthlyLimit = updatedUser?.maxMonthlyUploads || (updatedUser?.isPremium ? 100 : 3);
       
       // Determine if user is OAuth-verified (Google) or email-verified
       const isOAuthUser = req.user!.app_metadata?.providers?.includes('google') || 
@@ -673,7 +674,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isEmailVerified,
         isPremium: updatedUser?.isPremium || false,
         monthlyUploads: currentUploads,
-        monthlyPagesProcessed: updatedUser?.monthlyPagesProcessed || 0,
         monthlyLimit,
         uploadsRemaining,
       };

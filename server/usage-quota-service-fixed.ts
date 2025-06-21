@@ -10,7 +10,6 @@ export interface UsageQuota {
 
 export interface QuotaLimits {
   maxPagesPerFile: number;
-  monthlyPageLimit: number;
   monthlyUploadLimit: number;
 }
 
@@ -20,13 +19,12 @@ export interface QuotaLimits {
 export function getQuotaLimits(isPremium: boolean): QuotaLimits {
   return {
     maxPagesPerFile: isPremium ? 100 : 20,
-    monthlyPageLimit: isPremium ? 10000 : 60, // 20 pages * 3 uploads for free
     monthlyUploadLimit: isPremium ? 100 : 3
   };
 }
 
 /**
- * Get current usage quota for a user
+ * Get current usage quota for a user using actual database columns
  */
 export async function getUserQuota(userId: string): Promise<UsageQuota> {
   const user = await db.query.userProfiles.findFirst({
@@ -37,7 +35,7 @@ export async function getUserQuota(userId: string): Promise<UsageQuota> {
     throw new Error('User not found');
   }
 
-  // For simplicity, we'll check if it's a new month and reset if needed
+  // Check if it's a new month and reset if needed
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -49,20 +47,6 @@ export async function getUserQuota(userId: string): Promise<UsageQuota> {
     maxMonthlyUploads: user.maxMonthlyUploads || (user.isPremium ? 100 : 3),
     needsReset
   };
-}
-
-/**
- * Check if quota should be reset (monthly)
- */
-function shouldResetQuota(lastResetDate: Date, currentDate: Date): boolean {
-  const lastReset = new Date(lastResetDate);
-  const now = new Date(currentDate);
-  
-  // Reset if it's been more than a month
-  const monthsDiff = (now.getFullYear() - lastReset.getFullYear()) * 12 + 
-                    (now.getMonth() - lastReset.getMonth());
-  
-  return monthsDiff >= 1;
 }
 
 /**
@@ -120,7 +104,7 @@ export async function canUserUpload(
   const limits = getQuotaLimits(user.isPremium || false);
 
   // Check upload limit
-  if (quota.monthlyUploads >= limits.monthlyUploadLimit) {
+  if (quota.uploadsThisMonth >= limits.monthlyUploadLimit) {
     return {
       canUpload: false,
       reason: `Monthly upload limit reached (${limits.monthlyUploadLimit} uploads)`,
@@ -131,29 +115,6 @@ export async function canUserUpload(
 
   // Calculate pages that will be processed
   let pagesWillProcess = Math.min(pageCount, limits.maxPagesPerFile);
-  
-  // Check monthly page limit
-  const remainingPages = limits.monthlyPageLimit - quota.monthlyPagesProcessed;
-  if (remainingPages <= 0) {
-    return {
-      canUpload: false,
-      reason: `Monthly page limit reached (${limits.monthlyPageLimit} pages)`,
-      quotaInfo: quota,
-      limits
-    };
-  }
-
-  // Limit to remaining pages if necessary
-  pagesWillProcess = Math.min(pagesWillProcess, remainingPages);
-
-  if (pagesWillProcess <= 0) {
-    return {
-      canUpload: false,
-      reason: `No pages remaining in monthly quota`,
-      quotaInfo: quota,
-      limits
-    };
-  }
 
   return {
     canUpload: true,
@@ -168,7 +129,6 @@ export async function canUserUpload(
  */
 export async function getQuotaStatus(userId: string): Promise<{
   uploads: { used: number; limit: number; percentage: number };
-  pages: { used: number; limit: number; percentage: number };
   isPremium: boolean;
   needsReset: boolean;
 }> {
@@ -185,14 +145,9 @@ export async function getQuotaStatus(userId: string): Promise<{
 
   return {
     uploads: {
-      used: quota.monthlyUploads,
+      used: quota.uploadsThisMonth,
       limit: limits.monthlyUploadLimit,
-      percentage: Math.round((quota.monthlyUploads / limits.monthlyUploadLimit) * 100)
-    },
-    pages: {
-      used: quota.monthlyPagesProcessed,
-      limit: limits.monthlyPageLimit,
-      percentage: Math.round((quota.monthlyPagesProcessed / limits.monthlyPageLimit) * 100)
+      percentage: Math.round((quota.uploadsThisMonth / limits.monthlyUploadLimit) * 100)
     },
     isPremium: user.isPremium || false,
     needsReset: quota.needsReset

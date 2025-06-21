@@ -28,13 +28,14 @@ export const sessions = pgTable(
 // User profiles table - matching actual database schema
 export const userProfiles = pgTable("user_profiles", {
   id: varchar("id").primaryKey().notNull(),
-  email: varchar("email"),
+  email: text("email").notNull(),
+  fullName: text("full_name"),
+  avatarUrl: text("avatar_url"),
   isPremium: boolean("is_premium").default(false),
-  monthlyUploads: integer("monthly_uploads").default(0),
-  monthlyPagesProcessed: integer("monthly_pages_processed").default(0),
-  monthlyLimit: integer("monthly_limit").default(3),
-  lastResetDate: timestamp("last_reset_date").defaultNow(),
-  lastUploadDate: timestamp("last_upload_date"),
+  subscriptionStatus: text("subscription_status"),
+  subscriptionTier: text("subscription_tier").default("free"),
+  uploadsThisMonth: integer("uploads_this_month").default(0),
+  maxMonthlyUploads: integer("max_monthly_uploads").default(3),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
