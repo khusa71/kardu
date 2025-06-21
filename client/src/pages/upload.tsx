@@ -28,7 +28,6 @@ import {
   Loader2,
   Brain,
   Target,
-  Clock,
   BookOpen,
   Lightbulb,
   Sparkles,
@@ -444,7 +443,7 @@ export default function Upload() {
               </CardHeader>
               <CardContent>
                 <div 
-                  className="group relative border-2 border-dashed border-blue-200 dark:border-blue-800 rounded-2xl p-12 text-center hover:border-blue-400 dark:hover:border-blue-600 transition-all duration-300 cursor-pointer bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:shadow-xl hover:scale-[1.02]"
+                  className="border-2 border-dashed border-primary/30 rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer bg-primary/5"
                   onClick={() => document.getElementById('file-input')?.click()}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -452,54 +451,22 @@ export default function Upload() {
                   }}
                   onDragOver={(e) => e.preventDefault()}
                 >
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 opacity-5">
-                    <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl"></div>
-                  </div>
-                  
-                  <div className="relative flex flex-col items-center space-y-6">
-                    <div className="relative">
-                      <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-300">
-                        <FileText className="w-10 h-10 text-white" />
-                      </div>
-                      <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                        <Plus className="w-3 h-3 text-white" />
-                      </div>
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                      <FileText className="w-8 h-8 text-primary" />
                     </div>
-                    
-                    <div className="space-y-3">
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                        Drop your PDF here
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                        Drop your PDF here or click to browse
                       </h3>
-                      <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
-                        Drag and drop your PDF files or click to browse. We'll transform them into intelligent flashcards.
+                      <p className="text-muted-foreground">
+                        Supports multiple files • Max {isPremium ? '10' : '1'} file{isPremium ? 's' : ''} • PDF only
                       </p>
-                      
-                      <div className="flex items-center justify-center gap-4 text-sm text-gray-500 dark:text-gray-400 pt-2">
-                        <div className="flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          PDF only
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          Max {isPremium ? '10' : '1'} file{isPremium ? 's' : ''}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          Up to 100 pages
-                        </div>
-                      </div>
                     </div>
-                    
-                    <Button size="lg" className="px-10 py-4 text-lg font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <UploadIcon className="w-5 h-5 mr-3" />
+                    <Button size="lg" className="px-8">
+                      <Plus className="w-5 h-5 mr-2" />
                       Choose Files
                     </Button>
-                  </div>
-                  
-                  {/* Animated Border Glow */}
-                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-400 to-indigo-400 blur-sm"></div>
                   </div>
                 </div>
                 
@@ -513,58 +480,38 @@ export default function Upload() {
                 />
 
                 {selectedFiles.length > 0 && (
-                  <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border border-green-200 dark:border-green-800">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-white" />
-                      </div>
-                      <h4 className="text-lg font-semibold text-green-900 dark:text-green-100">
-                        Files Ready for Processing
-                      </h4>
-                    </div>
-                    
-                    <div className="space-y-3 mb-6">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="group flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl border border-green-100 dark:border-green-800 hover:shadow-md transition-all duration-200">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg flex items-center justify-center shadow-md">
-                              <FileText className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900 dark:text-gray-100">{file.name}</p>
-                              <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
-                                <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <CheckCircle className="w-3 h-3 text-green-500" />
-                                  Ready to process
-                                </span>
-                              </div>
-                            </div>
+                  <div className="mt-6 space-y-3">
+                    <h4 className="font-medium text-foreground">Selected Files:</h4>
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <FileText className="w-5 h-5 text-primary" />
+                          <div>
+                            <p className="font-medium text-foreground">{file.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedFiles(files => files.filter((_, i) => i !== index));
-                              if (selectedFiles.length === 1) setCurrentStep(1);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/30"
-                          >
-                            <X className="w-4 h-4 text-red-500" />
-                          </Button>
                         </div>
-                      ))}
-                    </div>
-                    
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedFiles(files => files.filter((_, i) => i !== index));
+                            if (selectedFiles.length === 1) setCurrentStep(1);
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
                     <Button 
                       onClick={() => setCurrentStep(2)} 
+                      className="w-full mt-4" 
                       size="lg"
-                      className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transition-all duration-300"
                     >
-                      <Settings className="w-5 h-5 mr-3" />
-                      Configure AI Settings
-                      <ArrowRight className="w-5 h-5 ml-3" />
+                      Continue to Configuration
+                      <ArrowRight className="w-5 h-5 ml-2" />
                     </Button>
                   </div>
                 )}
@@ -584,78 +531,56 @@ export default function Upload() {
                   Configure how you want your flashcards generated
                 </p>
               </CardHeader>
-              <CardContent className="space-y-8">
+              <CardContent className="space-y-6">
                 <Tabs defaultValue="basic" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 h-12 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
-                    <TabsTrigger value="basic" className="h-10 font-semibold">Basic Settings</TabsTrigger>
-                    <TabsTrigger value="advanced" className="h-10 font-semibold">Advanced Options</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="basic">Basic Settings</TabsTrigger>
+                    <TabsTrigger value="advanced">Advanced Options</TabsTrigger>
                   </TabsList>
                   
-                  <TabsContent value="basic" className="space-y-8 mt-8">
+                  <TabsContent value="basic" className="space-y-6 mt-6">
                     {/* Subject Selection */}
-                    <div className="space-y-4 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                          <Target className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <label className="text-lg font-semibold text-blue-900 dark:text-blue-100">
-                            Subject Area
-                          </label>
-                          <p className="text-sm text-blue-700 dark:text-blue-300">
-                            Choose the field of study for optimized question generation
-                          </p>
-                        </div>
-                      </div>
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Target className="w-4 h-4" />
+                        Subject Area
+                      </label>
                       <Select value={subject} onValueChange={setSubject}>
-                        <SelectTrigger className="h-14 text-lg font-medium bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-700 hover:border-blue-400 transition-colors">
-                          <SelectValue placeholder="Select your subject area" />
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Select subject area" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="general">🌍 General Knowledge</SelectItem>
-                          <SelectItem value="programming">💻 Programming & Tech</SelectItem>
-                          <SelectItem value="science">🧬 Science & Mathematics</SelectItem>
-                          <SelectItem value="history">📚 History & Social Studies</SelectItem>
-                          <SelectItem value="language">📝 Language & Literature</SelectItem>
-                          <SelectItem value="business">💼 Business & Economics</SelectItem>
-                          <SelectItem value="medicine">⚕️ Medicine & Health</SelectItem>
-                          <SelectItem value="law">⚖️ Law & Legal Studies</SelectItem>
+                          <SelectItem value="general">General Knowledge</SelectItem>
+                          <SelectItem value="programming">Programming & Tech</SelectItem>
+                          <SelectItem value="science">Science & Mathematics</SelectItem>
+                          <SelectItem value="history">History & Social Studies</SelectItem>
+                          <SelectItem value="language">Language & Literature</SelectItem>
+                          <SelectItem value="business">Business & Economics</SelectItem>
+                          <SelectItem value="medicine">Medicine & Health</SelectItem>
+                          <SelectItem value="law">Law & Legal Studies</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     {/* Difficulty Level */}
-                    <div className="space-y-4 p-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-                          <Brain className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <label className="text-lg font-semibold text-purple-900 dark:text-purple-100">
-                            Difficulty Level
-                          </label>
-                          <p className="text-sm text-purple-700 dark:text-purple-300">
-                            Adjust complexity based on your expertise level
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Brain className="w-4 h-4" />
+                        Difficulty Level
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
                         {(['beginner', 'intermediate', 'advanced'] as const).map((level) => (
                           <Button
                             key={level}
                             variant={difficulty === level ? "default" : "outline"}
                             onClick={() => setDifficulty(level)}
-                            className={`h-16 flex flex-col transition-all duration-300 ${
-                              difficulty === level 
-                                ? 'bg-gradient-to-br from-purple-600 to-pink-600 text-white shadow-lg scale-105' 
-                                : 'hover:shadow-md hover:scale-102'
-                            }`}
+                            className="h-12 flex flex-col"
                           >
-                            <span className="font-semibold text-base capitalize">{level}</span>
-                            <span className="text-xs opacity-80 mt-1">
-                              {level === 'beginner' && '📚 Simple & Clear'}
-                              {level === 'intermediate' && '⚖️ Balanced Approach'}
-                              {level === 'advanced' && '🎓 Detailed & Complex'}
+                            <span className="font-medium capitalize">{level}</span>
+                            <span className="text-xs opacity-70">
+                              {level === 'beginner' && 'Simple & Clear'}
+                              {level === 'intermediate' && 'Balanced'}
+                              {level === 'advanced' && 'Detailed & Complex'}
                             </span>
                           </Button>
                         ))}
@@ -663,228 +588,142 @@ export default function Upload() {
                     </div>
 
                     {/* Number of Cards */}
-                    <div className="space-y-4 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
-                          <Sparkles className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <label className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
-                            Number of Flashcards
-                          </label>
-                          <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                            More cards provide comprehensive coverage
-                          </p>
-                        </div>
-                      </div>
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        Number of Flashcards
+                      </label>
                       <div className="grid grid-cols-4 gap-3">
                         {[5, 10, 15, 20].map((count) => (
                           <Button
                             key={count}
                             variant={flashcardCount === count ? "default" : "outline"}
                             onClick={() => setFlashcardCount(count)}
-                            className={`h-14 text-lg font-semibold transition-all duration-300 ${
-                              flashcardCount === count 
-                                ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-lg scale-105' 
-                                : 'hover:shadow-md hover:scale-102'
-                            }`}
+                            className="h-12"
                           >
                             {count}
                           </Button>
                         ))}
                       </div>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          min="1"
-                          max="50"
-                          value={flashcardCount}
-                          onChange={(e) => setFlashcardCount(parseInt(e.target.value) || 10)}
-                          className="h-14 text-lg font-medium bg-white dark:bg-gray-800 border-2 border-emerald-200 dark:border-emerald-700 hover:border-emerald-400 transition-colors pl-12"
-                          placeholder="Custom amount (1-50)"
-                        />
-                        <Settings className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-emerald-600" />
-                      </div>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={flashcardCount}
+                        onChange={(e) => setFlashcardCount(parseInt(e.target.value) || 10)}
+                        className="h-12"
+                        placeholder="Custom amount (1-50)"
+                      />
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="advanced" className="space-y-8 mt-8">
+                  <TabsContent value="advanced" className="space-y-6 mt-6">
                     {/* AI Model Selection */}
-                    <div className="space-y-4 p-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                          <Zap className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <label className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-                            AI Model Quality
-                          </label>
-                          <p className="text-sm text-amber-700 dark:text-amber-300">
-                            Choose the AI model that best fits your needs
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Zap className="w-4 h-4" />
+                        AI Model Quality
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
                         <Button
                           variant={apiProvider === "basic" ? "default" : "outline"}
                           onClick={() => setApiProvider("basic")}
-                          className={`h-20 flex flex-col transition-all duration-300 ${
-                            apiProvider === "basic" 
-                              ? 'bg-gradient-to-br from-amber-600 to-orange-600 text-white shadow-lg scale-105' 
-                              : 'hover:shadow-md hover:scale-102'
-                          }`}
+                          className="h-16 flex flex-col"
                         >
-                          <span className="font-semibold text-base">⚡ Standard</span>
-                          <span className="text-xs opacity-80 mt-1">Fast & Reliable</span>
-                          <Badge variant="secondary" className="mt-2 bg-green-100 text-green-800">Free</Badge>
+                          <span className="font-medium">Standard</span>
+                          <span className="text-xs opacity-70">Fast & Reliable</span>
+                          <Badge variant="secondary" className="mt-1">Free</Badge>
                         </Button>
                         <Button
                           variant={apiProvider === "advanced" ? "default" : "outline"}
                           onClick={() => setApiProvider("advanced")}
-                          className={`h-20 flex flex-col transition-all duration-300 ${
-                            apiProvider === "advanced" 
-                              ? 'bg-gradient-to-br from-amber-600 to-orange-600 text-white shadow-lg scale-105' 
-                              : isPremium ? 'hover:shadow-md hover:scale-102' : 'opacity-50 cursor-not-allowed'
-                          }`}
+                          className="h-16 flex flex-col"
                           disabled={!isPremium}
                         >
-                          <span className="font-semibold text-base">🚀 Premium</span>
-                          <span className="text-xs opacity-80 mt-1">Advanced AI</span>
-                          <Badge variant="default" className="mt-2 bg-purple-100 text-purple-800">Pro Only</Badge>
+                          <span className="font-medium">Premium</span>
+                          <span className="text-xs opacity-70">Advanced AI</span>
+                          <Badge variant="default" className="mt-1">Pro Only</Badge>
                         </Button>
                       </div>
                     </div>
 
                     {/* Focus Areas */}
-                    <div className="space-y-4 p-6 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-xl border border-cyan-200 dark:border-cyan-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
-                          <Target className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <label className="text-lg font-semibold text-cyan-900 dark:text-cyan-100">
-                            Focus Areas
-                          </label>
-                          <p className="text-sm text-cyan-700 dark:text-cyan-300">
-                            Select what types of content to emphasize
-                          </p>
-                        </div>
-                      </div>
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Target className="w-4 h-4" />
+                        Focus Areas
+                      </label>
                       <div className="grid grid-cols-2 gap-3">
                         {Object.entries(focusAreas).map(([key, value]) => (
                           <Button
                             key={key}
                             variant={value ? "default" : "outline"}
                             onClick={() => setFocusAreas(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
-                            className={`h-14 flex items-center justify-center transition-all duration-300 ${
-                              value 
-                                ? 'bg-gradient-to-br from-cyan-600 to-blue-600 text-white shadow-lg scale-105' 
-                                : 'hover:shadow-md hover:scale-102'
-                            }`}
+                            className="h-12"
                           >
-                            <span className="capitalize font-semibold">{key}</span>
+                            <span className="capitalize">{key}</span>
                           </Button>
                         ))}
                       </div>
                     </div>
 
                     {/* Custom Context */}
-                    <div className="space-y-4 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                          <Lightbulb className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <label className="text-lg font-semibold text-indigo-900 dark:text-indigo-100">
-                            Custom Instructions
-                          </label>
-                          <p className="text-sm text-indigo-700 dark:text-indigo-300">
-                            Add specific guidance for AI generation (optional)
-                          </p>
-                        </div>
-                      </div>
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4" />
+                        Custom Instructions (Optional)
+                      </label>
                       <Textarea
-                        placeholder="e.g., Focus on key formulas, include examples, avoid technical jargon..."
+                        placeholder="Provide specific instructions for flashcard generation..."
                         value={customContext}
                         onChange={(e) => setCustomContext(e.target.value)}
                         rows={4}
-                        className="resize-none h-20 text-base bg-white dark:bg-gray-800 border-2 border-indigo-200 dark:border-indigo-700 hover:border-indigo-400 transition-colors"
+                        className="resize-none"
                       />
                     </div>
 
                     {/* Custom File Name */}
-                    <div className="space-y-4 p-6 bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20 rounded-xl border border-rose-200 dark:border-rose-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-lg flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <label className="text-lg font-semibold text-rose-900 dark:text-rose-100">
-                            Custom File Name
-                          </label>
-                          <p className="text-sm text-rose-700 dark:text-rose-300">
-                            Give your flashcard set a memorable name (optional)
-                          </p>
-                        </div>
-                      </div>
-                      <div className="relative">
-                        <Input
-                          placeholder="e.g., Biology Chapter 5, JavaScript Fundamentals, etc."
-                          value={customFileName}
-                          onChange={(e) => setCustomFileName(e.target.value)}
-                          className="h-14 text-lg font-medium bg-white dark:bg-gray-800 border-2 border-rose-200 dark:border-rose-700 hover:border-rose-400 transition-colors pl-12"
-                        />
-                        <FileText className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-rose-600" />
-                      </div>
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">
+                        Custom File Name (Optional)
+                      </label>
+                      <Input
+                        placeholder="Enter a custom name for your flashcard set"
+                        value={customFileName}
+                        onChange={(e) => setCustomFileName(e.target.value)}
+                        className="h-12"
+                      />
                     </div>
                   </TabsContent>
                 </Tabs>
 
                 <Separator />
 
-                {/* Enhanced Action Bar */}
-                <div className="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setCurrentStep(1)}
-                      className="flex-1 h-14 text-base font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-                    >
-                      <ArrowRight className="w-5 h-5 mr-2 rotate-180" />
-                      Back to Upload
-                    </Button>
-                    <Button 
-                      onClick={handleGenerate}
-                      disabled={uploadMutation.isPending}
-                      className="flex-1 h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                    >
-                      {uploadMutation.isPending ? (
-                        <>
-                          <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                          Creating Magic...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-6 h-6 mr-3" />
-                          Start AI Processing
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  
-                  {/* Processing Preview */}
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span>Ready to process {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span>Est. 2-3 minutes</span>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCurrentStep(1)}
+                    className="flex-1 h-12"
+                  >
+                    Back to Upload
+                  </Button>
+                  <Button 
+                    onClick={handleGenerate}
+                    disabled={uploadMutation.isPending}
+                    className="flex-1 h-12 text-lg"
+                  >
+                    {uploadMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5 mr-2" />
+                        Generate Flashcards
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
