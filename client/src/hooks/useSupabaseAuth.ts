@@ -19,14 +19,22 @@ export function useSupabaseAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session);
+      console.log('=== AUTH STATE CHANGE ===');
+      console.log('Event:', event);
+      console.log('Session:', session);
+      console.log('Session user:', session?.user);
+      console.log('Session access_token exists:', !!session?.access_token);
+      
       setSession(session as AuthSession);
       setUser(session?.user as User || null);
       setLoading(false);
       
-      // If user just signed in, sync with backend
+      // If user just signed in, sync with backend and handle redirect
       if (event === 'SIGNED_IN' && session) {
+        console.log('Processing SIGNED_IN event...');
+        
         try {
+          console.log('Attempting backend sync...');
           const response = await fetch('/api/auth/sync', {
             method: 'POST',
             headers: {
@@ -38,14 +46,36 @@ export function useSupabaseAuth() {
             })
           });
           
+          console.log('Backend sync response status:', response.status);
+          
           if (response.ok) {
             console.log('User synced with backend successfully');
+            
+            // Check if we should redirect to dashboard after OAuth
+            const shouldRedirect = localStorage.getItem('redirectToDashboard');
+            console.log('Should redirect to dashboard?', shouldRedirect);
+            
+            if (shouldRedirect === 'true') {
+              console.log('Redirecting to dashboard after successful OAuth...');
+              localStorage.removeItem('redirectToDashboard');
+              
+              // Small delay to ensure state is updated
+              setTimeout(() => {
+                window.location.href = '/dashboard';
+              }, 100);
+            }
           } else {
-            console.warn('Failed to sync user with backend');
+            const errorText = await response.text();
+            console.warn('Failed to sync user with backend:', response.status, errorText);
           }
         } catch (error) {
           console.error('Error syncing user with backend:', error);
         }
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        console.log('User signed out, clearing redirect flag');
+        localStorage.removeItem('redirectToDashboard');
       }
     });
 

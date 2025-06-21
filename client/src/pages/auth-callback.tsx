@@ -10,8 +10,11 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('Auth callback: Starting authentication process...');
+        console.log('=== AUTH CALLBACK START ===');
         console.log('Auth callback: Current URL:', window.location.href);
+        console.log('Auth callback: Current pathname:', window.location.pathname);
+        console.log('Auth callback: Current search:', window.location.search);
+        console.log('Auth callback: Current hash:', window.location.hash);
         
         // Check for error in URL first
         const urlParams = new URLSearchParams(window.location.search);
@@ -19,6 +22,14 @@ export default function AuthCallback() {
         
         console.log('Auth callback: URL params:', Object.fromEntries(urlParams));
         console.log('Auth callback: Fragment params:', Object.fromEntries(fragment));
+        
+        // Log all URL components for debugging
+        console.log('Auth callback: Full URL breakdown:');
+        console.log('  - Protocol:', window.location.protocol);
+        console.log('  - Host:', window.location.host);
+        console.log('  - Pathname:', window.location.pathname);
+        console.log('  - Search:', window.location.search);
+        console.log('  - Hash:', window.location.hash);
         
         if (urlParams.get('error') || fragment.get('error')) {
           const errorMsg = urlParams.get('error_description') || fragment.get('error_description') || 'Authentication failed';
