@@ -476,196 +476,263 @@ export default function History() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-4 sm:space-y-6">
+          <div className="grid gap-6">
             {jobs.map((job: HistoryJob) => (
-              <Card key={job.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0">
+              <Card key={job.id} className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 hover:scale-[1.02]">
+                <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
-                        <FileText className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                        {editingJobId === job.id ? (
-                          <div className="flex items-center space-x-2 flex-1">
-                            <Input
-                              value={editingFilename}
-                              onChange={(e) => setEditingFilename(e.target.value)}
-                              className="text-sm sm:text-base"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleSaveRename(job.id);
-                                } else if (e.key === 'Escape') {
-                                  handleCancelRename();
-                                }
-                              }}
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleSaveRename(job.id)}
-                              className="text-green-600 hover:text-green-700 p-1"
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handleCancelRename}
-                              className="text-red-600 hover:text-red-700 p-1"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2 flex-1">
-                            <span className="truncate">{job.filename}</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleStartRename(job.id, job.filename)}
-                              className="text-gray-500 hover:text-gray-700 p-1"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm">
-                          <span className="flex items-center">
-                            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                            {formatDate(job.createdAt)}
-                          </span>
-                          <span>{formatFileSize(job.fileSize)}</span>
-                          <span className="capitalize">{job.subject}</span>
-                          <span className="capitalize">{job.difficulty}</span>
+                      {/* Enhanced File Header */}
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <FileText className="w-6 h-6 text-white" />
                         </div>
-                      </CardDescription>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="flex items-center space-x-2 text-lg font-bold">
+                            {editingJobId === job.id ? (
+                              <div className="flex items-center space-x-2 flex-1">
+                                <Input
+                                  value={editingFilename}
+                                  onChange={(e) => setEditingFilename(e.target.value)}
+                                  className="text-lg font-semibold bg-white dark:bg-gray-800 border-2 border-blue-300"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleSaveRename(job.id);
+                                    } else if (e.key === 'Escape') {
+                                      handleCancelRename();
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleSaveRename(job.id)}
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-100 p-2"
+                                >
+                                  <Check className="w-5 h-5" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={handleCancelRename}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-100 p-2"
+                                >
+                                  <X className="w-5 h-5" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-3 flex-1">
+                                <span className="truncate text-gray-900 dark:text-gray-100">{job.filename}</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleStartRename(job.id, job.filename)}
+                                  className="opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-100 p-1 transition-all duration-200"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </CardTitle>
+                          
+                          {/* Enhanced Metadata */}
+                          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                            <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                              <Calendar className="w-4 h-4" />
+                              <span>{formatDate(job.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                              <FileText className="w-4 h-4" />
+                              <span>{formatFileSize(job.fileSize)}</span>
+                            </div>
+                            <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                              {job.subject}
+                            </Badge>
+                            <Badge variant="outline" className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">
+                              {job.difficulty}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+                    
+                    {/* Enhanced Status */}
                     <div className="flex items-center space-x-2 flex-shrink-0">
-                      <Badge className={`${getStatusColor(job.status)} text-xs`}>
+                      <Badge className={`${getStatusColor(job.status)} text-sm px-3 py-1 shadow-md`}>
                         {getStatusIcon(job.status)}
-                        <span className="ml-1 capitalize">{job.status}</span>
+                        <span className="ml-2 capitalize font-semibold">{job.status}</span>
                       </Badge>
                     </div>
                   </div>
                 </CardHeader>
 
                 <CardContent>
-                  <div className="space-y-4">
-                    {/* Progress and stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Flashcards</span>
-                        <p className="font-medium">{job.flashcardCount}</p>
+                  <div className="space-y-6">
+                    {/* Enhanced Stats Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-3 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                            <FileText className="w-3 h-3 text-white" />
+                          </div>
+                          <div>
+                            <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Flashcards</span>
+                            <p className="text-lg font-bold text-emerald-900 dark:text-emerald-100">{job.flashcardCount}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-gray-500">Provider</span>
-                        <p className="font-medium capitalize">{job.apiProvider}</p>
+                      
+                      <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                            <BarChart3 className="w-3 h-3 text-white" />
+                          </div>
+                          <div>
+                            <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">AI Model</span>
+                            <p className="text-sm font-bold text-blue-900 dark:text-blue-100 capitalize">{job.apiProvider}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-gray-500">Progress</span>
-                        <p className="font-medium">{job.progress}%</p>
+                      
+                      <div className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-3 h-3 text-white" />
+                          </div>
+                          <div>
+                            <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">Progress</span>
+                            <p className="text-lg font-bold text-amber-900 dark:text-amber-100">{job.progress}%</p>
+                          </div>
+                        </div>
                       </div>
+                      
                       {job.processingTime && (
-                        <div>
-                          <span className="text-gray-500">Processing Time</span>
-                          <p className="font-medium">{job.processingTime}s</p>
+                        <div className="p-3 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                              <Clock className="w-3 h-3 text-white" />
+                            </div>
+                            <div>
+                              <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">Time</span>
+                              <p className="text-sm font-bold text-purple-900 dark:text-purple-100">{job.processingTime}s</p>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
 
                     {/* Error message */}
                     {job.errorMessage && (
-                      <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                        <p className="text-red-800 dark:text-red-200 text-sm">{job.errorMessage}</p>
+                      <div className="p-4 bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                            <XCircle className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-red-900 dark:text-red-100">Processing Error</h4>
+                            <p className="text-red-800 dark:text-red-200 text-sm">{job.errorMessage}</p>
+                          </div>
+                        </div>
                       </div>
                     )}
 
-                    <Separator />
+                    <Separator className="bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
 
-                    {/* Action buttons */}
-                    <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                    {/* Enhanced Action Buttons */}
+                    <div className="space-y-4">
+                      {/* Primary Actions */}
                       {job.hasFlashcards && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewFlashcards(job)}
-                          className="flex items-center justify-center"
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Flashcards
-                        </Button>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <Button
+                            onClick={() => handleViewFlashcards(job)}
+                            className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300"
+                          >
+                            <Eye className="w-5 h-5 mr-2" />
+                            View & Edit Flashcards
+                          </Button>
+                          <Button
+                            onClick={() => setLocation(`/study/${job.id}`)}
+                            className="flex-1 h-12 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-lg hover:shadow-xl transition-all duration-300"
+                          >
+                            <BarChart3 className="w-5 h-5 mr-2" />
+                            Start Study Mode
+                          </Button>
+                        </div>
                       )}
 
-                      <div className="flex flex-wrap gap-2">
-                        {job.hasAnkiDeck && (
+                      {/* Enhanced Download Actions */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                          <Download className="w-4 h-4" />
+                          Download Options
+                        </h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {job.hasAnkiDeck && (
+                            <Button
+                              variant="outline"
+                              onClick={() => handleDownload(job.id, 'anki')}
+                              className="h-10 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border-orange-200 dark:border-orange-800 hover:from-orange-100 hover:to-red-100 transition-all duration-300"
+                            >
+                              <Download className="w-4 h-4 mr-2 text-orange-600" />
+                              <span className="font-medium text-orange-800 dark:text-orange-200">Anki</span>
+                            </Button>
+                          )}
+
+                          <Button
+                            variant="outline"
+                            onClick={() => handleDownload(job.id, 'pdf')}
+                            className="h-10 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-red-200 dark:border-red-800 hover:from-red-100 hover:to-pink-100 transition-all duration-300"
+                          >
+                            <FileDown className="w-4 h-4 mr-2 text-red-600" />
+                            <span className="font-medium text-red-800 dark:text-red-200">PDF</span>
+                          </Button>
+
+                          {job.hasFlashcards && (
+                            <>
+                              <Button
+                                variant="outline"
+                                onClick={() => handleDownload(job.id, 'csv')}
+                                className="h-10 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800 hover:from-green-100 hover:to-emerald-100 transition-all duration-300"
+                              >
+                                <Download className="w-4 h-4 mr-2 text-green-600" />
+                                <span className="font-medium text-green-800 dark:text-green-200">CSV</span>
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                onClick={() => handleDownload(job.id, 'json')}
+                                className="h-10 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-cyan-100 transition-all duration-300"
+                              >
+                                <Download className="w-4 h-4 mr-2 text-blue-600" />
+                                <span className="font-medium text-blue-800 dark:text-blue-200">JSON</span>
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                onClick={() => handleDownload(job.id, 'quizlet')}
+                                className="h-10 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-purple-200 dark:border-purple-800 hover:from-purple-100 hover:to-violet-100 transition-all duration-300"
+                              >
+                                <Download className="w-4 h-4 mr-2 text-purple-600" />
+                                <span className="font-medium text-purple-800 dark:text-purple-200">Quizlet</span>
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                        
+                        {/* Enhanced Delete Action */}
+                        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDownload(job.id, 'anki')}
-                            className="flex items-center justify-center text-xs sm:text-sm"
+                            onClick={() => handleDeleteJob(job.id, job.filename)}
+                            className="w-full h-10 bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-200 dark:border-red-800 hover:from-red-100 hover:to-rose-100 transition-all duration-300"
                           >
-                            <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                            Anki
+                            <Trash2 className="w-4 h-4 mr-2 text-red-600" />
+                            <span className="font-medium text-red-800 dark:text-red-200">Delete Job & Files</span>
                           </Button>
-                        )}
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownload(job.id, 'pdf')}
-                          className="flex items-center justify-center text-xs sm:text-sm"
-                        >
-                          <FileDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                          PDF
-                        </Button>
-
-                        {job.hasFlashcards && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownload(job.id, 'csv')}
-                              className="flex items-center justify-center text-xs sm:text-sm"
-                            >
-                              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                              CSV
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownload(job.id, 'json')}
-                              className="flex items-center justify-center text-xs sm:text-sm"
-                            >
-                              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                              JSON
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownload(job.id, 'quizlet')}
-                              className="flex items-center justify-center text-xs sm:text-sm"
-                            >
-                              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                              Quizlet
-                            </Button>
-                          </>
-                        )}
+                        </div>
                       </div>
-
-                      {/* Delete button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteJob(job.id, job.filename)}
-                        className="flex items-center text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 text-xs sm:text-sm mt-2 sm:mt-0"
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                        Delete
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
