@@ -9,12 +9,14 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 interface OptimizedFlashcard {
-  id?: number;
+  id: number;
   front: string;
   back: string;
-  index: number;
+  cardIndex: number;
+  jobId: number;
   subject?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  tags?: string[];
   progress: {
     status: 'new' | 'reviewing' | 'known';
     reviewCount: number;
@@ -210,7 +212,7 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
   const handleResponse = useCallback((status: string, difficultyRating: string) => {
     if (!currentCard) return;
 
-    queueProgressUpdate(currentCard.index, status, difficultyRating);
+    queueProgressUpdate(currentCard.cardIndex, status, difficultyRating);
 
     // Auto-advance or complete session
     if (currentIndex < flashcards.length - 1) {

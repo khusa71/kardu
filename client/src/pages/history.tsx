@@ -130,15 +130,13 @@ export default function History() {
     try {
       const jobData = await apiRequest('GET', `/api/jobs/${job.id}`);
       
-      if (jobData.flashcards) {
-        const flashcards = JSON.parse(jobData.flashcards);
-        
-        // Transform data structure if needed (question/answer vs front/back)
-        const normalizedFlashcards = flashcards.map((card: any) => ({
-          id: card.id || Math.random(),
-          front: card.front || card.question || '',
-          back: card.back || card.answer || '',
-          subject: card.subject || card.topic || '',
+      if (jobData.flashcards && jobData.flashcards.length > 0) {
+        // Flashcards are already in normalized format from the API
+        const normalizedFlashcards = jobData.flashcards.map((card: any) => ({
+          id: card.id,
+          front: card.front,
+          back: card.back,
+          subject: card.subject || job.subject || '',
           difficulty: card.difficulty || 'beginner',
           tags: card.tags || []
         }));
@@ -146,12 +144,16 @@ export default function History() {
         setCurrentFlashcards(normalizedFlashcards);
         setSelectedJob(job);
         setViewMode('view');
-      } else if (jobData.status === 'completed' && !jobData.flashcards) {
+      } else if (jobData.status === 'completed' && (!jobData.flashcards || jobData.flashcards.length === 0)) {
         // Fallback: offer to regenerate if flashcards are missing but job is completed
         const shouldRegenerate = confirm("Flashcards appear to be missing for this completed job. Would you like to regenerate them?");
         if (shouldRegenerate) {
           try {
-            await apiRequest('POST', `/api/regenerate/${job.id}`, {});
+            await apiRequest('POST', `/api/regenerate/${job.id}`, {
+              customContext: "Regenerate with improved clarity and detail",
+              flashcardCount: 15,
+              difficulty: "intermediate"
+            });
             
             toast({
               title: "Regeneration Started",

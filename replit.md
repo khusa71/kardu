@@ -101,6 +101,18 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
+- June 21, 2025: **COMPREHENSIVE FLASHCARD NORMALIZATION COMPLETED** - Successfully updated entire codebase to use normalized flashcard database structure:
+  * Updated all frontend components (history.tsx, study-main.tsx, upload.tsx, optimized-study-mode.tsx) to work with normalized flashcard arrays instead of JSON parsing
+  * Fixed API endpoints to return flashcard data directly from normalized `flashcards` table with proper relationships
+  * Updated `/api/jobs/:id` endpoint to include flashcards from normalized table using `getNormalizedFlashcards()` function
+  * Enhanced `/api/decks` endpoint to load preview cards from normalized table with proper async mapping
+  * Fixed all TypeScript compilation errors related to flashcard data structure changes (cardIndex vs index, flashcardCount vs cardCount)
+  * Updated FlashcardDeck interface to use `flashcardCount` and `status` fields matching actual database schema
+  * Removed legacy JSON parsing logic throughout frontend - flashcards now returned as proper arrays from API
+  * Enhanced storage layer with proper normalized flashcard CRUD operations and optimized study data loading
+  * All components now reference individual flashcard records with proper IDs, enabling advanced progress tracking and study features
+  * Database relationships fully functional: flashcards table → study_progress table via flashcard_id foreign keys
+  * System now supports individual card progress tracking, advanced study analytics, and scalable study session management
 - June 21, 2025: **CRITICAL DATABASE SCHEMA FIXES COMPLETED** - Resolved all upload system failures and database constraint errors:
   * Fixed database schema mismatches causing 500 server errors during uploads by removing references to non-existent columns
   * Removed all references to apiProvider, pdfDownloadUrl, stripeCustomerId, role, and subscriptionStatus fields that don't exist in current schema

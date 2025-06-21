@@ -180,18 +180,9 @@ export default function Upload() {
     }
     
     if (status === 'completed') {
-      let flashcards = [];
-      const flashcardsData = (jobStatus as any)?.flashcards;
-      
-      if (flashcardsData) {
-        try {
-          flashcards = Array.isArray(flashcardsData) 
-            ? flashcardsData 
-            : JSON.parse(flashcardsData);
-        } catch (error) {
-          flashcards = [];
-        }
-      }
+      // Flashcards are now returned directly as arrays from the normalized API
+      const flashcardsData = (jobStatus as any)?.flashcards || [];
+      const flashcards = Array.isArray(flashcardsData) ? flashcardsData : [];
       
       setGeneratedFlashcards(flashcards);
       setIsProcessing(false);

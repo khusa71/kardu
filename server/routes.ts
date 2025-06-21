@@ -1481,9 +1481,26 @@ async function processFlashcardJob(jobId: number) {
       );
 
       // Transform jobs into deck format with metadata
-      const decks = completedJobs.map(job => {
+      const decks = await Promise.all(completedJobs.map(async job => {
         const flashcardCount = job.flashcardCount || 0;
-        const previewCards: any[] = []; // Preview cards will be loaded separately if needed
+        
+        // Get first 3 flashcards for preview from normalized table
+        let previewCards: any[] = [];
+        if (flashcardCount > 0) {
+          try {
+            const flashcards = await storage.getFlashcards(job.id);
+            previewCards = flashcards.slice(0, 3).map(card => ({
+              id: card.id,
+              front: card.front,
+              back: card.back,
+              subject: card.subject,
+              difficulty: card.difficulty,
+              tags: card.tags || []
+            }));
+          } catch (error) {
+            console.error(`Failed to load preview cards for job ${job.id}:`, error);
+          }
+        }
 
         return {
           id: job.id,
@@ -1491,13 +1508,14 @@ async function processFlashcardJob(jobId: number) {
           filename: job.filename,
           subject: job.subject,
           difficulty: job.difficulty,
-          cardCount: flashcardCount,
+          flashcardCount: flashcardCount,
+          status: job.status,
           createdAt: job.createdAt,
           updatedAt: job.updatedAt,
           previewCards,
           hasFlashcards: flashcardCount > 0
         };
-      });
+      }));
 
       res.json(decks);
     } catch (error) {

@@ -25,10 +25,10 @@ interface FlashcardDeck {
   filename: string;
   subject: string;
   difficulty: string;
-  cardCount: number;
+  flashcardCount: number;
   createdAt: string;
   updatedAt: string;
-  apiProvider: string;
+  status: string;
   previewCards: FlashcardPair[];
   hasFlashcards: boolean;
 }
@@ -87,15 +87,13 @@ export default function StudyMain() {
     try {
       const jobData = await apiRequest("GET", `/api/jobs/${deck.id}`);
       
-      if (jobData.flashcards) {
-        const rawFlashcards = JSON.parse(jobData.flashcards);
-        
-        // Map the database format to frontend format
-        const flashcards = rawFlashcards.map((card: any) => ({
+      if (jobData.flashcards && jobData.flashcards.length > 0) {
+        // Flashcards are already in normalized format from the API
+        const flashcards = jobData.flashcards.map((card: any) => ({
           id: card.id,
-          front: card.question || card.front || "No question available",
-          back: card.answer || card.back || "No answer available", 
-          subject: card.topic || card.subject || deck.subject,
+          front: card.front,
+          back: card.back,
+          subject: card.subject || deck.subject,
           difficulty: card.difficulty || deck.difficulty,
           tags: card.tags || []
         }));
@@ -369,7 +367,7 @@ export default function StudyMain() {
                       <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
                         <span className="flex items-center gap-1">
                           <FileText className="w-4 h-4" />
-                          {deck.cardCount} cards
+                          {deck.flashcardCount} cards
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
@@ -380,7 +378,7 @@ export default function StudyMain() {
                       <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
                         <span className="flex items-center gap-1">
                           <Zap className="w-4 h-4" />
-                          {deck.apiProvider}
+                          {deck.status === 'completed' ? 'Ready' : 'Processing'}
                         </span>
                       </div>
 
