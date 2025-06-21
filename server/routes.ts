@@ -81,6 +81,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // JSON middleware for all other routes
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  // Debug endpoint to test database connection without auth
+  app.post('/api/debug/test-db', async (req, res) => {
+    try {
+      console.log('Testing database connection...');
+      const testUser = await storage.getUserProfile('test-user-123');
+      console.log('Database test successful:', testUser ? 'user found' : 'no user found');
+      res.json({ status: 'database_ok', hasTestUser: !!testUser });
+    } catch (error) {
+      console.error('Database test failed:', error);
+      res.status(500).json({ error: 'Database connection failed', details: error.message });
+    }
+  });
+
   // Supabase Auth routes
   app.post('/api/auth/sync', verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {

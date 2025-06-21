@@ -134,6 +134,14 @@ function cleanupTempFiles() {
   
   const server = await registerRoutes(app);
 
+  // Add explicit API route handler to prevent vite middleware from intercepting API calls
+  app.use('/api/*', (req, res, next) => {
+    // If we reach here, the API route wasn't handled properly
+    // This should not happen if routes are properly registered
+    console.error(`Unhandled API route: ${req.method} ${req.path}`);
+    res.status(404).json({ error: 'API endpoint not found' });
+  });
+
   // Add graceful shutdown handling
   process.on('SIGTERM', () => {
     log('Received SIGTERM, shutting down gracefully');
