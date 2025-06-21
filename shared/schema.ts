@@ -82,7 +82,8 @@ export const studyProgress = pgTable("study_progress", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => userProfiles.id),
   jobId: integer("job_id").notNull().references(() => flashcardJobs.id, { onDelete: "cascade" }),
-  flashcardId: integer("flashcard_id").notNull().references(() => flashcards.id, { onDelete: "cascade" }),
+  cardIndex: integer("card_index").notNull(), // Legacy field for existing data
+  flashcardId: integer("flashcard_id").references(() => flashcards.id, { onDelete: "cascade" }), // New normalized reference
   status: text("status").notNull(), // 'new', 'learning', 'reviewing', 'known'
   lastReviewedAt: timestamp("last_reviewed_at").defaultNow(),
   nextReviewDate: timestamp("next_review_date"),

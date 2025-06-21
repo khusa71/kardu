@@ -290,6 +290,221 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check and update all table structures for normalized flashcards
+  app.post("/api/update-all-table-structures", async (req, res) => {
+    try {
+      // 1. Remove flashcards JSON column from flashcard_jobs table
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE flashcard_jobs DROP COLUMN IF EXISTS flashcards;
+        EXCEPTION
+          WHEN undefined_column THEN NULL;
+        END $$;
+      `);
+
+      // 2. Update study_progress to use flashcard_id instead of card_index
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE study_progress 
+          ADD COLUMN flashcard_id INTEGER;
+        EXCEPTION
+          WHEN duplicate_column THEN NULL;
+        END $$;
+      `);
+
+      // 3. Add foreign key constraint to flashcards
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE study_progress 
+          ADD CONSTRAINT fk_study_progress_flashcard 
+          FOREIGN KEY (flashcard_id) REFERENCES flashcards(id) ON DELETE CASCADE;
+        EXCEPTION
+          WHEN duplicate_object THEN NULL;
+        END $$;
+      `);
+
+      // 4. Add enhanced progress tracking columns
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE study_progress 
+          ADD COLUMN correct_streak INTEGER DEFAULT 0,
+          ADD COLUMN total_reviews INTEGER DEFAULT 0,
+          ADD COLUMN correct_reviews INTEGER DEFAULT 0;
+        EXCEPTION
+          WHEN duplicate_column THEN NULL;
+        END $$;
+      `);
+
+      // 5. Check if study_sessions table needs flashcard references
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE study_sessions 
+          ADD COLUMN flashcard_count INTEGER DEFAULT 0;
+        EXCEPTION
+          WHEN duplicate_column THEN NULL;
+        END $$;
+      `);
+
+      // Get updated table structures
+      const flashcardJobsStructure = await db.execute(sql`
+        SELECT column_name, data_type, is_nullable 
+        FROM information_schema.columns 
+        WHERE table_name = 'flashcard_jobs'
+        ORDER BY ordinal_position
+      `);
+
+      const studyProgressStructure = await db.execute(sql`
+        SELECT column_name, data_type, is_nullable 
+        FROM information_schema.columns 
+        WHERE table_name = 'study_progress'
+        ORDER BY ordinal_position
+      `);
+
+      const studySessionsStructure = await db.execute(sql`
+        SELECT column_name, data_type, is_nullable 
+        FROM information_schema.columns 
+        WHERE table_name = 'study_sessions'
+        ORDER BY ordinal_position
+      `);
+
+      res.json({
+        success: true,
+        message: "All table structures updated for normalized flashcards",
+        updatedTables: {
+          flashcard_jobs: flashcardJobsStructure,
+          study_progress: studyProgressStructure,
+          study_sessions: studySessionsStructure
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message,
+        message: "Failed to update table structures"
+      });
+    }
+  });
+
+  // Migrate existing study_progress records to use flashcard_id references
+  app.post("/api/migrate-study-progress-flashcard-refs", async (req, res) => {
+    try {
+      // Get all study_progress records without flashcard_id
+      const progressRecords = await db.execute(sql`
+        SELECT sp.id, sp.job_id, sp.card_index, sp.user_id
+        FROM study_progress sp
+        WHERE sp.flashcard_id IS NULL
+      `);
+
+      let migratedCount = 0;
+
+      for (const record of progressRecords) {
+        // Find corresponding flashcard by job_id and card_index
+        const flashcardResult = await db.execute(sql`
+          SELECT id FROM flashcards 
+          WHERE job_id = ${record.job_id} AND card_index = ${record.card_index}
+          LIMIT 1
+        `);
+
+        if (flashcardResult.length > 0) {
+          const flashcardId = flashcardResult[0].id;
+          
+          // Update study_progress record with flashcard_id
+          await db.execute(sql`
+            UPDATE study_progress 
+            SET flashcard_id = ${flashcardId}
+            WHERE id = ${record.id}
+          `);
+          
+          migratedCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Migrated ${migratedCount} study progress records to use flashcard_id references`,
+        totalRecords: progressRecords.length,
+        migratedRecords: migratedCount
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message,
+        message: "Failed to migrate study progress flashcard references"
+      });
+    }
+  });
+
+  // Test normalized study functionality
+  app.post("/api/test-normalized-study/:jobId", async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId);
+      const userId = "29012732-3c3e-465f-ab37-10cf9eccfd57"; // Test user
+
+      // Get flashcards for this job
+      const flashcardsResult = await db.execute(sql`
+        SELECT * FROM flashcards WHERE job_id = ${jobId} ORDER BY card_index
+      `);
+
+      if (flashcardsResult.length === 0) {
+        return res.status(404).json({ error: "No flashcards found for this job" });
+      }
+
+      // Get study progress for these flashcards
+      const progressResult = await db.execute(sql`
+        SELECT sp.*, f.front, f.back 
+        FROM study_progress sp
+        JOIN flashcards f ON sp.flashcard_id = f.id
+        WHERE sp.user_id = ${userId} AND sp.job_id = ${jobId}
+      `);
+
+      // Create some test progress if none exists
+      if (progressResult.length === 0) {
+        for (const flashcard of flashcardsResult.slice(0, 2)) {
+          await db.execute(sql`
+            INSERT INTO study_progress (user_id, job_id, card_index, flashcard_id, status)
+            VALUES (${userId}, ${jobId}, ${flashcard.card_index}, ${flashcard.id}, 'new')
+          `);
+        }
+
+        // Re-fetch progress
+        const newProgressResult = await db.execute(sql`
+          SELECT sp.*, f.front, f.back 
+          FROM study_progress sp
+          JOIN flashcards f ON sp.flashcard_id = f.id
+          WHERE sp.user_id = ${userId} AND sp.job_id = ${jobId}
+        `);
+
+        return res.json({
+          success: true,
+          message: "Normalized study system working correctly",
+          flashcardsCount: flashcardsResult.length,
+          progressRecords: newProgressResult.length,
+          testData: {
+            flashcards: flashcardsResult,
+            progress: newProgressResult
+          }
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Normalized study system working correctly",
+        flashcardsCount: flashcardsResult.length,
+        progressRecords: progressResult.length,
+        testData: {
+          flashcards: flashcardsResult,
+          progress: progressResult
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message,
+        message: "Normalized study system test failed"
+      });
+    }
+  });
+
   // Raw body middleware for Stripe webhooks
   app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
   
