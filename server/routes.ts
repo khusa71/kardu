@@ -889,6 +889,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // CRITICAL: Double-check quota limits before job creation
+      // This ensures no race conditions allow bypassing limits
+      for (const validation of req.fileValidations) {
+        const uploadCheck = await canUserUpload(userId, validation.pageInfo.pageCount);
+        if (!uploadCheck.canUpload) {
+          return res.status(429).json({
+            message: uploadCheck.reason,
+            fileName: validation.file.originalname,
+            pageCount: validation.pageInfo.pageCount,
+            quotaInfo: uploadCheck.quotaInfo,
+            limits: uploadCheck.limits,
+            requiresUpgrade: !user.isPremium
+          });
+        }
+      }
+
       // Enforce AI model access based on user tier
       const enforcedProvider = enforceAIModelAccess(Boolean(user.isPremium), apiProvider);
       
@@ -904,6 +920,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           availableProviders: validation.availableProviders
         });
       }
+
+      // CRITICAL: Increment quota BEFORE creating jobs to prevent race conditions
+      await incrementUploadCount(userId, req.totalPagesWillProcess);
 
       // Process files using page-based validation results with transaction safety
       const createdJobs = [];
@@ -974,8 +993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Atomic increment of user quotas
-        await incrementUploadCount(userId, req.totalPagesWillProcess);
+        // Quota already incremented before job creation to prevent race conditions
         
       } catch (error) {
         // Clean up any created jobs on failure
