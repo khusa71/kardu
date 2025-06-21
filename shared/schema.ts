@@ -41,8 +41,8 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   pageCount: integer("page_count"), // Number of pages in the PDF
   pagesProcessed: integer("pages_processed"), // Actual pages processed (may be less due to limits)
   pdfStorageKey: text("pdf_storage_key"), // Object Storage key for original PDF
-  pdfDownloadUrl: text("pdf_download_url"), // Download URL for original PDF
-  apiProvider: text("api_provider").notNull(), // 'openai' | 'anthropic'
+
+
   flashcardCount: integer("flashcard_count").notNull(),
   subject: text("subject"), // Store subject for better categorization
   difficulty: text("difficulty"), // Store difficulty level

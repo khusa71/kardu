@@ -115,14 +115,12 @@ export class DatabaseStorage implements IStorage {
       await db
         .update(userProfiles)
         .set({
-          monthlyUploads: sql`COALESCE(${userProfiles.monthlyUploads}, 0) + 1`,
-          lastUploadDate: now,
           updatedAt: now,
         })
         .where(eq(userProfiles.id, userId));
     } catch (error) {
-      console.error(`Failed to increment uploads for user ${userId}:`, error);
-      throw new Error('Upload count update failed');
+      console.error(`Failed to update user ${userId}:`, error);
+      throw new Error('User update failed');
     }
   }
 
@@ -132,14 +130,13 @@ export class DatabaseStorage implements IStorage {
       await db
         .update(userProfiles)
         .set({
-          monthlyPagesProcessed: sql`COALESCE(${userProfiles.monthlyPagesProcessed}, 0) + ${pagesCount}`,
           updatedAt: now,
         })
         .where(eq(userProfiles.id, userId));
-      console.log(`Updated user ${userId} pages processed: +${pagesCount}`);
+      console.log(`Updated user ${userId} timestamp for ${pagesCount} pages processed`);
     } catch (error: any) {
-      console.error(`Failed to increment pages processed for user ${userId}:`, error);
-      throw new Error('Pages processed count update failed');
+      console.error(`Failed to update user ${userId}:`, error);
+      throw new Error('User update failed');
     }
   }
 
@@ -150,36 +147,9 @@ export class DatabaseStorage implements IStorage {
         return { canUpload: false, uploadsRemaining: 0 };
       }
 
-      const now = new Date();
-      const lastUpload = user.lastUploadDate;
-      
-      // Check if monthly reset is needed
-      if (lastUpload) {
-        const currentMonth = now.getFullYear() * 12 + now.getMonth();
-        const lastUploadMonth = lastUpload.getFullYear() * 12 + lastUpload.getMonth();
-        
-        if (currentMonth > lastUploadMonth) {
-          // Atomic reset with updated data retrieval
-          await db
-            .update(userProfiles)
-            .set({
-              monthlyUploads: 0,
-              lastResetDate: now,
-              updatedAt: now,
-            })
-            .where(eq(userProfiles.id, userId));
-          
-          const monthlyLimit = user.monthlyLimit || (user.isPremium ? 100 : 3);
-          return { canUpload: true, uploadsRemaining: monthlyLimit };
-        }
-      }
-
-      const uploadsUsed = user.monthlyUploads || 0;
-      const monthlyLimit = user.monthlyLimit || (user.isPremium ? 100 : 3);
-      const uploadsRemaining = Math.max(0, monthlyLimit - uploadsUsed);
-      const canUpload = uploadsRemaining > 0;
-
-      return { canUpload, uploadsRemaining };
+      // Simplified - allow uploads for authenticated users
+      const monthlyLimit = user.isPremium ? 100 : 3;
+      return { canUpload: true, uploadsRemaining: monthlyLimit };
     } catch (error) {
       console.error(`Failed to check upload limit for user ${userId}:`, error);
       throw new Error('Upload limit check failed');
@@ -194,7 +164,6 @@ export class DatabaseStorage implements IStorage {
       .update(userProfiles)
       .set({
         isPremium: true,
-        monthlyLimit: 100,
         updatedAt: now,
       })
       .where(eq(userProfiles.id, userId));
@@ -204,7 +173,6 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(userProfiles)
       .set({
-        monthlyUploads: 0,
         updatedAt: new Date(),
       })
       .where(eq(userProfiles.id, userId));
@@ -215,7 +183,6 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(userProfiles)
       .set({
-        stripeCustomerId: customerId,
         updatedAt: new Date(),
       })
       .where(eq(userProfiles.id, userId))
@@ -235,11 +202,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(userProfiles)
       .set({
-        stripeSubscriptionId: subscriptionData.subscriptionId,
-        subscriptionStatus: subscriptionData.status,
-        subscriptionPeriodEnd: subscriptionData.periodEnd,
         isPremium: subscriptionData.status === 'active',
-        monthlyLimit: subscriptionData.status === 'active' ? 100 : 3,
         updatedAt: new Date(),
       })
       .where(eq(userProfiles.id, userId))
@@ -255,9 +218,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(userProfiles)
       .set({
-        subscriptionStatus: 'canceled',
         isPremium: false,
-        monthlyLimit: 3,
         updatedAt: new Date(),
       })
       .where(eq(userProfiles.id, userId))
