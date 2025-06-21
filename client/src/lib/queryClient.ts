@@ -44,10 +44,18 @@ export async function apiRequest(
   });
 
   // Handle 401 errors with automatic retry
-  if (res.status === 401 && retryCount < 2) {
-    // Refresh session and retry
-    await supabase.auth.refreshSession();
-    return apiRequest(method, url, data, retryCount + 1);
+  if (res.status === 401 && retryCount < 3) {
+    // Force session refresh and retry
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    if (!refreshError && refreshData?.session?.access_token) {
+      return apiRequest(method, url, data, retryCount + 1);
+    }
+    
+    // If refresh fails, try getting a fresh session
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session?.access_token) {
+      return apiRequest(method, url, data, retryCount + 1);
+    }
   }
 
   await throwIfResNotOk(res);

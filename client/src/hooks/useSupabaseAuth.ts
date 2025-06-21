@@ -7,9 +7,10 @@ export function useSupabaseAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let syncInProgress = false;
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session);
       setSession(session as AuthSession);
       setUser(session?.user as User || null);
       setLoading(false);
@@ -19,22 +20,15 @@ export function useSupabaseAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('=== AUTH STATE CHANGE ===');
-      console.log('Event:', event);
-      console.log('Session:', session);
-      console.log('Session user:', session?.user);
-      console.log('Session access_token exists:', !!session?.access_token);
-      
       setSession(session as AuthSession);
       setUser(session?.user as User || null);
       setLoading(false);
       
-      // If user just signed in, sync with backend and handle redirect
-      if (event === 'SIGNED_IN' && session) {
-        console.log('Processing SIGNED_IN event...');
+      // If user just signed in, sync with backend (prevent duplicate calls)
+      if (event === 'SIGNED_IN' && session && !syncInProgress) {
+        syncInProgress = true;
         
         try {
-          console.log('Attempting backend sync...');
           const response = await fetch('/api/auth/sync', {
             method: 'POST',
             headers: {
@@ -46,17 +40,11 @@ export function useSupabaseAuth() {
             })
           });
           
-          console.log('Backend sync response status:', response.status);
-          
           if (response.ok) {
-            console.log('User synced with backend successfully');
-            
             // Check if we should redirect to dashboard after OAuth
             const shouldRedirect = localStorage.getItem('redirectToDashboard');
-            console.log('Should redirect to dashboard?', shouldRedirect);
             
             if (shouldRedirect === 'true') {
-              console.log('Redirecting to dashboard after successful OAuth...');
               localStorage.removeItem('redirectToDashboard');
               
               // Small delay to ensure state is updated
@@ -64,18 +52,17 @@ export function useSupabaseAuth() {
                 window.location.href = '/dashboard';
               }, 100);
             }
-          } else {
-            const errorText = await response.text();
-            console.warn('Failed to sync user with backend:', response.status, errorText);
           }
         } catch (error) {
-          console.error('Error syncing user with backend:', error);
+          // Sync failed but don't block user experience
+        } finally {
+          syncInProgress = false;
         }
       }
       
       if (event === 'SIGNED_OUT') {
-        console.log('User signed out, clearing redirect flag');
         localStorage.removeItem('redirectToDashboard');
+        syncInProgress = false;
       }
     });
 
@@ -83,37 +70,26 @@ export function useSupabaseAuth() {
   }, []);
 
   const signInWithEmail = async (email: string, password: string) => {
-    console.log('Attempting email sign in...');
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    console.log('Email sign in result:', { data, error });
     return { data, error };
   };
 
   const signUpWithEmail = async (email: string, password: string) => {
-    console.log('Attempting email sign up...');
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
-    console.log('Email sign up result:', { data, error });
     return { data, error };
   };
 
   const signInWithGoogle = async () => {
-    console.log('=== GOOGLE OAUTH START ===');
-    console.log('Current location:', window.location.href);
-    console.log('Current hostname:', window.location.hostname);
-    console.log('Current origin:', window.location.origin);
-    
     // Set redirect flag before starting OAuth flow
     localStorage.setItem('redirectToDashboard', 'true');
-    console.log('Set redirect flag to dashboard');
     
     const redirectTo = `${window.location.origin}/auth/callback`;
-    console.log('Using redirect URL:', redirectTo);
     
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -122,10 +98,7 @@ export function useSupabaseAuth() {
       }
     });
     
-    console.log('Google OAuth result:', { data, error });
-    
     if (error) {
-      console.error('Google OAuth error:', error);
       localStorage.removeItem('redirectToDashboard');
     }
     

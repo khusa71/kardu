@@ -55,11 +55,9 @@ const upload = multer({
     files: 10, // Maximum 10 files (will be restricted by user role)
   },
   fileFilter: (req, file, cb) => {
-    console.log('DEBUG: File upload attempt:', file.originalname, 'Type:', file.mimetype);
     if (file.mimetype === "application/pdf") {
       cb(null, true);
     } else {
-      console.log('DEBUG: File rejected - not PDF. Attempted type:', file.mimetype);
       cb(new Error(`Only PDF files are allowed. You uploaded: ${file.mimetype}`));
     }
   },
@@ -862,7 +860,7 @@ async function processFlashcardJob(jobId: number) {
       updatedAt: new Date()
     });
 
-    console.log(`Job ${jobId} completed successfully with ${flashcards.length} flashcards`);
+
 
   } catch (error: any) {
     console.error(`Job ${jobId} failed:`, error);
@@ -2108,7 +2106,7 @@ async function processFlashcardJobWithPageLimits(
       updatedAt: new Date()
     });
 
-    console.log(`Job ${jobId} completed successfully: ${finalPagesToProcess} pages processed from ${job.pageCount || 'unknown'} total pages, ${flashcards.length} flashcards generated`);
+
 
   } catch (error: any) {
     console.error(`Error processing job ${jobId}:`, error);

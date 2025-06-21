@@ -335,16 +335,12 @@ function getSubjectContext(subject: string) {
 }
 
 function validateAndFormatFlashcards(flashcards: any[]): FlashcardPair[] {
-  console.log("validateAndFormatFlashcards called with:", typeof flashcards, Array.isArray(flashcards), flashcards?.length);
-  
   if (!Array.isArray(flashcards)) {
-    console.error("Validation failed: not an array:", flashcards);
     throw new Error("Response must be an array of flashcards");
   }
 
   try {
     const filtered = flashcards.filter(card => card && (card.question || card.front) && (card.answer || card.back));
-    console.log("After filtering:", filtered.length, "valid cards");
     
     const mapped = filtered.map(card => ({
       front: String(card.question || card.front || "").trim(),
@@ -352,14 +348,11 @@ function validateAndFormatFlashcards(flashcards: any[]): FlashcardPair[] {
       subject: String(card.topic || card.subject || "General").trim(),
       difficulty: (card.difficulty || "intermediate") as "beginner" | "intermediate" | "advanced"
     }));
-    console.log("After mapping:", mapped.length, "cards");
     
     const final = mapped.filter(card => card.front.length > 0 && card.back.length > 0);
-    console.log("Final validated cards:", final.length);
     
     return final;
   } catch (error) {
-    console.error("Error in validateAndFormatFlashcards:", error);
     throw error;
   }
 }
