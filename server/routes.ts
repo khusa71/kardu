@@ -127,7 +127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Flashcards table does NOT exist in database"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({
         exists: false,
         error: error.message,
@@ -176,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: "Flashcards table created successfully"
       });
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({
         success: false,
         error: error.message,
@@ -2066,23 +2066,21 @@ async function processFlashcardJob(jobId: number) {
       }
 
       // Delete existing flashcards for this job
-      await db.delete(flashcardsTable).where(eq(flashcardsTable.jobId, jobId));
+      await storage.deleteFlashcards(jobId);
 
       // Insert new normalized flashcards
       if (flashcards && flashcards.length > 0) {
         const normalizedFlashcards = flashcards.map((card: any, index: number) => ({
           jobId,
-          userId,
           cardIndex: index,
           front: card.front || '',
           back: card.back || '',
           subject: card.subject || job.subject || '',
           difficulty: card.difficulty || job.difficulty || 'beginner',
           tags: card.tags || [],
-          confidence: card.confidence ? parseFloat(card.confidence) : null,
         }));
 
-        await db.insert(flashcardsTable).values(normalizedFlashcards);
+        await storage.createFlashcards(normalizedFlashcards);
       }
 
       // Update job metadata

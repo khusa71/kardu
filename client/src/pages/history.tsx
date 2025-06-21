@@ -391,17 +391,9 @@ export default function History() {
             jobId={selectedJob?.id}
             onSave={async (flashcards) => {
               try {
-                const response = await fetch(`/api/jobs/${selectedJob?.id}/flashcards`, {
-                  method: 'PUT',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ flashcards: JSON.stringify(flashcards) }),
+                const response = await apiRequest('PUT', `/api/jobs/${selectedJob?.id}/flashcards`, {
+                  flashcards: flashcards // Send flashcards directly as array, not JSON string
                 });
-                
-                if (!response.ok) {
-                  throw new Error('Failed to save flashcards');
-                }
                 
                 toast({
                   title: "Success",
