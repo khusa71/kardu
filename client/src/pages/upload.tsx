@@ -14,6 +14,7 @@ import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { NavigationBar } from "@/components/navigation-bar";
 import { AuthModal } from "@/components/auth-modal";
 import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Upload as UploadIcon, 
   FileText, 
@@ -75,11 +76,7 @@ export default function Upload() {
   // File upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!response.ok) throw new Error('Upload failed');
+      const response = await apiRequest('POST', '/api/upload', formData);
       return response.json();
     },
     onSuccess: (data) => {
@@ -253,10 +250,10 @@ export default function Upload() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <NavigationBar />
       
-      <main className="max-w-screen-xl mx-auto px-4 py-8">
+      <main className="max-w-screen-xl mx-auto px-4 pt-4 pb-16">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-4">
@@ -620,18 +617,16 @@ export default function Upload() {
                     </p>
                   </div>
                   
-                  {jobStatus && (
-                    <div className="max-w-md mx-auto space-y-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="font-medium">{(jobStatus as any).progress || 0}%</span>
-                      </div>
-                      <Progress value={(jobStatus as any).progress || 0} className="h-3" />
-                      <p className="text-sm text-muted-foreground">
-                        Status: {(jobStatus as any).status || 'Processing...'}
-                      </p>
+                  <div className="max-w-md mx-auto space-y-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Progress</span>
+                      <span className="font-medium">{jobStatus ? (jobStatus as any)?.progress || 0 : 0}%</span>
                     </div>
-                  )}
+                    <Progress value={jobStatus ? (jobStatus as any)?.progress || 0 : 0} className="h-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Status: {jobStatus ? (jobStatus as any)?.status || 'Processing...' : 'Processing...'}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
