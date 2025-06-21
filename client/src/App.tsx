@@ -48,13 +48,9 @@ function Router() {
 
   // Handle redirect after successful authentication
   useEffect(() => {
-    if (!loading && user) {
-      const shouldRedirect = localStorage.getItem('redirectToDashboard');
-      if (shouldRedirect === 'true') {
-        localStorage.removeItem('redirectToDashboard');
-        navigate('/dashboard');
-      } else if (location === '/' && !location.includes('/auth/callback')) {
-        // Only redirect from home page if not coming from auth callback
+    if (!loading && user && location !== '/auth/callback') {
+      // If user is authenticated and not on auth callback, redirect to dashboard
+      if (location === '/') {
         navigate('/dashboard');
       }
     }
