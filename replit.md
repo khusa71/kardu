@@ -138,6 +138,10 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
   * Added detailed debugging logs throughout auto-check mechanism to trace completion detection failures
   * Implemented comprehensive step 3 transition debugging with state change tracking and API call logging
   * Added deep investigation tools to identify root cause of frontend stuck on processing screen despite backend completion
+  * FIXED STEP 3 TRANSITION ISSUE - Replaced manual polling with React Query's built-in refetchInterval for proper state management
+  * Replaced debug panel with informative AI processing progress tracker showing backend operations to users
+  * Enhanced user experience with visual progress indicators and step-by-step processing explanations
+  * Jobs now automatically transition from step 3 (processing) to step 4 (results) when flashcards are generated
 - June 21, 2025: **READING/STUDYING ENGINE OPTIMIZED** - Completed comprehensive performance improvements:
   * Implemented batch progress updates to reduce API calls by 80% during study sessions
   * Enhanced spaced repetition algorithm with SM-2 inspired intervals and progressive difficulty scaling

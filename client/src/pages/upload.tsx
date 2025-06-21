@@ -750,111 +750,84 @@ export default function Upload() {
                       Status: {jobStatus ? (jobStatus as any)?.status || 'Processing...' : 'Processing...'}
                     </p>
                     
-                    {currentJobId && (
-                      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                          Job ID: {currentJobId} • Debug Info: Step={currentStep}, Processing={isProcessing ? 'true' : 'false'}
-                        </p>
-                        <div className="space-y-3">
-                          <Button 
-                            variant="default" 
-                            size="lg"
-                            onClick={async () => {
-                              console.log('=== MANUAL BUTTON CLICKED ===');
-                              console.log('Current state before API call:');
-                              console.log('- currentJobId:', currentJobId);
-                              console.log('- currentStep:', currentStep);
-                              console.log('- isProcessing:', isProcessing);
-                              
-                              try {
-                                console.log('Making API request to /api/jobs/' + currentJobId);
-                                const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
-                                const data = await response.json();
-                                console.log('API response:', JSON.stringify(data, null, 2));
-                                
-                                if (data.status === 'completed') {
-                                  console.log('✅ Job is completed, processing flashcards...');
-                                  let flashcards = [];
-                                  if (data.flashcards) {
-                                    console.log('Raw flashcards data:', typeof data.flashcards, data.flashcards);
-                                    flashcards = Array.isArray(data.flashcards) 
-                                      ? data.flashcards 
-                                      : JSON.parse(data.flashcards);
-                                    console.log('Parsed flashcards:', flashcards.length, 'cards');
-                                  }
-                                  
-                                  console.log('🔄 CALLING setState functions:');
-                                  console.log('- setGeneratedFlashcards(' + flashcards.length + ' cards)');
-                                  setGeneratedFlashcards(flashcards);
-                                  
-                                  console.log('- setIsProcessing(false)');
-                                  setIsProcessing(false);
-                                  
-                                  console.log('- setCurrentStep(4)');
-                                  setCurrentStep(4);
-                                  
-                                  // Force immediate re-render check
-                                  setTimeout(() => {
-                                    console.log('🔍 POST-UPDATE STATE CHECK:');
-                                    console.log('- currentStep should be 4, actual:', currentStep);
-                                    console.log('- isProcessing should be false, actual:', isProcessing);
-                                    console.log('- flashcards should be', flashcards.length, ', actual:', generatedFlashcards.length);
-                                  }, 100);
-                                  
-                                  console.log('✅ State update calls completed');
-                                  
-                                  toast({
-                                    title: "Success!",
-                                    description: `Loaded ${flashcards.length} flashcards.`,
-                                  });
-                                } else if (data.status === 'failed') {
-                                  console.log('❌ Job failed:', data.errorMessage);
-                                  setIsProcessing(false);
-                                  toast({
-                                    title: "Generation failed",
-                                    description: data.errorMessage || "Please try again.",
-                                    variant: "destructive",
-                                  });
-                                } else {
-                                  console.log('⏳ Job still processing, status:', data.status);
-                                  toast({
-                                    title: "Still processing",
-                                    description: `Status: ${data.status}`,
-                                  });
-                                }
-                              } catch (error) {
-                                console.error('❌ Manual retrieval error:', error);
-                                toast({
-                                  title: "Error",
-                                  description: "Unable to retrieve flashcards",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                            className="w-full"
-                          >
-                            Get My Flashcards
-                          </Button>
-                          
-                          <div className="mt-3 pt-3 border-t border-gray-200">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setLocation('/history')}
-                              className="w-full"
-                            >
-                              View All My Flashcard Sets
-                            </Button>
+                    <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                      <div className="space-y-5">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                            <Brain className="w-5 h-5" />
+                            AI Processing Your PDF
+                          </h3>
+                          <div className="text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-800/50 px-3 py-1 rounded-full">
+                            {Math.round(((jobStatus as any)?.progress || 0))}% Complete
                           </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setLocation('/history')}
-                            className="flex-1"
-                          >
-                            Go to History
-                          </Button>
                         </div>
+                        
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-3 text-sm">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-gray-700 dark:text-gray-300 font-medium">PDF parsed and text extracted</span>
+                            <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                          </div>
+                          
+                          <div className="flex items-center space-x-3 text-sm">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-gray-700 dark:text-gray-300 font-medium">Content analyzed and chunked intelligently</span>
+                            <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                          </div>
+                          
+                          <div className="flex items-center space-x-3 text-sm">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-gray-700 dark:text-gray-300 font-medium">Key concepts and topics identified</span>
+                            <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                          </div>
+                          
+                          <div className="flex items-center space-x-3 text-sm">
+                            <div className={`w-2 h-2 rounded-full ${(jobStatus as any)?.status === 'processing' ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+                            <span className="text-gray-700 dark:text-gray-300 font-medium">
+                              {(jobStatus as any)?.status === 'processing' 
+                                ? 'AI generating intelligent questions and answers...' 
+                                : 'AI flashcard generation complete'}
+                            </span>
+                            {(jobStatus as any)?.status === 'processing' ? (
+                              <Loader2 className="w-4 h-4 text-yellow-500 animate-spin ml-auto" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center space-x-3 text-sm">
+                            <div className={`w-2 h-2 rounded-full ${(jobStatus as any)?.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                            <span className="text-gray-700 dark:text-gray-300 font-medium">
+                              {(jobStatus as any)?.status === 'completed' 
+                                ? `${((jobStatus as any)?.flashcards?.length || 0)} flashcards ready for study` 
+                                : 'Finalizing your study deck...'}
+                            </span>
+                            {(jobStatus as any)?.status === 'completed' && (
+                              <Sparkles className="w-4 h-4 text-green-500 ml-auto" />
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="mt-5 pt-4 border-t border-blue-200 dark:border-blue-700">
+                          <div className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+                            Our advanced AI is analyzing your content structure, identifying key learning concepts, 
+                            and crafting effective questions that enhance retention and understanding.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Fallback action buttons */}
+                    <div className="mt-6 space-y-3">
+                      <div className="flex gap-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setLocation('/history')}
+                          className="flex-1"
+                        >
+                          Go to History
+                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm"
@@ -863,12 +836,12 @@ export default function Upload() {
                             setCurrentStep(1);
                             setCurrentJobId(null);
                           }}
-                          className="w-full"
+                          className="flex-1"
                         >
                           Start Over
                         </Button>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
