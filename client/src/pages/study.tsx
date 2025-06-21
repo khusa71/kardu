@@ -27,10 +27,9 @@ export default function Study() {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [completedSession, setCompletedSession] = useState<StudySession | null>(null);
 
-  // Fetch job data for title and subject
+  // Fetch job data for title and subject with authentication
   const { data: jobData, isLoading: jobLoading } = useQuery({
     queryKey: ['/api/jobs', jobId],
-    queryFn: () => fetch(`/api/jobs/${jobId}`).then(res => res.json()),
     enabled: !!jobId
   });
 
@@ -70,7 +69,7 @@ export default function Study() {
     );
   }
 
-  if (!jobData || jobData.status !== 'completed') {
+  if (!jobData || (jobData as any).status !== 'completed') {
     return (
       <div className="min-h-screen bg-background">
         <NavigationBar />
@@ -167,10 +166,10 @@ export default function Study() {
                     <Brain className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">{jobData.filename}</CardTitle>
+                    <CardTitle className="text-xl">{(jobData as any).filename}</CardTitle>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary">{jobData.subject}</Badge>
-                      <Badge variant="outline">{jobData.difficulty}</Badge>
+                      <Badge variant="secondary">{(jobData as any).subject}</Badge>
+                      <Badge variant="outline">{(jobData as any).difficulty}</Badge>
                     </div>
                   </div>
                 </div>
@@ -179,12 +178,12 @@ export default function Study() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-muted rounded-lg">
                     <div className="text-xl font-bold text-primary">
-                      {JSON.parse(jobData.flashcards || '[]').length}
+                      {(jobData as any).flashcards?.length || (jobData as any).flashcardCount || 0}
                     </div>
                     <div className="text-sm text-muted-foreground">Flashcards</div>
                   </div>
                   <div className="text-center p-4 bg-muted rounded-lg">
-                    <div className="text-xl font-bold text-blue-500">{jobData.pagesProcessed || jobData.pageCount || 0}</div>
+                    <div className="text-xl font-bold text-blue-500">{(jobData as any).pagesProcessed || (jobData as any).pageCount || 0}</div>
                     <div className="text-sm text-muted-foreground">Pages</div>
                   </div>
                   <div className="text-center p-4 bg-muted rounded-lg">

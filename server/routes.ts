@@ -1964,24 +1964,12 @@ async function processFlashcardJob(jobId: number) {
         return res.status(400).json({ error: "Too many updates in single batch (max 100)" });
       }
 
-      // Get flashcard IDs for all card indices in batch
-      const cardIndices = progressUpdates.map((update: any) => update.cardIndex);
-      const flashcardRecords = await db.select({ id: flashcardsTable.id, cardIndex: flashcardsTable.cardIndex })
-        .from(flashcardsTable)
-        .where(and(eq(flashcardsTable.jobId, parseInt(jobId)), inArray(flashcardsTable.cardIndex, cardIndices)));
-
-      // Create mapping from cardIndex to flashcardId
-      const cardIndexToFlashcardId = new Map();
-      flashcardRecords.forEach(record => {
-        cardIndexToFlashcardId.set(record.cardIndex, record.id);
-      });
-
-      // Prepare batch data with flashcard IDs and calculated review dates
+      // Prepare batch data with flashcard IDs from frontend (normalized table tracking)
       const batchData = progressUpdates.map((update: any) => ({
         userId,
         jobId: parseInt(jobId),
-        cardIndex: update.cardIndex, // Keep for compatibility with storage interface
-        flashcardId: cardIndexToFlashcardId.get(update.cardIndex),
+        cardIndex: update.cardIndex,
+        flashcardId: update.flashcardId, // Use flashcard ID from frontend
         status: update.status,
         difficultyRating: update.difficultyRating,
         lastReviewedAt: new Date(),

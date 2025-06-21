@@ -177,15 +177,17 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
     return () => clearInterval(interval);
   }, [batchUpdateMutation]);
 
-  // Queue progress update for batching
+  // Queue progress update for batching with flashcard ID tracking
   const queueProgressUpdate = useCallback((cardIndex: number, status: string, difficultyRating: string) => {
     const responseTime = Date.now() - cardStartTime;
     
     const update = {
+      flashcardId: currentCard?.id, // Use individual flashcard ID from normalized table
       cardIndex,
       status,
       difficultyRating,
-      responseTime
+      responseTime,
+      reviewCount: (currentCard?.progress?.reviewCount || 0) + 1
     };
 
     batchUpdateQueue.current.push(update);
@@ -207,7 +209,7 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
       batchUpdateMutation.mutate(updates);
       lastBatchUpdate.current = Date.now();
     }
-  }, [cardStartTime, batchUpdateMutation]);
+  }, [cardStartTime, currentCard, batchUpdateMutation]);
 
   const handleResponse = useCallback((status: string, difficultyRating: string) => {
     if (!currentCard) return;
@@ -256,6 +258,38 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
       setCardStartTime(Date.now());
     }
   };
+
+  // Finish study session mechanism
+  const handleFinishSession = useCallback(async () => {
+    // Process any pending progress updates
+    if (batchUpdateQueue.current.length > 0) {
+      const updates = [...batchUpdateQueue.current];
+      batchUpdateQueue.current = [];
+      await batchUpdateMutation.mutateAsync(updates);
+    }
+
+    // Complete database session tracking
+    if (dbSessionId) {
+      const accuracy = Math.round(session.accuracy || 0);
+      try {
+        await completeSessionMutation.mutateAsync({
+          sessionId: dbSessionId,
+          cardsStudied: session.cardsStudied,
+          accuracy
+        });
+      } catch (error) {
+        console.error('Failed to complete session:', error);
+      }
+    }
+
+    toast({
+      title: "Study Session Complete!",
+      description: `Studied ${session.cardsStudied} cards with ${Math.round(session.accuracy)}% accuracy`,
+    });
+
+    // Call completion callback
+    onComplete?.(session);
+  }, [session, batchUpdateMutation, completeSessionMutation, dbSessionId, onComplete, toast]);
 
   if (isLoading) {
     return (
@@ -309,7 +343,13 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
             </div>
           </div>
         </div>
-        <Button onClick={onExit} variant="outline" size="sm">Exit Study</Button>
+        <div className="flex gap-2">
+          <Button onClick={handleFinishSession} variant="default" size="sm">
+            <Trophy className="w-4 h-4 mr-2" />
+            Finish Session
+          </Button>
+          <Button onClick={onExit} variant="outline" size="sm">Exit Study</Button>
+        </div>
       </div>
 
       {/* Progress Bar */}
