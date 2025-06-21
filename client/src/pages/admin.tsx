@@ -41,32 +41,38 @@ export default function Admin() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-background">
         <NavigationBar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <Card className="max-w-md">
-            <CardContent className="text-center p-8">
-              <div className="text-red-500 mb-4">
-                <Users className="w-16 h-16 mx-auto" />
-              </div>
-              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                You don't have permission to access the admin panel.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        
+        <main className="max-w-screen-xl mx-auto px-4 pt-4 pb-16">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Card className="max-w-md">
+              <CardContent className="text-center p-8">
+                <div className="text-red-500 mb-4">
+                  <Users className="w-16 h-16 mx-auto" />
+                </div>
+                <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+                <p className="text-muted-foreground">
+                  You don't have permission to access the admin panel.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-background">
         <NavigationBar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
+        
+        <main className="max-w-screen-xl mx-auto px-4 pt-4 pb-16">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -80,16 +86,16 @@ export default function Admin() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <NavigationBar />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
+      <main className="max-w-screen-xl mx-auto px-4 pt-4 pb-16">
+        {/* Page Header */}
+        <div className="mb-6 space-y-2">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-              <p className="text-gray-600 dark:text-gray-400">Platform metrics and analytics</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Admin Dashboard</h1>
+              <p className="text-muted-foreground text-sm md:text-base">Platform metrics and analytics</p>
             </div>
             <Badge variant="destructive" className="flex items-center space-x-1">
               <Users className="w-4 h-4" />
@@ -241,21 +247,21 @@ export default function Admin() {
               <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                 <div>
                   <div className="font-medium">API Status</div>
-                  <div className="text-sm text-gray-500">All systems operational</div>
+                  <div className="text-sm text-muted-foreground">All systems operational</div>
                 </div>
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
               <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                 <div>
                   <div className="font-medium">Database</div>
-                  <div className="text-sm text-gray-500">Connected and healthy</div>
+                  <div className="text-sm text-muted-foreground">Connected and healthy</div>
                 </div>
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
               <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                 <div>
                   <div className="font-medium">Storage</div>
-                  <div className="text-sm text-gray-500">Object storage online</div>
+                  <div className="text-sm text-muted-foreground">Object storage online</div>
                 </div>
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               </div>

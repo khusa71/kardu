@@ -327,17 +327,18 @@ export default function History() {
   // Flashcard viewing mode
   if (viewMode === 'view' && currentFlashcards.length > 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-background">
         <NavigationBar />
-        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        
+        <main className="max-w-screen-xl mx-auto px-4 pt-4 pb-16">
+          <div className="mb-6 space-y-2">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                 <Button variant="outline" onClick={() => setViewMode('history')} size="sm">
                   ← Back to History
                 </Button>
                 <div>
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground">
                     {selectedJob?.filename}
                   </h1>
                   <div className="flex items-center gap-2 mt-1">
@@ -364,8 +365,6 @@ export default function History() {
               </div>
             </div>
           </div>
-        </header>
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
           <FlashcardEditor
             flashcards={currentFlashcards}
             onFlashcardsChange={setCurrentFlashcards}
@@ -407,20 +406,19 @@ export default function History() {
   // Study mode
   if (viewMode === 'study' && currentFlashcards.length > 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Button variant="outline" onClick={() => setViewMode('view')}>
-                  ← Back to View
-                </Button>
-                <h1 className="text-xl font-bold">Study Mode: {selectedJob?.filename}</h1>
-              </div>
-            </div>
+      <div className="min-h-screen bg-background">
+        <NavigationBar />
+        
+        <main className="max-w-screen-xl mx-auto px-4 pt-4 pb-16">
+          <div className="mb-6 space-y-2">
+            <Button variant="outline" onClick={() => setViewMode('view')} size="sm">
+              ← Back to View
+            </Button>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              Study Mode: {selectedJob?.filename}
+            </h1>
           </div>
-        </header>
-        <main className="max-w-4xl mx-auto px-4 py-8">
+          
           <StudyMode
             flashcards={currentFlashcards}
             onComplete={(results) => {
@@ -438,14 +436,16 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <NavigationBar />
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      
+      <main className="max-w-screen-xl mx-auto px-4 pt-4 pb-16">
+        {/* Page Header */}
+        <div className="mb-6 space-y-2">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-neutral dark:text-white">Upload History</h1>
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Upload History</h1>
+              <p className="text-muted-foreground text-sm md:text-base">
                 View and manage your past PDF uploads and generated flashcards
               </p>
             </div>
@@ -456,9 +456,6 @@ export default function History() {
             </Badge>
           </div>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-red-800 dark:text-red-200">Failed to load upload history. Please try again.</p>
