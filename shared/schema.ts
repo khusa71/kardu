@@ -62,7 +62,7 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   status: text("status").notNull(), // 'pending' | 'processing' | 'completed' | 'failed'
   progress: integer("progress").default(0), // 0-100
   currentTask: text("current_task"),
-  flashcards: text("flashcards"), // JSON string of generated flashcards
+  // Removed flashcards JSON field - now normalized in flashcards table
   ankiStorageKey: text("anki_storage_key"), // Object Storage key for Anki deck
   ankiDownloadUrl: text("anki_download_url"), // Download URL for Anki deck
   csvStorageKey: text("csv_storage_key"), // Object Storage key for CSV export
@@ -82,17 +82,43 @@ export const studyProgress = pgTable("study_progress", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => userProfiles.id),
   jobId: integer("job_id").notNull().references(() => flashcardJobs.id, { onDelete: "cascade" }),
-  cardIndex: integer("card_index").notNull(),
-  status: text("status").notNull(), // 'known', 'unknown', 'reviewing'
+  flashcardId: integer("flashcard_id").notNull().references(() => flashcards.id, { onDelete: "cascade" }),
+  status: text("status").notNull(), // 'new', 'learning', 'reviewing', 'known'
   lastReviewedAt: timestamp("last_reviewed_at").defaultNow(),
   nextReviewDate: timestamp("next_review_date"),
   difficultyRating: text("difficulty_rating"), // 'easy', 'medium', 'hard'
   reviewCount: integer("review_count").default(0),
+  correctStreak: integer("correct_streak").default(0), // Consecutive correct answers
+  totalReviews: integer("total_reviews").default(0), // Total review attempts
+  correctReviews: integer("correct_reviews").default(0), // Correct review attempts
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_study_progress_user_job").on(table.userId, table.jobId),
-  index("idx_study_progress_unique").on(table.userId, table.jobId, table.cardIndex),
+  index("idx_study_progress_flashcard").on(table.flashcardId),
+  index("idx_study_progress_unique").on(table.userId, table.flashcardId),
+  index("idx_study_progress_next_review").on(table.nextReviewDate),
+]);
+
+// Normalized flashcards table - each card as separate record
+export const flashcards = pgTable("flashcards", {
+  id: serial("id").primaryKey(),
+  jobId: integer("job_id").notNull().references(() => flashcardJobs.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => userProfiles.id),
+  cardIndex: integer("card_index").notNull(), // Position in original set
+  front: text("front").notNull(), // Question/prompt
+  back: text("back").notNull(), // Answer/explanation
+  subject: text("subject"), // Subject category
+  difficulty: text("difficulty"), // 'beginner' | 'intermediate' | 'advanced'
+  tags: text("tags").array(), // Array of tags for categorization
+  confidence: numeric("confidence", { precision: 3, scale: 2 }), // AI confidence score (0.00-1.00)
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_flashcards_job").on(table.jobId),
+  index("idx_flashcards_user").on(table.userId),
+  index("idx_flashcards_subject").on(table.subject),
+  index("idx_flashcards_unique").on(table.jobId, table.cardIndex),
 ]);
 
 export const studySessions = pgTable("study_sessions", {
@@ -121,6 +147,12 @@ export const insertFlashcardJobSchema = createInsertSchema(flashcardJobs).omit({
   updatedAt: true,
 });
 
+export const insertFlashcardSchema = createInsertSchema(flashcards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertStudyProgressSchema = createInsertSchema(studyProgress).omit({
   id: true,
   createdAt: true,
@@ -131,6 +163,8 @@ export const insertStudySessionSchema = createInsertSchema(studySessions);
 
 export type InsertFlashcardJob = z.infer<typeof insertFlashcardJobSchema>;
 export type FlashcardJob = typeof flashcardJobs.$inferSelect;
+export type Flashcard = typeof flashcards.$inferSelect;
+export type InsertFlashcard = z.infer<typeof insertFlashcardSchema>;
 export type UpsertUserProfile = typeof userProfiles.$inferInsert;
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type StudyProgress = typeof studyProgress.$inferSelect;

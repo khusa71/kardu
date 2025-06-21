@@ -1,12 +1,15 @@
 import {
   userProfiles,
   flashcardJobs,
+  flashcards,
   studyProgress,
   studySessions,
   type UserProfile,
   type UpsertUserProfile,
   type FlashcardJob,
   type InsertFlashcardJob,
+  type Flashcard,
+  type InsertFlashcard,
   type StudyProgress,
   type InsertStudyProgress,
   type StudySession,
@@ -41,6 +44,13 @@ export interface IStorage {
   updateJobFilename(id: number, filename: string): Promise<void>;
   deleteFlashcardJob(id: number): Promise<boolean>;
   getUserJobs(userId: string): Promise<FlashcardJob[]>;
+  
+  // Normalized flashcard operations
+  createFlashcards(flashcardList: InsertFlashcard[]): Promise<Flashcard[]>;
+  getFlashcards(jobId: number): Promise<Flashcard[]>;
+  getFlashcard(id: number): Promise<Flashcard | undefined>;
+  updateFlashcard(id: number, updates: Partial<Flashcard>): Promise<Flashcard | undefined>;
+  deleteFlashcards(jobId: number): Promise<boolean>;
   
   // Study progress operations
   getStudyProgress(userId: string, jobId: number): Promise<StudyProgress[]>;
@@ -308,13 +318,53 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(flashcardJobs.createdAt));
   }
 
+  // Normalized flashcard operations
+  async createFlashcards(flashcardList: InsertFlashcard[]): Promise<Flashcard[]> {
+    return await db.insert(flashcards).values(flashcardList).returning();
+  }
+
+  async getFlashcards(jobId: number): Promise<Flashcard[]> {
+    return await db
+      .select()
+      .from(flashcards)
+      .where(eq(flashcards.jobId, jobId))
+      .orderBy(flashcards.cardIndex);
+  }
+
+  async getFlashcard(id: number): Promise<Flashcard | undefined> {
+    const [flashcard] = await db
+      .select()
+      .from(flashcards)
+      .where(eq(flashcards.id, id));
+    return flashcard || undefined;
+  }
+
+  async updateFlashcard(id: number, updates: Partial<Flashcard>): Promise<Flashcard | undefined> {
+    const [updated] = await db
+      .update(flashcards)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(flashcards.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteFlashcards(jobId: number): Promise<boolean> {
+    try {
+      await db.delete(flashcards).where(eq(flashcards.jobId, jobId));
+      return true;
+    } catch (error) {
+      console.error(`Failed to delete flashcards for job ${jobId}:`, error);
+      return false;
+    }
+  }
+
   // Study progress operations
   async getStudyProgress(userId: string, jobId: number): Promise<StudyProgress[]> {
     return await db
       .select()
       .from(studyProgress)
       .where(and(eq(studyProgress.userId, userId), eq(studyProgress.jobId, jobId)))
-      .orderBy(studyProgress.cardIndex);
+      .orderBy(studyProgress.flashcardId);
   }
 
   async updateStudyProgress(progressData: InsertStudyProgress): Promise<StudyProgress> {
@@ -323,8 +373,7 @@ export class DatabaseStorage implements IStorage {
       .from(studyProgress)
       .where(and(
         eq(studyProgress.userId, progressData.userId),
-        eq(studyProgress.jobId, progressData.jobId),
-        eq(studyProgress.cardIndex, progressData.cardIndex)
+        eq(studyProgress.flashcardId, progressData.flashcardId)
       ))
       .limit(1);
 
@@ -349,12 +398,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStudyStats(userId: string, jobId: number): Promise<{ total: number; known: number; reviewing: number }> {
-    const job = await this.getFlashcardJob(jobId);
-    if (!job || !job.flashcards) {
-      return { total: 0, known: 0, reviewing: 0 };
-    }
-
-    const flashcardsData = JSON.parse(job.flashcards);
+    const flashcardsData = await this.getFlashcards(jobId);
     const total = flashcardsData.length;
 
     const progress = await this.getStudyProgress(userId, jobId);
@@ -372,8 +416,7 @@ export class DatabaseStorage implements IStorage {
         .from(studyProgress)
         .where(and(
           eq(studyProgress.userId, progress.userId),
-          eq(studyProgress.jobId, progress.jobId),
-          eq(studyProgress.cardIndex, progress.cardIndex)
+          eq(studyProgress.flashcardId, progress.flashcardId)
         ))
         .limit(1);
 
@@ -435,25 +478,22 @@ export class DatabaseStorage implements IStorage {
 
   async getOptimizedFlashcards(jobId: number, userId: string): Promise<{ flashcards: any[]; progress: StudyProgress[] }> {
     try {
-      // Get job and flashcards data in single query
-      const job = await this.getFlashcardJob(jobId);
-      if (!job || !job.flashcards) {
+      // Get flashcards from normalized table
+      const flashcards = await this.getFlashcards(jobId);
+      if (!flashcards.length) {
         throw new Error('Flashcards not found');
       }
-
-      // Parse flashcards from JSON
-      const flashcards = JSON.parse(job.flashcards);
       
       // Get all study progress for this user and job in single query
       const progress = await this.getStudyProgress(userId, jobId);
       
       // Create optimized flashcard objects with progress data
-      const optimizedFlashcards = flashcards.map((card: any, index: number) => {
-        const cardProgress = progress.find(p => p.cardIndex === index);
+      const optimizedFlashcards = flashcards.map((card) => {
+        const cardProgress = progress.find(p => p.flashcardId === card.id);
         
         return {
           ...card,
-          index,
+          cardIndex: card.cardIndex,
           progress: cardProgress ? {
             status: cardProgress.status,
             reviewCount: cardProgress.reviewCount,

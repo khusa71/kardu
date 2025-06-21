@@ -840,12 +840,27 @@ async function processFlashcardJob(jobId: number) {
       flashcards
     );
 
+    // Create normalized flashcard records
+    const normalizedFlashcards = flashcards.map((card: any, index: number) => ({
+      jobId: job.id,
+      userId: job.userId!,
+      cardIndex: index,
+      front: card.front || card.question || '',
+      back: card.back || card.answer || '',
+      subject: card.subject || job.subject || '',
+      difficulty: card.difficulty || job.difficulty || 'beginner',
+      tags: card.tags || [],
+      confidence: card.confidence ? card.confidence.toString() : null,
+    }));
+
+    // Store flashcards in normalized table
+    await storage.createFlashcards(normalizedFlashcards);
+
     // Complete the job
     await storage.updateFlashcardJob(jobId, {
       status: "completed",
       progress: 100,
       currentTask: "Processing complete",
-      flashcards: JSON.stringify(flashcards),
       csvStorageKey: exports.csv?.key,
       csvDownloadUrl: exports.csv?.url,
       jsonStorageKey: exports.json?.key,

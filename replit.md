@@ -101,6 +101,15 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
+- June 21, 2025: **NORMALIZED FLASHCARD DATABASE MIGRATION IN PROGRESS** - Redesigning data storage for scalable study functionality:
+  * Identified critical issue: JSON flashcard storage prevents proper progress tracking and scalability
+  * Created normalized flashcards table with individual records for each card (front, back, subject, difficulty, tags, confidence)
+  * Updated study_progress table to reference flashcard_id instead of card_index for proper relationships
+  * Enhanced progress tracking with correct_streak, total_reviews, and correct_reviews fields
+  * Implemented storage layer with CRUD operations for normalized flashcard structure
+  * Updated processing pipeline to create flashcard records in normalized table instead of JSON storage
+  * Added migration helper for converting existing JSON flashcards to normalized structure
+  * Benefits: individual card progress tracking, multiple export formats, improved scalability, advanced study features
 - June 21, 2025: **COMPLETE STUDY SESSION & PROGRESS TRACKING IMPLEMENTED** - Built comprehensive database-driven session management with full progress persistence:
   * Added study_sessions table to database schema for complete session lifecycle tracking with proper foreign key relationships
   * Implemented session creation, completion, and retrieval operations in storage layer with duration and accuracy calculation
