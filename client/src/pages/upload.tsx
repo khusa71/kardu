@@ -89,8 +89,7 @@ export default function Upload() {
   // File upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiRequest('POST', '/api/upload', formData);
-      return response.json();
+      return await apiRequest('POST', '/api/upload', formData);
     },
     onSuccess: (data) => {
       const jobId = data.jobs && data.jobs.length > 0 ? data.jobs[0].jobId : data.jobId;
@@ -119,8 +118,7 @@ export default function Upload() {
   const { data: jobStatus, error: jobStatusError } = useQuery({
     queryKey: ['/api/jobs', currentJobId],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/jobs/${currentJobId}`);
-      return response.json();
+      return await apiRequest('GET', `/api/jobs/${currentJobId}`);
     },
     enabled: !!currentJobId && isProcessing && !!user,
     refetchInterval: (data) => {
