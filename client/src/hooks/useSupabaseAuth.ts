@@ -78,21 +78,12 @@ export function useSupabaseAuth() {
     console.log('Current hostname:', window.location.hostname);
     console.log('Current origin:', window.location.origin);
     
-    // Determine the correct redirect URL based on environment
-    let redirectTo;
-    
-    if (window.location.hostname.includes('.replit.dev')) {
-      // Replit development environment
-      redirectTo = `${window.location.origin}/auth/callback`;
-    } else if (window.location.hostname === 'kardu.io' || window.location.hostname === 'www.kardu.io') {
-      // Production environment
-      redirectTo = 'https://kardu.io/auth/callback';
-    } else {
-      // Default to current origin (localhost or other environments)
-      redirectTo = `${window.location.origin}/auth/callback`;
-    }
+    // For Replit environment, we need to ensure the redirect URL is configured correctly in Supabase
+    // The redirect URL must match exactly what's configured in the Supabase dashboard
+    const redirectTo = `${window.location.origin}/auth/callback`;
     
     console.log('Using redirect URL:', redirectTo);
+    console.log('Note: Ensure this URL is added to Supabase Auth > Settings > Redirect URLs');
     
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

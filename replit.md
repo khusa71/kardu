@@ -101,6 +101,8 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
+- June 21, 2025: Identified Google OAuth redirect URL configuration issue - Supabase project needs current Replit URL added to allowed redirect URLs
+- June 21, 2025: Fixed API route interception issue where vite middleware was catching API calls and returning HTML instead of JSON
 - June 21, 2025: Successfully completed migration away from ALL Replit services to Supabase exclusively
 - June 21, 2025: Connected to Supabase PostgreSQL database using connection pooling for production-ready performance
 - June 21, 2025: Fixed database schema with all required columns for proper user management and file processing

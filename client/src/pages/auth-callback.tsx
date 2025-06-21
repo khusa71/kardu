@@ -60,6 +60,10 @@ export default function AuthCallback() {
           
           // Sync user data with backend
           try {
+            console.log('Auth callback: Attempting to sync user with backend');
+            console.log('Auth callback: Access token:', data.session.access_token?.substring(0, 20) + '...');
+            console.log('Auth callback: User data:', JSON.stringify(data.session.user, null, 2));
+            
             const response = await fetch('/api/auth/sync', {
               method: 'POST',
               headers: {
@@ -71,14 +75,19 @@ export default function AuthCallback() {
               })
             });
             
+            console.log('Auth callback: Response status:', response.status);
+            console.log('Auth callback: Response headers:', Object.fromEntries(response.headers));
+            
             if (response.ok) {
-              console.log('Auth callback: User synced successfully');
+              const userData = await response.json();
+              console.log('Auth callback: User synced successfully:', userData);
             } else {
               const errorData = await response.text();
               console.error('Auth callback: User sync failed:', response.status, errorData);
+              console.error('Auth callback: Response body:', errorData);
               
               // If sync fails, show error and don't redirect
-              setError(errorData || 'Failed to sync user data');
+              setError(`Authentication failed: ${errorData || 'Failed to sync user data'}`);
               setProcessing(false);
               setTimeout(() => setLocation('/'), 3000);
               return;
