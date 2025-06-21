@@ -80,7 +80,10 @@ export default function Upload() {
       return response.json();
     },
     onSuccess: (data) => {
-      setCurrentJobId(data.jobId);
+      console.log('Upload response:', data);
+      const jobId = data.jobs && data.jobs.length > 0 ? data.jobs[0].jobId : data.jobId;
+      console.log('Setting job ID:', jobId);
+      setCurrentJobId(jobId);
       setCurrentStep(3);
       setIsProcessing(true);
       toast({
@@ -101,19 +104,23 @@ export default function Upload() {
   const jobStatus = null;
   const jobStatusError = null;
 
-  // Auto-check for completion after upload
+  // Simple timer-based completion check
   useEffect(() => {
     if (!currentJobId || !isProcessing) return;
 
-    const checkCompletion = async () => {
+    // After 10 seconds of processing, check for completion aggressively
+    const checkTimer = setTimeout(async () => {
       try {
         const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
         const data = await response.json();
         
-        if (data.status === 'completed' && data.flashcards) {
-          const flashcards = Array.isArray(data.flashcards) 
-            ? data.flashcards 
-            : JSON.parse(data.flashcards);
+        if (data.status === 'completed') {
+          let flashcards = [];
+          if (data.flashcards) {
+            flashcards = Array.isArray(data.flashcards) 
+              ? data.flashcards 
+              : JSON.parse(data.flashcards);
+          }
           
           setGeneratedFlashcards(flashcards);
           setIsProcessing(false);
@@ -127,21 +134,9 @@ export default function Upload() {
       } catch (error) {
         console.log('Auto-check failed, manual retrieval available');
       }
-    };
+    }, 10000);
 
-    // Check immediately, then every 5 seconds
-    checkCompletion();
-    const interval = setInterval(checkCompletion, 5000);
-    
-    // Cleanup after 2 minutes
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
-    }, 120000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
+    return () => clearTimeout(checkTimer);
   }, [currentJobId, isProcessing, toast]);
 
   // Handle job completion
@@ -693,7 +688,7 @@ export default function Upload() {
                         <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
                           Job ID: {currentJobId} • Taking longer than expected?
                         </p>
-                        <div className="flex gap-2 mb-2">
+                        <div className="space-y-3">
                           <Button 
                             variant="default" 
                             size="lg"
@@ -702,16 +697,24 @@ export default function Upload() {
                                 const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
                                 const data = await response.json();
                                 
-                                if (data.status === 'completed' && data.flashcards) {
-                                  let flashcards = Array.isArray(data.flashcards) ? data.flashcards : JSON.parse(data.flashcards);
+                                if (data.status === 'completed') {
+                                  let flashcards = [];
+                                  if (data.flashcards) {
+                                    flashcards = Array.isArray(data.flashcards) 
+                                      ? data.flashcards 
+                                      : JSON.parse(data.flashcards);
+                                  }
+                                  
                                   setGeneratedFlashcards(flashcards);
                                   setIsProcessing(false);
                                   setCurrentStep(4);
+                                  
                                   toast({
-                                    title: "Flashcards retrieved successfully!",
-                                    description: `Found ${flashcards.length} completed flashcards.`,
+                                    title: "Success!",
+                                    description: `Loaded ${flashcards.length} flashcards.`,
                                   });
                                 } else if (data.status === 'failed') {
+                                  setIsProcessing(false);
                                   toast({
                                     title: "Generation failed",
                                     description: data.errorMessage || "Please try again.",
@@ -720,13 +723,13 @@ export default function Upload() {
                                 } else {
                                   toast({
                                     title: "Still processing",
-                                    description: `Status: ${data.status}. Please wait and try again.`,
+                                    description: `Status: ${data.status}`,
                                   });
                                 }
                               } catch (error) {
                                 toast({
-                                  title: "Connection error",
-                                  description: "Unable to check job status. Please try again.",
+                                  title: "Error",
+                                  description: "Unable to retrieve flashcards",
                                   variant: "destructive",
                                 });
                               }
@@ -735,6 +738,17 @@ export default function Upload() {
                           >
                             Get My Flashcards
                           </Button>
+                          
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setLocation('/history')}
+                              className="w-full"
+                            >
+                              View All My Flashcard Sets
+                            </Button>
+                          </div>
                           <Button 
                             variant="outline" 
                             size="sm"

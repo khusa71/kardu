@@ -133,6 +133,9 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
   * Replaced broken query polling with reliable useEffect-based auto-check mechanism
   * Implemented 5-second interval checking with proper authentication and automatic cleanup
   * Processing screen now transitions automatically to results when flashcards are generated
+  * Fixed upload response parsing to correctly extract job ID from server response structure
+  * Enhanced manual "Get My Flashcards Now" button with comprehensive error handling and state management
+  * Added detailed debugging logs throughout auto-check mechanism to trace completion detection failures
 - June 21, 2025: **READING/STUDYING ENGINE OPTIMIZED** - Completed comprehensive performance improvements:
   * Implemented batch progress updates to reduce API calls by 80% during study sessions
   * Enhanced spaced repetition algorithm with SM-2 inspired intervals and progressive difficulty scaling
