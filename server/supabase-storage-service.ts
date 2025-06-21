@@ -37,7 +37,7 @@ export class SupabaseStorageService {
       if (!bucketExists) {
         const { error } = await supabase.storage.createBucket(this.bucketName, {
           public: false,
-          allowedMimeTypes: ['application/pdf', 'text/csv', 'application/json', 'application/vnd.anki', 'application/octet-stream'],
+          allowedMimeTypes: ['application/pdf', 'text/csv', 'application/json', 'application/vnd.anki', 'application/octet-stream', 'text/plain'],
           fileSizeLimit: 10 * 1024 * 1024, // 10MB
         });
 
@@ -50,7 +50,7 @@ export class SupabaseStorageService {
         // Update existing bucket to allow Anki files
         const { error } = await supabase.storage.updateBucket(this.bucketName, {
           public: false,
-          allowedMimeTypes: ['application/pdf', 'text/csv', 'application/json', 'application/vnd.anki', 'application/octet-stream'],
+          allowedMimeTypes: ['application/pdf', 'text/csv', 'application/json', 'application/vnd.anki', 'application/octet-stream', 'text/plain'],
           fileSizeLimit: 10 * 1024 * 1024, // 10MB
         });
 
