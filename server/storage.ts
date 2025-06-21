@@ -17,6 +17,7 @@ export interface IStorage {
   getUserProfile(id: string): Promise<UserProfile | undefined>;
   upsertUserProfile(user: UpsertUserProfile): Promise<UserProfile>;
   incrementUserUploads(userId: string): Promise<void>;
+  incrementUserPagesProcessed(userId: string, pagesCount: number): Promise<void>;
   checkUploadLimit(userId: string): Promise<{ canUpload: boolean; uploadsRemaining: number }>;
   upgradeToPremium(userId: string): Promise<void>;
   resetMonthlyUploads(userId: string): Promise<void>;
@@ -78,10 +79,10 @@ export class DatabaseStorage implements IStorage {
       
       console.log('User profile upserted successfully:', profile);
       return profile;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Database error in upsertUserProfile:", error);
       console.error("Attempted data:", userData);
-      throw new Error(`Database error saving user profile: ${error.message}`);
+      throw new Error(`Database error saving user profile: ${error?.message || 'Unknown error'}`);
     }
   }
 
@@ -99,6 +100,23 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Failed to increment uploads for user ${userId}:`, error);
       throw new Error('Upload count update failed');
+    }
+  }
+
+  async incrementUserPagesProcessed(userId: string, pagesCount: number): Promise<void> {
+    const now = new Date();
+    try {
+      await db
+        .update(userProfiles)
+        .set({
+          monthlyPagesProcessed: sql`COALESCE(${userProfiles.monthlyPagesProcessed}, 0) + ${pagesCount}`,
+          updatedAt: now,
+        })
+        .where(eq(userProfiles.id, userId));
+      console.log(`Updated user ${userId} pages processed: +${pagesCount}`);
+    } catch (error: any) {
+      console.error(`Failed to increment pages processed for user ${userId}:`, error);
+      throw new Error('Pages processed count update failed');
     }
   }
 
@@ -262,8 +280,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteFlashcardJob(id: number): Promise<boolean> {
-    const result = await db.delete(flashcardJobs).where(eq(flashcardJobs.id, id));
-    return (result.rowCount || 0) > 0;
+    try {
+      const result = await db.delete(flashcardJobs).where(eq(flashcardJobs.id, id));
+      return true; // If no error is thrown, deletion was successful
+    } catch (error) {
+      console.error(`Failed to delete job ${id}:`, error);
+      return false;
+    }
   }
 
   async getUserJobs(userId: string): Promise<FlashcardJob[]> {

@@ -1902,28 +1902,50 @@ async function processFlashcardJobWithPageLimits(
   maxPages?: number
 ) {
   try {
-    // Update job status
+    // Get job and user info for premium restrictions
+    const job = await storage.getFlashcardJob(jobId);
+    const user = await storage.getUserProfile(userId);
+    
+    if (!job || !user) {
+      throw new Error("Job or user not found");
+    }
+
+    // Enforce premium restrictions on page processing
+    const actualPagesToProcess = maxPages || job.pageCount || 20;
+    const premiumLimits = user.isPremium ? 100 : 20;
+    const finalPagesToProcess = Math.min(actualPagesToProcess, premiumLimits);
+
+    // Update job status with proper page tracking
     await storage.updateFlashcardJob(jobId, {
       status: "processing",
       progress: 10,
-      currentTask: maxPages ? `Extracting text from first ${maxPages} pages...` : "Extracting text from PDF...",
+      currentTask: finalPagesToProcess < (job.pageCount || 0) 
+        ? `Extracting text from first ${finalPagesToProcess} of ${job.pageCount} pages...`
+        : "Extracting text from PDF...",
+      pagesProcessed: finalPagesToProcess,
+      updatedAt: new Date()
     });
 
-    // Extract text from PDF with page limit
-    const ocrResult = await extractTextWithOCR(pdfPath, maxPages);
+    // Extract text from PDF with enforced page limit
+    const ocrResult = await extractTextWithOCR(pdfPath, finalPagesToProcess);
     const extractedText = ocrResult.text;
     
     if (ocrResult.isScanned) {
       await storage.updateFlashcardJob(jobId, {
         progress: 25,
-        currentTask: `OCR processing completed (${Math.round(ocrResult.confidence * 100)}% confidence)`,
+        currentTask: `OCR processing completed (${Math.round(ocrResult.confidence * 100)}% confidence) - ${finalPagesToProcess} pages processed`,
+        updatedAt: new Date()
       });
     } else {
       await storage.updateFlashcardJob(jobId, {
         progress: 25,
-        currentTask: "Text extraction completed",
+        currentTask: `Text extraction completed - ${finalPagesToProcess} pages processed`,
+        updatedAt: new Date()
       });
     }
+
+    // Update user's monthly pages processed count
+    await storage.incrementUserPagesProcessed(userId, finalPagesToProcess);
 
     // Check cache first to avoid unnecessary API calls
     const contentHash = cacheService.generateContentHash(extractedText, subject, difficulty, focusAreas || "{}");
@@ -2016,11 +2038,12 @@ async function processFlashcardJobWithPageLimits(
     const storedAnki = await supabaseStorage.uploadAnkiDeck(userId, jobId, ankiBuffer);
     const exportFiles = await supabaseStorage.generateAndUploadExports(userId, jobId, flashcards);
 
-    // Complete the job
+    // Complete the job with proper page tracking
     await storage.updateFlashcardJob(jobId, {
       status: "completed",
       progress: 100,
-      currentTask: "All files ready for download",
+      currentTask: `Processing complete - ${finalPagesToProcess} pages processed, ${flashcards.length} flashcards generated`,
+      pagesProcessed: finalPagesToProcess, // Ensure final count is saved
       pdfStorageKey: storedPdf.key,
       pdfDownloadUrl: storedPdf.url,
       ankiStorageKey: storedAnki.key,
@@ -2031,16 +2054,18 @@ async function processFlashcardJobWithPageLimits(
       jsonDownloadUrl: exportFiles.json?.url,
       quizletStorageKey: exportFiles.quizlet?.key,
       quizletDownloadUrl: exportFiles.quizlet?.url,
+      updatedAt: new Date()
     });
 
-    console.log(`Job ${jobId} completed successfully with ${maxPages ? `${maxPages} pages processed` : 'all pages processed'}`);
+    console.log(`Job ${jobId} completed successfully: ${finalPagesToProcess} pages processed from ${job.pageCount || 'unknown'} total pages, ${flashcards.length} flashcards generated`);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error processing job ${jobId}:`, error);
     await storage.updateFlashcardJob(jobId, {
       status: "failed",
-      errorMessage: error instanceof Error ? error.message : "Unknown error occurred",
+      errorMessage: error?.message || "Unknown error occurred",
       currentTask: "Processing failed",
+      updatedAt: new Date()
     });
   } finally {
     // Clean up temp file

@@ -24,6 +24,8 @@ interface HistoryItem {
   id: number;
   filename: string;
   fileSize: number;
+  pageCount: number;
+  pagesProcessed: number;
   flashcardCount: number;
   createdAt: string;
   status: string;
@@ -34,6 +36,21 @@ interface HistoryItem {
 export default function Dashboard() {
   const { user } = useSupabaseAuth();
   
+  // Fetch user's profile data with premium status and usage info
+  const { data: userData } = useQuery<{
+    id: string;
+    email: string;
+    displayName: string;
+    isPremium: boolean;
+    monthlyUploads: number;
+    monthlyLimit: number;
+    monthlyPagesProcessed: number;
+    uploadsRemaining: number;
+  }>({
+    queryKey: ['/api/auth/user'],
+    enabled: !!user,
+  });
+  
   // Fetch user's flashcard history
   const { data: history = [], isLoading: historyLoading } = useQuery<HistoryItem[]>({
     queryKey: ["/api/history"],
@@ -42,6 +59,7 @@ export default function Dashboard() {
 
   // Calculate user stats
   const totalFlashcards = history.reduce((sum, item) => sum + (item.flashcardCount || 0), 0);
+  const totalPagesProcessed = history.reduce((sum, item) => sum + (item.pagesProcessed || 0), 0);
   const totalUploads = history.length;
   const recentUploads = history.filter(item => {
     const uploadDate = new Date(item.createdAt);
@@ -50,9 +68,9 @@ export default function Dashboard() {
     return uploadDate >= thirtyDaysAgo;
   }).length;
 
-  // Calculate usage percentage
-  const monthlyUsage = user?.monthlyUploads || 0;
-  const monthlyLimit = user?.monthlyLimit || 3;
+  // Calculate usage percentage using userData instead of user
+  const monthlyUsage = userData?.monthlyUploads || 0;
+  const monthlyLimit = userData?.monthlyLimit || 3;
   const usagePercentage = Math.min((monthlyUsage / monthlyLimit) * 100, 100);
 
   // Get recent activity (last 5 items)
@@ -66,7 +84,7 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="mb-6 space-y-2">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            Welcome back, {user?.displayName || user?.email?.split('@')[0] || 'there'}!
+            Welcome back, {userData?.displayName || user?.email?.split('@')[0] || 'there'}!
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
             Ready to create more flashcards and continue your learning journey?
@@ -132,16 +150,16 @@ export default function Dashboard() {
               <CardContent className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-2">
-                    <Badge variant={user?.isPremium ? "default" : "secondary"} className="text-xs">
-                      {user?.isPremium ? "Premium" : "Free Plan"}
+                    <Badge variant={userData?.isPremium ? "default" : "secondary"} className="text-xs">
+                      {userData?.isPremium ? "Premium" : "Free Plan"}
                     </Badge>
-                    {user?.isPremium && (
+                    {userData?.isPremium && (
                       <p className="text-sm text-muted-foreground">
                         Unlimited uploads and advanced features
                       </p>
                     )}
                   </div>
-                  {!user?.isPremium && (
+                  {!userData?.isPremium && (
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -152,7 +170,7 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {!user?.isPremium && (
+                {!userData?.isPremium && (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Monthly uploads</span>
@@ -182,18 +200,18 @@ export default function Dashboard() {
                     <div className="text-xs md:text-sm text-muted-foreground">Total Flashcards</div>
                   </div>
                   <div className="text-center space-y-1">
-                    <div className="text-xl md:text-2xl font-bold text-blue-500">{totalUploads}</div>
-                    <div className="text-xs md:text-sm text-muted-foreground">Documents Processed</div>
+                    <div className="text-xl md:text-2xl font-bold text-blue-500">{totalPagesProcessed}</div>
+                    <div className="text-xs md:text-sm text-muted-foreground">Pages Processed</div>
                   </div>
                   <div className="text-center space-y-1">
-                    <div className="text-xl md:text-2xl font-bold text-green-500">{recentUploads}</div>
-                    <div className="text-xs md:text-sm text-muted-foreground">Recent Uploads</div>
+                    <div className="text-xl md:text-2xl font-bold text-green-500">{totalUploads}</div>
+                    <div className="text-xs md:text-sm text-muted-foreground">Documents</div>
                   </div>
                   <div className="text-center space-y-1">
                     <div className="text-xl md:text-2xl font-bold text-orange-500">
-                      {history.length > 0 ? Math.round(totalFlashcards / totalUploads) : 0}
+                      {totalPagesProcessed > 0 ? Math.round(totalFlashcards / totalPagesProcessed * 10) / 10 : 0}
                     </div>
-                    <div className="text-xs md:text-sm text-muted-foreground">Avg per Document</div>
+                    <div className="text-xs md:text-sm text-muted-foreground">Cards per Page</div>
                   </div>
                 </div>
               </CardContent>
@@ -232,7 +250,7 @@ export default function Dashboard() {
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-sm truncate">{item.filename}</p>
                               <p className="text-xs text-muted-foreground">
-                                {item.flashcardCount} cards • {item.subject} • {item.difficulty}
+                                {item.flashcardCount} cards • {item.pagesProcessed || item.pageCount || 0} pages • {item.subject} • {item.difficulty}
                               </p>
                             </div>
                           </div>
