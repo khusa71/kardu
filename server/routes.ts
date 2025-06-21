@@ -271,7 +271,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await createNormalizedFlashcards(
         jobId, 
-        jobData.user_id, 
         testFlashcards, 
         jobData.subject || 'Test Subject', 
         jobData.difficulty || 'beginner'
@@ -1266,21 +1265,8 @@ async function processFlashcardJob(jobId: number) {
       flashcards
     );
 
-    // Create normalized flashcard records
-    const normalizedFlashcards = flashcards.map((card: any, index: number) => ({
-      jobId: job.id,
-      userId: job.userId!,
-      cardIndex: index,
-      front: card.front || card.question || '',
-      back: card.back || card.answer || '',
-      subject: card.subject || job.subject || '',
-      difficulty: card.difficulty || job.difficulty || 'beginner',
-      tags: card.tags || [],
-      confidence: card.confidence ? card.confidence.toString() : null,
-    }));
-
     // Store flashcards in normalized table
-    await createNormalizedFlashcards(job.id, job.userId!, flashcards, job.subject || '', job.difficulty || 'beginner');
+    await createNormalizedFlashcards(job.id, flashcards, job.subject || '', job.difficulty || 'beginner');
 
     // Complete the job
     await storage.updateFlashcardJob(jobId, {
@@ -2515,7 +2501,7 @@ async function processFlashcardJobWithPageLimits(
       flashcards = cachedFlashcards;
 
       // Create normalized flashcards from cache
-      await createNormalizedFlashcards(jobId, userId, flashcards, subject, difficulty);
+      await createNormalizedFlashcards(jobId, flashcards, subject, difficulty);
       await storage.updateFlashcardJob(jobId, {
         progress: 80,
         currentTask: "Retrieved from cache (cost-optimized)",
@@ -2574,7 +2560,7 @@ async function processFlashcardJobWithPageLimits(
       );
 
       // Create normalized flashcards from AI generation
-      await createNormalizedFlashcards(jobId, userId, flashcards, subject, difficulty);
+      await createNormalizedFlashcards(jobId, flashcards, subject, difficulty);
 
       await storage.updateFlashcardJob(jobId, {
         progress: 75,
@@ -2687,7 +2673,7 @@ async function processFlashcardJob(
       flashcards = cachedFlashcards;
       
       // Create normalized flashcards from cache
-      await createNormalizedFlashcards(jobId, userId, flashcards, subject, difficulty);
+      await createNormalizedFlashcards(jobId, flashcards, subject, difficulty);
       await storage.updateFlashcardJob(jobId, {
         progress: 80,
         currentTask: "Retrieved from cache (cost-optimized)",
@@ -2746,7 +2732,7 @@ async function processFlashcardJob(
       );
 
       // Create normalized flashcards from AI generation
-      await createNormalizedFlashcards(jobId, userId, flashcards, subject, difficulty);
+      await createNormalizedFlashcards(jobId, flashcards, subject, difficulty);
 
       await storage.updateFlashcardJob(jobId, {
         progress: 75,

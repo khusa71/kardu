@@ -18,7 +18,7 @@ export async function replaceJsonWithNormalizedFlashcards(
   await db.delete(flashcardsTable).where(eq(flashcardsTable.jobId, jobId));
   
   // Create new normalized flashcard records
-  await createNormalizedFlashcards(jobId, userId, flashcards, subject, difficulty);
+  await createNormalizedFlashcards(jobId, flashcards, subject, difficulty);
 }
 
 /**
