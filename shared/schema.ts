@@ -30,6 +30,11 @@ export const userProfiles = pgTable("user_profiles", {
   id: varchar("id").primaryKey().notNull(),
   email: varchar("email"),
   isPremium: boolean("is_premium").default(false),
+  monthlyUploads: integer("monthly_uploads").default(0),
+  monthlyPagesProcessed: integer("monthly_pages_processed").default(0),
+  monthlyLimit: integer("monthly_limit").default(3),
+  lastResetDate: timestamp("last_reset_date").defaultNow(),
+  lastUploadDate: timestamp("last_upload_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

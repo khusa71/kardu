@@ -57,9 +57,21 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  // Calculate user stats
-  const totalFlashcards = history.reduce((sum, item) => sum + (item.flashcardCount || 0), 0);
-  const totalPagesProcessed = history.reduce((sum, item) => sum + (item.pagesProcessed || 0), 0);
+  // Fetch comprehensive learning statistics
+  const { data: learningStats } = useQuery<{
+    totalFlashcards: number;
+    totalPagesProcessed: number;
+    totalStudySessions: number;
+    cardsStudied: number;
+    averageAccuracy: number;
+  }>({
+    queryKey: ["/api/learning-stats"],
+    enabled: !!user,
+  });
+
+  // Calculate user stats from API data and history
+  const totalFlashcards = learningStats?.totalFlashcards || 0;
+  const totalPagesProcessed = learningStats?.totalPagesProcessed || 0;
   const totalUploads = history.length;
   const recentUploads = history.filter(item => {
     const uploadDate = new Date(item.createdAt);

@@ -136,6 +136,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add quota tracking columns to user_profiles table
+  app.post("/api/add-quota-columns", async (req, res) => {
+    try {
+      const { addQuotaColumns } = await import("./add-quota-columns");
+      const result = await addQuotaColumns();
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: "Quota tracking columns added successfully"
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: result.error,
+          message: "Failed to add quota columns"
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        message: "Failed to add quota columns"
+      });
+    }
+  });
+
   // Create flashcards table endpoint
   app.post("/api/create-flashcards-table", async (req, res) => {
     try {
@@ -628,9 +655,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { uploadsRemaining } = await storage.checkUploadLimit(userId);
       const updatedUser = await storage.getUserProfile(userId); // Get fresh data after potential reset
       
-      // Calculate correct monthly usage data  
-      const currentUploads = 0; // Default for existing users
-      const monthlyLimit = updatedUser?.isPremium ? 100 : 3;
+      // Get actual monthly usage data from database
+      const currentUploads = updatedUser?.monthlyUploads || 0;
+      const monthlyLimit = updatedUser?.monthlyLimit || (updatedUser?.isPremium ? 100 : 3);
       
       // Determine if user is OAuth-verified (Google) or email-verified
       const isOAuthUser = req.user!.app_metadata?.providers?.includes('google') || 
@@ -646,6 +673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isEmailVerified,
         isPremium: updatedUser?.isPremium || false,
         monthlyUploads: currentUploads,
+        monthlyPagesProcessed: updatedUser?.monthlyPagesProcessed || 0,
         monthlyLimit,
         uploadsRemaining,
       };
@@ -1435,6 +1463,59 @@ async function processFlashcardJob(jobId: number) {
     } catch (error) {
       console.error("History fetch error:", error);
       res.status(500).json({ message: "Failed to fetch upload history" });
+    }
+  });
+
+  // Get user learning statistics
+  app.get("/api/learning-stats", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get total flashcards created
+      const totalFlashcardsResult = await db.execute(sql`
+        SELECT COUNT(f.id) as total_flashcards
+        FROM flashcards f
+        JOIN flashcard_jobs j ON f.job_id = j.id
+        WHERE j.user_id = ${userId}
+      `);
+
+      // Get total pages processed
+      const totalPagesResult = await db.execute(sql`
+        SELECT SUM(pages_processed) as total_pages
+        FROM flashcard_jobs
+        WHERE user_id = ${userId} AND status = 'completed'
+      `);
+
+      // Get study sessions count
+      const studySessionsResult = await db.execute(sql`
+        SELECT COUNT(*) as total_sessions
+        FROM study_sessions
+        WHERE user_id = ${userId}
+      `);
+
+      // Get cards studied and accuracy
+      const studyStatsResult = await db.execute(sql`
+        SELECT 
+          COUNT(DISTINCT sp.flashcard_id) as cards_studied,
+          AVG(CASE WHEN sp.correct_reviews > 0 THEN 
+            (sp.correct_reviews::float / NULLIF(sp.total_reviews, 0)) * 100 
+            ELSE 0 END) as avg_accuracy
+        FROM study_progress sp
+        WHERE sp.user_id = ${userId} AND sp.total_reviews > 0
+      `);
+
+      const stats = {
+        totalFlashcards: Number(totalFlashcardsResult[0]?.total_flashcards || 0),
+        totalPagesProcessed: Number(totalPagesResult[0]?.total_pages || 0),
+        totalStudySessions: Number(studySessionsResult[0]?.total_sessions || 0),
+        cardsStudied: Number(studyStatsResult[0]?.cards_studied || 0),
+        averageAccuracy: Math.round(Number(studyStatsResult[0]?.avg_accuracy || 0))
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error("Learning stats error:", error);
+      res.status(500).json({ message: "Failed to fetch learning statistics" });
     }
   });
 
