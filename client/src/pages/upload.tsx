@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import { supabase } from "@/lib/supabase";
 import { NavigationBar } from "@/components/navigation-bar";
 import { AuthModal } from "@/components/auth-modal";
 import { useLocation } from "wouter";
@@ -44,6 +45,19 @@ export default function Upload() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentJobId, setCurrentJobId] = useState<number | null>(null);
+
+  // Deep state debugging
+  useEffect(() => {
+    console.log('🔄 currentStep changed to:', currentStep);
+  }, [currentStep]);
+
+  useEffect(() => {
+    console.log('🔄 isProcessing changed to:', isProcessing);
+  }, [isProcessing]);
+
+  useEffect(() => {
+    console.log('🔄 currentJobId changed to:', currentJobId);
+  }, [currentJobId]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   // Configuration state
@@ -80,12 +94,20 @@ export default function Upload() {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log('Upload response:', data);
+      console.log('=== UPLOAD SUCCESS ===');
+      console.log('Full upload response:', JSON.stringify(data, null, 2));
+      
       const jobId = data.jobs && data.jobs.length > 0 ? data.jobs[0].jobId : data.jobId;
-      console.log('Setting job ID:', jobId);
+      console.log('Extracted job ID:', jobId);
+      console.log('Setting currentJobId state to:', jobId);
+      console.log('Setting currentStep to: 3');
+      console.log('Setting isProcessing to: true');
+      
       setCurrentJobId(jobId);
       setCurrentStep(3);
       setIsProcessing(true);
+      
+      console.log('State update complete, upload success toast showing');
       toast({
         title: "Upload successful!",
         description: "Your PDF is being processed. This may take a few minutes.",
@@ -100,44 +122,71 @@ export default function Upload() {
     },
   });
 
-  // Disable automatic polling - use manual retrieval instead
-  const jobStatus = null;
-  const jobStatusError = null;
+  // Real-time job status polling with proper state management
+  const { data: jobStatus, error: jobStatusError } = useQuery({
+    queryKey: ['/api/jobs', currentJobId],
+    enabled: !!currentJobId && isProcessing,
+    refetchInterval: 3000, // Poll every 3 seconds
+    refetchIntervalInBackground: true,
+    retry: 3,
+    retryDelay: 1000,
+  });
 
-  // Simple timer-based completion check
+  // Monitor job status changes from React Query polling
   useEffect(() => {
-    if (!currentJobId || !isProcessing) return;
-
-    // After 10 seconds of processing, check for completion aggressively
-    const checkTimer = setTimeout(async () => {
-      try {
-        const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
-        const data = await response.json();
-        
-        if (data.status === 'completed') {
-          let flashcards = [];
-          if (data.flashcards) {
-            flashcards = Array.isArray(data.flashcards) 
-              ? data.flashcards 
-              : JSON.parse(data.flashcards);
-          }
-          
-          setGeneratedFlashcards(flashcards);
-          setIsProcessing(false);
-          setCurrentStep(4);
-          
-          toast({
-            title: "Flashcards ready!",
-            description: `Generated ${flashcards.length} flashcards successfully.`,
-          });
+    console.log('=== JOB STATUS MONITOR ===');
+    console.log('jobStatus:', jobStatus);
+    console.log('isProcessing:', isProcessing);
+    console.log('currentStep:', currentStep);
+    
+    if (!jobStatus || !isProcessing) {
+      return;
+    }
+    
+    const status = (jobStatus as any)?.status;
+    console.log('Job status from React Query:', status);
+    
+    if (status === 'completed') {
+      console.log('JOB COMPLETED - TRANSITIONING TO STEP 4');
+      
+      let flashcards = [];
+      const flashcardsData = (jobStatus as any)?.flashcards;
+      
+      if (flashcardsData) {
+        console.log('Processing flashcards data, type:', typeof flashcardsData);
+        try {
+          flashcards = Array.isArray(flashcardsData) 
+            ? flashcardsData 
+            : JSON.parse(flashcardsData);
+          console.log('Successfully parsed flashcards:', flashcards.length, 'cards');
+        } catch (error) {
+          console.error('Error parsing flashcards:', error);
+          flashcards = [];
         }
-      } catch (error) {
-        console.log('Auto-check failed, manual retrieval available');
       }
-    }, 10000);
-
-    return () => clearTimeout(checkTimer);
-  }, [currentJobId, isProcessing, toast]);
+      
+      console.log('Updating state for job completion...');
+      setGeneratedFlashcards(flashcards);
+      setIsProcessing(false);
+      setCurrentStep(4);
+      
+      toast({
+        title: "Flashcards Ready!",
+        description: `Generated ${flashcards.length} flashcards successfully.`,
+      });
+      
+    } else if (status === 'failed') {
+      console.log('JOB FAILED');
+      const errorMessage = (jobStatus as any)?.errorMessage || "Generation failed. Please try again.";
+      
+      setIsProcessing(false);
+      toast({
+        title: "Generation Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  }, [jobStatus, isProcessing, currentStep, toast]);
 
   // Handle job completion
   useEffect(() => {
@@ -686,34 +735,62 @@ export default function Upload() {
                     {currentJobId && (
                       <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                         <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                          Job ID: {currentJobId} • Taking longer than expected?
+                          Job ID: {currentJobId} • Debug Info: Step={currentStep}, Processing={isProcessing ? 'true' : 'false'}
                         </p>
                         <div className="space-y-3">
                           <Button 
                             variant="default" 
                             size="lg"
                             onClick={async () => {
+                              console.log('=== MANUAL BUTTON CLICKED ===');
+                              console.log('Current state before API call:');
+                              console.log('- currentJobId:', currentJobId);
+                              console.log('- currentStep:', currentStep);
+                              console.log('- isProcessing:', isProcessing);
+                              
                               try {
+                                console.log('Making API request to /api/jobs/' + currentJobId);
                                 const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
                                 const data = await response.json();
+                                console.log('API response:', JSON.stringify(data, null, 2));
                                 
                                 if (data.status === 'completed') {
+                                  console.log('✅ Job is completed, processing flashcards...');
                                   let flashcards = [];
                                   if (data.flashcards) {
+                                    console.log('Raw flashcards data:', typeof data.flashcards, data.flashcards);
                                     flashcards = Array.isArray(data.flashcards) 
                                       ? data.flashcards 
                                       : JSON.parse(data.flashcards);
+                                    console.log('Parsed flashcards:', flashcards.length, 'cards');
                                   }
                                   
+                                  console.log('🔄 CALLING setState functions:');
+                                  console.log('- setGeneratedFlashcards(' + flashcards.length + ' cards)');
                                   setGeneratedFlashcards(flashcards);
+                                  
+                                  console.log('- setIsProcessing(false)');
                                   setIsProcessing(false);
+                                  
+                                  console.log('- setCurrentStep(4)');
                                   setCurrentStep(4);
+                                  
+                                  // Force immediate re-render check
+                                  setTimeout(() => {
+                                    console.log('🔍 POST-UPDATE STATE CHECK:');
+                                    console.log('- currentStep should be 4, actual:', currentStep);
+                                    console.log('- isProcessing should be false, actual:', isProcessing);
+                                    console.log('- flashcards should be', flashcards.length, ', actual:', generatedFlashcards.length);
+                                  }, 100);
+                                  
+                                  console.log('✅ State update calls completed');
                                   
                                   toast({
                                     title: "Success!",
                                     description: `Loaded ${flashcards.length} flashcards.`,
                                   });
                                 } else if (data.status === 'failed') {
+                                  console.log('❌ Job failed:', data.errorMessage);
                                   setIsProcessing(false);
                                   toast({
                                     title: "Generation failed",
@@ -721,12 +798,14 @@ export default function Upload() {
                                     variant: "destructive",
                                   });
                                 } else {
+                                  console.log('⏳ Job still processing, status:', data.status);
                                   toast({
                                     title: "Still processing",
                                     description: `Status: ${data.status}`,
                                   });
                                 }
                               } catch (error) {
+                                console.error('❌ Manual retrieval error:', error);
                                 toast({
                                   title: "Error",
                                   description: "Unable to retrieve flashcards",
