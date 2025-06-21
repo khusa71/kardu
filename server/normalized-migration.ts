@@ -29,7 +29,7 @@ export async function executeNormalizedMigration() {
         subject TEXT,
         difficulty TEXT,
         tags TEXT[],
-        confidence NUMERIC(3,2),
+
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
@@ -135,17 +135,15 @@ export async function executeNormalizedMigration() {
           const card = flashcardsData[i];
           
           await db.execute(sql`
-            INSERT INTO flashcards (job_id, user_id, card_index, front, back, subject, difficulty, tags, confidence)
+            INSERT INTO flashcards (job_id, card_index, front, back, subject, difficulty, tags)
             VALUES (
               ${jobId},
-              ${userId},
               ${i},
               ${card.front || card.question || ''},
               ${card.back || card.answer || ''},
               ${card.subject || subject || ''},
               ${card.difficulty || difficulty || 'beginner'},
-              ${card.tags || []},
-              ${card.confidence ? parseFloat(card.confidence.toString()) : null}
+              ${card.tags || []}
             )
           `);
         }
@@ -183,7 +181,7 @@ export async function createNormalizedFlashcards(
     subject: card.subject || subject || '',
     difficulty: card.difficulty || difficulty || 'beginner',
     tags: card.tags || [],
-    confidence: card.confidence ? card.confidence.toString() : null,
+
   }));
 
   if (normalizedFlashcards.length > 0) {
@@ -231,7 +229,6 @@ export async function getFlashcardsWithProgress(jobId: number, userId: string) {
       subject: flashcards.subject,
       difficulty: flashcards.difficulty,
       tags: flashcards.tags,
-      confidence: flashcards.confidence,
       progressId: studyProgress.id,
       status: studyProgress.status,
       reviewCount: studyProgress.reviewCount,

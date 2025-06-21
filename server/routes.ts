@@ -1007,7 +1007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           back: card.back,
           subject: card.subject,
           difficulty: card.difficulty,
-          tags: card.tags
+          tags: card.tags || []
         }));
         
         res.json({

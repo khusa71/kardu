@@ -91,7 +91,6 @@ export const flashcards = pgTable("flashcards", {
   subject: text("subject"), // Subject category
   difficulty: text("difficulty"), // 'beginner' | 'intermediate' | 'advanced'
   tags: text("tags").array(), // Array of tags for categorization
-  confidence: numeric("confidence", { precision: 3, scale: 2 }), // AI confidence score (0.00-1.00)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
