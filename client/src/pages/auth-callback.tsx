@@ -9,8 +9,9 @@ export default function AuthCallback() {
     const handleAuthCallback = async () => {
       try {
         console.log('Auth callback: Starting authentication process...');
+        console.log('Auth callback: Current URL:', window.location.href);
         
-        // First, handle the OAuth callback
+        // Handle the OAuth callback with URL parameters
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -23,9 +24,6 @@ export default function AuthCallback() {
 
         if (data.session) {
           console.log('Auth callback: Session found, redirecting to dashboard');
-          
-          // Set a flag to help with redirection
-          localStorage.setItem('redirectToDashboard', 'true');
           
           // Sync user data with backend
           try {
@@ -49,19 +47,29 @@ export default function AuthCallback() {
             console.warn('Auth callback: User sync error:', syncError);
           }
           
-          // Redirect to dashboard
-          setLocation('/dashboard');
+          // Force immediate redirect to dashboard
+          window.location.replace('/dashboard');
         } else {
           console.log('Auth callback: No session found, redirecting to home');
-          setLocation('/');
+          window.location.replace('/');
         }
       } catch (error) {
         console.error('Auth callback error:', error);
-        setLocation('/');
+        window.location.replace('/');
       }
     };
 
-    handleAuthCallback();
+    // Check if there are auth parameters in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const fragment = new URLSearchParams(window.location.hash.substring(1));
+    
+    if (urlParams.has('code') || fragment.has('access_token') || fragment.has('error')) {
+      console.log('Auth callback: OAuth parameters detected');
+      handleAuthCallback();
+    } else {
+      console.log('Auth callback: No OAuth parameters, checking session...');
+      handleAuthCallback();
+    }
   }, [setLocation]);
 
   return (
