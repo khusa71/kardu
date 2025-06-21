@@ -485,13 +485,17 @@ export class DatabaseStorage implements IStorage {
   // Study session operations
   async createStudySession(sessionData: InsertStudySession): Promise<StudySession> {
     try {
+      console.log('Creating study session with data:', sessionData);
       const [session] = await db
         .insert(studySessions)
         .values(sessionData)
         .returning();
+      console.log('Study session created successfully:', session);
       return session;
     } catch (error) {
-      throw new Error('Failed to create study session');
+      console.error('Study session creation error:', error);
+      console.error('Session data that failed:', sessionData);
+      throw new Error(`Failed to create study session: ${(error as Error).message}`);
     }
   }
 

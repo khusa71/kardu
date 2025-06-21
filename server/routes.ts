@@ -1996,6 +1996,8 @@ async function processFlashcardJob(jobId: number) {
       const { jobId, totalCards } = req.body;
       const userId = req.user!.id;
 
+      console.log('Study session creation request:', { jobId, totalCards, userId });
+
       const sessionData = {
         sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         userId,
@@ -2008,7 +2010,11 @@ async function processFlashcardJob(jobId: number) {
       const session = await storage.createStudySession(sessionData);
       res.json(session);
     } catch (error) {
-      res.status(500).json({ error: "Failed to create study session" });
+      console.error("Study session creation error:", error);
+      res.status(500).json({ 
+        error: "Failed to create study session",
+        details: (error as Error).message 
+      });
     }
   });
 
