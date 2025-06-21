@@ -103,17 +103,17 @@ export function useSupabaseAuth() {
   };
 
   const signInWithGoogle = async () => {
-    console.log('Attempting Google sign in...');
+    console.log('=== GOOGLE OAUTH START ===');
     console.log('Current location:', window.location.href);
     console.log('Current hostname:', window.location.hostname);
     console.log('Current origin:', window.location.origin);
     
-    // For Replit environment, we need to ensure the redirect URL is configured correctly in Supabase
-    // The redirect URL must match exactly what's configured in the Supabase dashboard
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    // Set redirect flag before starting OAuth flow
+    localStorage.setItem('redirectToDashboard', 'true');
+    console.log('Set redirect flag to dashboard');
     
+    const redirectTo = `${window.location.origin}/auth/callback`;
     console.log('Using redirect URL:', redirectTo);
-    console.log('Note: Ensure this URL is added to Supabase Auth > Settings > Redirect URLs');
     
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -121,7 +121,14 @@ export function useSupabaseAuth() {
         redirectTo
       }
     });
-    console.log('Google sign in result:', { data, error });
+    
+    console.log('Google OAuth result:', { data, error });
+    
+    if (error) {
+      console.error('Google OAuth error:', error);
+      localStorage.removeItem('redirectToDashboard');
+    }
+    
     return { data, error };
   };
 
