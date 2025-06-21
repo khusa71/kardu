@@ -33,10 +33,11 @@ export class CacheService {
     }
   }
 
-  // Create content hash for caching
+  // Create optimized content hash for faster caching
   generateContentHash(text: string, subject: string, difficulty: string, focusAreas: string): string {
-    const content = `${text}|${subject}|${difficulty}|${focusAreas}`;
-    return crypto.createHash('sha256').update(content).digest('hex');
+    // Use faster hash for better performance
+    const content = `${text.slice(0, 1000)}|${subject}|${difficulty}|${focusAreas}`;
+    return crypto.createHash('md5').update(content).digest('hex').substring(0, 12);
   }
 
   // Check if content exists in cache

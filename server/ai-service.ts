@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { FlashcardPair } from "@shared/schema";
+import { performanceOptimizer } from './performance-optimizer';
 
 // Using OpenRouter for unified AI access
 
@@ -23,9 +24,9 @@ interface ApiError extends Error {
 }
 
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 3,
-  baseDelay: 1000,
-  maxDelay: 10000
+  maxRetries: 2,
+  baseDelay: 500,
+  maxDelay: 3000
 };
 
 /**

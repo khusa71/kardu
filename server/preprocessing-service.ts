@@ -16,26 +16,38 @@ export interface PreprocessingResult {
 }
 
 export class PreprocessingService {
-  // Intelligent content filtering to identify valuable sections
+  // Optimized content filtering for faster processing
   filterRelevantContent(text: string, subject: string): string {
+    // Use regex for faster line processing
     const lines = text.split('\n');
     const relevantLines: string[] = [];
     
-    // Subject-specific keywords for content filtering
+    // Pre-compiled regex patterns for faster matching
+    const pageNumberRegex = /^\s*\d+\s*$/;
+    const headerFooterRegex = /^(page|chapter|\d+\s*of\s*\d+|©|copyright)/i;
+    const definitionRegex = /(:|\bdefinition\b|\bis\s+defined\s+as\b|\bmeans\b)/i;
+    const exampleRegex = /(\bexample\b|\bfor\s+instance\b|\bsuch\s+as\b|\be\.g\b)/i;
+    
+    // Subject-specific keywords (cached for performance)
     const subjectKeywords = this.getSubjectKeywords(subject);
     
     for (const line of lines) {
       const cleanLine = line.trim();
       
-      // Skip very short lines, page numbers, headers/footers
-      if (cleanLine.length < 10 || this.isPageNumber(cleanLine) || this.isHeaderFooter(cleanLine)) {
-        continue;
-      }
+      // Skip processing very short lines or obvious noise
+      if (cleanLine.length < 15) continue;
+      if (pageNumberRegex.test(cleanLine)) continue;
+      if (headerFooterRegex.test(cleanLine)) continue;
       
-      // Prioritize lines with subject-relevant keywords
-      const relevanceScore = this.calculateRelevanceScore(cleanLine, subjectKeywords);
+      // Fast relevance check
+      const hasKeywords = subjectKeywords.some(keyword => 
+        cleanLine.toLowerCase().includes(keyword.toLowerCase())
+      );
       
-      if (relevanceScore > 0.3 || this.isDefinition(cleanLine) || this.isExample(cleanLine)) {
+      const isDefinition = definitionRegex.test(cleanLine);
+      const isExample = exampleRegex.test(cleanLine);
+      
+      if (hasKeywords || isDefinition || isExample) {
         relevantLines.push(cleanLine);
       }
     }
