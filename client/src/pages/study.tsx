@@ -1,220 +1,91 @@
 import { useState, useEffect } from "react";
-import { useParams } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { useParams, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { NavigationBar } from "@/components/navigation-bar";
-import { ChevronLeft, ChevronRight, RotateCcw, Home, BookOpen, CheckCircle, XCircle, Clock } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { OptimizedStudyMode } from "@/components/optimized-study-mode";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { tomorrow } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Brain, Trophy, Clock, TrendingUp, Home } from "lucide-react";
 
-interface FlashcardPair {
-  front: string;
-  back: string;
-  subject?: string;
-  difficulty?: 'beginner' | 'intermediate' | 'advanced';
-}
-
-interface StudyProgress {
-  id: number;
-  cardIndex: number;
-  status: string;
-  difficultyRating?: string;
-  reviewCount: number;
-}
-
-interface StudyStats {
-  total: number;
-  known: number;
-  reviewing: number;
+interface StudySession {
+  sessionId: string;
+  startTime: number;
+  totalCards: number;
+  cardsStudied: number;
+  accuracy: number;
 }
 
 export default function Study() {
   const { jobId } = useParams();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
-  // State variables
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [isFlipped, setIsFlipped] = useState(false);
+  // Study mode state
+  const [isStudying, setIsStudying] = useState(false);
+  const [sessionComplete, setSessionComplete] = useState(false);
+  const [completedSession, setCompletedSession] = useState<StudySession | null>(null);
 
-  // Fetch flashcard job data
+  // Fetch job data for title and subject
   const { data: jobData, isLoading: jobLoading } = useQuery({
     queryKey: ['/api/jobs', jobId],
     queryFn: () => fetch(`/api/jobs/${jobId}`).then(res => res.json()),
     enabled: !!jobId
   });
 
-  // Fetch study progress
-  const { data: progressData, isLoading: progressLoading } = useQuery({
-    queryKey: ['/api/study-progress', jobId],
-    enabled: !!jobId
-  });
-
-  // Study progress mutation
-  const updateProgressMutation = useMutation({
-    mutationFn: (data: { jobId: number; cardIndex: number; status: string; difficultyRating?: string }) =>
-      apiRequest('POST', '/api/study-progress', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/study-progress', jobId] });
-      toast({
-        title: "Progress Updated",
-        description: "Your study progress has been saved."
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to save study progress",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Computed values - normalize flashcard data structure
-  const flashcards: FlashcardPair[] = (() => {
-    if (!jobData?.flashcards) {
-      return [];
-    }
+  const handleSessionComplete = (session: StudySession) => {
+    setCompletedSession(session);
+    setSessionComplete(true);
+    setIsStudying(false);
     
-    try {
-      const parsed = JSON.parse(jobData.flashcards);
-      
-      const normalized = parsed.map((card: any) => ({
-        question: card.question || card.front || '',
-        answer: card.answer || card.back || '',
-        topic: card.topic || card.subject || '',
-        difficulty: card.difficulty || 'beginner'
-      }));
-      
-      return normalized;
-    } catch (error) {
-      console.error('Error parsing flashcards:', error);
-      return [];
-    }
-  })();
-  const progress: StudyProgress[] = (progressData as any)?.progress || [];
-  const stats: StudyStats = (progressData as any)?.stats || { total: flashcards.length, known: 0, reviewing: 0 };
-  const currentCard = flashcards[currentCardIndex];
-  const currentProgress = progress.find(p => p.cardIndex === currentCardIndex);
-  const progressPercentage = flashcards.length > 0 ? Math.round(((stats.known + stats.reviewing) / stats.total) * 100) : 0;
-
-  // Navigation functions
-  const handleNextCard = () => {
-    if (currentCardIndex < flashcards.length - 1) {
-      setCurrentCardIndex(currentCardIndex + 1);
-      setShowAnswer(false);
-      setIsFlipped(false);
-    }
-  };
-
-  const handlePreviousCard = () => {
-    if (currentCardIndex > 0) {
-      setCurrentCardIndex(currentCardIndex - 1);
-      setShowAnswer(false);
-      setIsFlipped(false);
-    }
-  };
-
-  const handleFlipCard = () => {
-    setIsFlipped(!isFlipped);
-    setShowAnswer(!showAnswer);
-  };
-
-  const handleMarkCardStatus = (status: string, difficultyRating?: string) => {
-    if (!jobId || currentCardIndex === undefined) return;
-    
-    updateProgressMutation.mutate({
-      jobId: parseInt(jobId),
-      cardIndex: currentCardIndex,
-      status,
-      difficultyRating
+    toast({
+      title: "Study Session Complete!",
+      description: `Studied ${session.cardsStudied} cards with ${Math.round(session.accuracy)}% accuracy`,
     });
-    
-    // Auto-advance to next card after marking
-    setTimeout(() => {
-      if (currentCardIndex < flashcards.length - 1) {
-        handleNextCard();
-      }
-    }, 1000);
   };
 
-  const handleResetStudy = () => {
-    setCurrentCardIndex(0);
-    setShowAnswer(false);
-    setIsFlipped(false);
+  const handleExitStudy = () => {
+    setIsStudying(false);
+    setSessionComplete(false);
+    setLocation('/dashboard');
   };
 
-  // Loading states
-  if (jobLoading || progressLoading) {
+  const startStudySession = () => {
+    setIsStudying(true);
+    setSessionComplete(false);
+  };
+
+  if (jobLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-background">
         <NavigationBar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Loading study session...</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Error handling for missing data
-  if (!jobData) {
+  if (!jobData || jobData.status !== 'completed') {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-background">
         <NavigationBar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <Card className="max-w-md">
-            <CardContent className="text-center p-8">
-              <div className="text-red-500 mb-4">
-                <XCircle className="w-16 h-16 mx-auto" />
-              </div>
-              <h2 className="text-xl font-semibold mb-2">Flashcard Set Not Found</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                The flashcard set you're looking for doesn't exist or has been removed.
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <Card className="text-center py-8">
+            <CardContent>
+              <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Flashcards Not Ready</h2>
+              <p className="text-muted-foreground mb-4">
+                This flashcard set is not ready for study yet.
               </p>
-              <Button onClick={() => window.location.href = '/history'}>
+              <Button onClick={() => setLocation('/dashboard')} variant="outline">
                 <Home className="w-4 h-4 mr-2" />
-                Back to History
+                Back to Dashboard
               </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  if (!flashcards || flashcards.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <NavigationBar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <Card className="max-w-md">
-            <CardContent className="text-center p-8">
-              <div className="text-yellow-500 mb-4">
-                <Clock className="w-16 h-16 mx-auto" />
-              </div>
-              <h2 className="text-xl font-semibold mb-2">No Flashcards Available</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                This flashcard set is empty or still being processed. Please check back later or regenerate the flashcards.
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => window.location.href = '/history'}>
-                  <Home className="w-4 h-4 mr-2" />
-                  Back to History
-                </Button>
-                {jobData.status === 'completed' && (
-                  <Button onClick={() => window.location.href = `/regenerate/${jobId}`}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Regenerate
-                  </Button>
-                )}
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -223,190 +94,129 @@ export default function Study() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <NavigationBar />
       
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Study Mode</h1>
-              <p className="text-gray-600 dark:text-gray-400">{jobData.filename}</p>
-            </div>
-            <Badge variant="outline" className="flex items-center space-x-1">
-              <BookOpen className="w-4 h-4" />
-              <span>{jobData.subject}</span>
-            </Badge>
-          </div>
-
-          {/* Progress Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {isStudying ? (
+          // Active study mode using optimized component
+          <OptimizedStudyMode
+            jobId={parseInt(jobId!)}
+            onComplete={handleSessionComplete}
+            onExit={handleExitStudy}
+          />
+        ) : sessionComplete && completedSession ? (
+          // Session completion summary
+          <div className="max-w-2xl mx-auto space-y-6">
             <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Total Cards</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.known}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Known</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-orange-600">{stats.reviewing}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Reviewing</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-purple-600">{progressPercentage}%</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Progress</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Card {currentCardIndex + 1} of {flashcards.length}</span>
-              <span>{progressPercentage}% Complete</span>
-            </div>
-            <Progress value={(currentCardIndex + 1) / flashcards.length * 100} className="w-full" />
-          </div>
-        </div>
-
-        {/* Flashcard */}
-        <Card className="min-h-[400px] mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">
-                {showAnswer ? 'Answer' : 'Question'}
-              </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleFlipCard}
-              >
-                {showAnswer ? 'Hide Answer' : 'Show Answer'}
-              </Button>
-            </div>
-          </CardHeader>
-          
-          <CardContent>
-            <div className="space-y-4">
-              <div className="prose dark:prose-invert max-w-none">
-                <ReactMarkdown
-                  components={{
-                    code({ className, children, ...props }) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const isInline = !className;
-                      
-                      return !isInline && match ? (
-                        <SyntaxHighlighter
-                          style={tomorrow as any}
-                          language={match[1]}
-                          PreTag="div"
-                        >
-                          {String(children).replace(/\n$/, '')}
-                        </SyntaxHighlighter>
-                      ) : (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    }
-                  }}
-                >
-                  {showAnswer ? currentCard?.back || "" : currentCard?.front || ""}
-                </ReactMarkdown>
-              </div>
-              
-              {currentCard?.subject && (
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <Badge variant="secondary">{currentCard.subject}</Badge>
-                  {currentCard.difficulty && (
-                    <Badge variant="outline">{currentCard.difficulty}</Badge>
-                  )}
-                  {currentProgress && (
-                    <Badge variant="outline">
-                      Reviewed {currentProgress.reviewCount} times
-                    </Badge>
-                  )}
+              <CardHeader className="text-center">
+                <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
+                  <Trophy className="w-8 h-8 text-green-600 dark:text-green-400" />
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Study Actions */}
-        {showAnswer && (
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">How well did you know this?</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Button
-                  variant="outline"
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                  onClick={() => handleMarkCardStatus('difficult', 'hard')}
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Again (Hard)
-                </Button>
-                <Button
-                  variant="outline"
-                  className="text-yellow-600 border-yellow-200 hover:bg-yellow-50"
-                  onClick={() => handleMarkCardStatus('reviewing', 'medium')}
-                >
-                  <Clock className="w-4 h-4 mr-2" />
-                  Good (Medium)
-                </Button>
-                <Button
-                  variant="outline"
-                  className="text-green-600 border-green-200 hover:bg-green-50"
-                  onClick={() => handleMarkCardStatus('known', 'easy')}
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Easy (Known)
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Navigation */}
-        <div className="flex justify-between items-center">
-          <Button
-            variant="outline"
-            onClick={handlePreviousCard}
-            disabled={currentCardIndex === 0}
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
-          
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleResetStudy}>
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset
-            </Button>
-            <Button variant="outline" onClick={() => window.location.href = '/history'}>
-              <Home className="w-4 h-4 mr-2" />
-              Back to History
-            </Button>
+                <CardTitle className="text-2xl">Session Complete!</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-2xl font-bold text-primary">{completedSession.cardsStudied}</div>
+                    <div className="text-sm text-muted-foreground">Cards Studied</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-2xl font-bold text-green-500">{Math.round(completedSession.accuracy)}%</div>
+                    <div className="text-sm text-muted-foreground">Accuracy</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-2xl font-bold text-blue-500">
+                      {Math.round((Date.now() - completedSession.startTime) / 60000)}m
+                    </div>
+                    <div className="text-sm text-muted-foreground">Duration</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-2xl font-bold text-purple-500">{completedSession.totalCards}</div>
+                    <div className="text-sm text-muted-foreground">Total Cards</div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button 
+                    onClick={startStudySession}
+                    className="flex-1"
+                  >
+                    <Brain className="w-4 h-4 mr-2" />
+                    Study Again
+                  </Button>
+                  <Button 
+                    onClick={() => setLocation('/dashboard')}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Home className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          
-          <Button
-            variant="outline"
-            onClick={handleNextCard}
-            disabled={currentCardIndex === flashcards.length - 1}
-          >
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
+        ) : (
+          // Study session start screen
+          <div className="max-w-2xl mx-auto space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Brain className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">{jobData.filename}</CardTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="secondary">{jobData.subject}</Badge>
+                      <Badge variant="outline">{jobData.difficulty}</Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-xl font-bold text-primary">
+                      {JSON.parse(jobData.flashcards || '[]').length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Flashcards</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-xl font-bold text-blue-500">{jobData.pagesProcessed || jobData.pageCount || 0}</div>
+                    <div className="text-sm text-muted-foreground">Pages</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-xl font-bold text-green-500">
+                      <Clock className="w-5 h-5 mx-auto" />
+                    </div>
+                    <div className="text-sm text-muted-foreground">Optimized</div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <h4 className="font-medium text-foreground">Enhanced Study Features:</h4>
+                  <ul className="space-y-1 ml-4">
+                    <li>• Intelligent spaced repetition algorithm</li>
+                    <li>• Real-time progress tracking with batch sync</li>
+                    <li>• Adaptive difficulty based on performance</li>
+                    <li>• Optimized for fast, smooth study sessions</li>
+                  </ul>
+                </div>
+
+                <Button 
+                  onClick={startStudySession}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Brain className="w-5 h-5 mr-2" />
+                  Start Optimized Study Session
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );

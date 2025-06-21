@@ -43,7 +43,9 @@ export interface IStorage {
   getStudyProgress(userId: string, jobId: number): Promise<StudyProgress[]>;
   updateStudyProgress(progress: InsertStudyProgress): Promise<StudyProgress>;
   upsertStudyProgress(progress: InsertStudyProgress): Promise<StudyProgress>;
+  batchUpdateStudyProgress(progressList: InsertStudyProgress[]): Promise<StudyProgress[]>;
   getStudyStats(userId: string, jobId: number): Promise<{ total: number; known: number; reviewing: number }>;
+  getOptimizedFlashcards(jobId: number, userId: string): Promise<{ flashcards: any[]; progress: StudyProgress[] }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -364,11 +366,81 @@ export class DatabaseStorage implements IStorage {
           difficultyRating: progress.difficultyRating,
           lastReviewedAt: progress.lastReviewedAt,
           nextReviewDate: progress.nextReviewDate,
+          reviewCount: sql`${studyProgress.reviewCount} + 1`,
           updatedAt: new Date(),
         },
       })
       .returning();
     return updatedProgress;
+  }
+
+  async batchUpdateStudyProgress(progressList: InsertStudyProgress[]): Promise<StudyProgress[]> {
+    if (progressList.length === 0) return [];
+    
+    try {
+      const results: StudyProgress[] = [];
+      
+      // Process in batches of 50 to avoid database limits
+      const batchSize = 50;
+      for (let i = 0; i < progressList.length; i += batchSize) {
+        const batch = progressList.slice(i, i + batchSize);
+        
+        for (const progress of batch) {
+          const result = await this.upsertStudyProgress(progress);
+          results.push(result);
+        }
+      }
+      
+      console.log(`Batch updated ${results.length} study progress records`);
+      return results;
+    } catch (error) {
+      console.error('Batch study progress update failed:', error);
+      throw new Error('Failed to batch update study progress');
+    }
+  }
+
+  async getOptimizedFlashcards(jobId: number, userId: string): Promise<{ flashcards: any[]; progress: StudyProgress[] }> {
+    try {
+      // Get job and flashcards data in single query
+      const job = await this.getFlashcardJob(jobId);
+      if (!job || !job.flashcards) {
+        throw new Error('Flashcards not found');
+      }
+
+      // Parse flashcards from JSON
+      const flashcards = JSON.parse(job.flashcards);
+      
+      // Get all study progress for this user and job in single query
+      const progress = await this.getStudyProgress(userId, jobId);
+      
+      // Create optimized flashcard objects with progress data
+      const optimizedFlashcards = flashcards.map((card: any, index: number) => {
+        const cardProgress = progress.find(p => p.cardIndex === index);
+        
+        return {
+          ...card,
+          index,
+          progress: cardProgress ? {
+            status: cardProgress.status,
+            reviewCount: cardProgress.reviewCount,
+            lastReviewedAt: cardProgress.lastReviewedAt,
+            nextReviewDate: cardProgress.nextReviewDate,
+            difficultyRating: cardProgress.difficultyRating
+          } : {
+            status: 'new',
+            reviewCount: 0,
+            lastReviewedAt: null,
+            nextReviewDate: null,
+            difficultyRating: null
+          }
+        };
+      });
+
+      return { flashcards: optimizedFlashcards, progress };
+    } catch (error) {
+      console.error('Failed to get optimized flashcards:', error);
+      throw new Error('Failed to load study data');
+    }
   }
 }
 

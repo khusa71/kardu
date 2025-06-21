@@ -1432,7 +1432,29 @@ async function processFlashcardJob(jobId: number) {
     }
   });
 
-  // Study progress tracking endpoints
+  // Optimized study data loading endpoint
+  app.get("/api/study-data/:jobId", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId);
+      const userId = req.user!.id;
+
+      // Get optimized flashcards with progress data in a single efficient call
+      const studyData = await storage.getOptimizedFlashcards(jobId, userId);
+      const stats = await storage.getStudyStats(userId, jobId);
+
+      res.json({ 
+        flashcards: studyData.flashcards,
+        progress: studyData.progress,
+        stats,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching optimized study data:", error);
+      res.status(500).json({ error: "Failed to fetch study data" });
+    }
+  });
+
+  // Legacy endpoint for backward compatibility
   app.get("/api/study-progress/:jobId", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.jobId);
@@ -1460,7 +1482,7 @@ async function processFlashcardJob(jobId: number) {
         status,
         difficultyRating,
         lastReviewedAt: new Date(),
-        nextReviewDate: calculateNextReviewDate(status, difficultyRating)
+        nextReviewDate: calculateNextReviewDate(status, difficultyRating, 0)
       };
 
       const updatedProgress = await storage.upsertStudyProgress(progressData);
@@ -1468,6 +1490,46 @@ async function processFlashcardJob(jobId: number) {
     } catch (error) {
       console.error("Error updating study progress:", error);
       res.status(500).json({ error: "Failed to update study progress" });
+    }
+  });
+
+  // Batch study progress update endpoint for session optimization
+  app.post("/api/study-progress/batch", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, progressUpdates } = req.body;
+      const userId = req.user!.id;
+
+      // Validate input
+      if (!Array.isArray(progressUpdates) || progressUpdates.length === 0) {
+        return res.status(400).json({ error: "Progress updates array is required" });
+      }
+
+      if (progressUpdates.length > 100) {
+        return res.status(400).json({ error: "Too many updates in single batch (max 100)" });
+      }
+
+      // Prepare batch data with calculated review dates
+      const batchData = progressUpdates.map((update: any) => ({
+        userId,
+        jobId: parseInt(jobId),
+        cardIndex: update.cardIndex,
+        status: update.status,
+        difficultyRating: update.difficultyRating,
+        lastReviewedAt: new Date(),
+        nextReviewDate: calculateNextReviewDate(update.status, update.difficultyRating, update.reviewCount || 0)
+      }));
+
+      // Execute batch update
+      const results = await storage.batchUpdateStudyProgress(batchData);
+      
+      res.json({ 
+        success: true, 
+        updatedCount: results.length,
+        results: results.slice(0, 5) // Return first 5 for verification
+      });
+    } catch (error) {
+      console.error("Error batch updating study progress:", error);
+      res.status(500).json({ error: "Failed to batch update study progress" });
     }
   });
 
@@ -2305,44 +2367,62 @@ function generateAnkiDeck(jobId: number, flashcards: any[]): Promise<string> {
   });
 }
 
-// Helper function to calculate next review date based on difficulty
-function calculateNextReviewDate(status: string, difficultyRating?: string): Date {
+// Enhanced spaced repetition algorithm with optimized intervals
+function calculateNextReviewDate(status: string, difficultyRating?: string, reviewCount: number = 0): Date {
   const now = new Date();
   const nextDate = new Date(now);
 
-  if (status === 'known') {
-    // Known cards: longer intervals
-    switch (difficultyRating) {
+  // Implement SM-2 inspired algorithm with improvements
+  const calculateInterval = (difficulty: string, count: number, baseInterval: number): number => {
+    let easeFactor = 2.5;
+    
+    switch (difficulty) {
       case 'easy':
-        nextDate.setDate(now.getDate() + 7); // 1 week
+        easeFactor = 2.8;
         break;
       case 'medium':
-        nextDate.setDate(now.getDate() + 3); // 3 days
+        easeFactor = 2.5;
         break;
       case 'hard':
-        nextDate.setDate(now.getDate() + 1); // 1 day
+        easeFactor = 2.2;
         break;
       default:
-        nextDate.setDate(now.getDate() + 3); // Default to 3 days
+        easeFactor = 2.5;
     }
+
+    // Progressive interval calculation
+    if (count === 0) return baseInterval;
+    if (count === 1) return Math.round(baseInterval * 1.5);
+    
+    return Math.round(baseInterval * Math.pow(easeFactor, count - 1));
+  };
+
+  if (status === 'known') {
+    // Known cards: exponentially increasing intervals
+    const baseInterval = difficultyRating === 'easy' ? 7 : 
+                        difficultyRating === 'medium' ? 4 : 2;
+    const intervalDays = calculateInterval(difficultyRating || 'medium', reviewCount, baseInterval);
+    nextDate.setDate(now.getDate() + Math.min(intervalDays, 180)); // Cap at 6 months
   } else if (status === 'reviewing') {
-    // Reviewing cards: shorter intervals
-    switch (difficultyRating) {
-      case 'easy':
-        nextDate.setDate(now.getDate() + 2); // 2 days
-        break;
-      case 'medium':
-        nextDate.setDate(now.getDate() + 1); // 1 day
-        break;
-      case 'hard':
-        nextDate.setHours(now.getHours() + 4); // 4 hours
-        break;
-      default:
-        nextDate.setDate(now.getDate() + 1); // Default to 1 day
+    // Reviewing cards: moderate intervals
+    const baseInterval = difficultyRating === 'easy' ? 3 : 
+                        difficultyRating === 'medium' ? 1 : 0.5;
+    const intervalDays = calculateInterval(difficultyRating || 'medium', reviewCount, baseInterval);
+    
+    if (intervalDays >= 1) {
+      nextDate.setDate(now.getDate() + intervalDays);
+    } else {
+      nextDate.setHours(now.getHours() + Math.round(intervalDays * 24));
     }
   } else {
-    // Unknown cards: immediate review
-    nextDate.setHours(now.getHours() + 1); // 1 hour
+    // Unknown/new cards: short intervals for frequent practice
+    if (reviewCount === 0) {
+      nextDate.setMinutes(now.getMinutes() + 10); // 10 minutes for first review
+    } else if (reviewCount === 1) {
+      nextDate.setHours(now.getHours() + 1); // 1 hour for second review
+    } else {
+      nextDate.setHours(now.getHours() + 4); // 4 hours for subsequent reviews
+    }
   }
 
   return nextDate;

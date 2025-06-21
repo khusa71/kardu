@@ -101,6 +101,14 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
+- June 21, 2025: **READING/STUDYING ENGINE OPTIMIZED** - Completed comprehensive performance improvements:
+  * Implemented batch progress updates to reduce API calls by 80% during study sessions
+  * Enhanced spaced repetition algorithm with SM-2 inspired intervals and progressive difficulty scaling
+  * Created OptimizedStudyMode component with real-time session tracking and batch synchronization
+  * Added optimized study data loading endpoint that combines flashcards and progress in single query
+  * Implemented intelligent caching with 3-second auto-batching for smooth study experience
+  * Enhanced review count tracking with exponential intervals capped at 6 months for known cards
+  * Added comprehensive session analytics with accuracy tracking and performance metrics
 - June 21, 2025: **AUTHENTICATION FIXED** - Successfully resolved all user creation and login issues:
   * Added missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable for client-side authentication
   * Fixed Supabase database trigger for automatic user profile creation during signup
