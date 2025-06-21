@@ -24,7 +24,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User profiles table - exact column names from current database
+// User profiles table - matching actual database schema
 export const userProfiles = pgTable("user_profiles", {
   id: varchar("id").primaryKey().notNull(),
   email: varchar("email"),
@@ -47,6 +47,7 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   subject: text("subject"), // Store subject for better categorization
   difficulty: text("difficulty"), // Store difficulty level
   focusAreas: text("focus_areas"), // Store focus areas as JSON
+  apiProvider: text("api_provider"), // AI provider used ('basic' | 'advanced')
   status: text("status").notNull(), // 'pending' | 'processing' | 'completed' | 'failed'
   progress: integer("progress").default(0), // 0-100
   currentTask: text("current_task"),

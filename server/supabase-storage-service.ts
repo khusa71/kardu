@@ -271,6 +271,22 @@ export class SupabaseStorageService {
     return data?.map((file: any) => file.name) || [];
   }
 
+  async createSignedUrl(key: string, expiresIn: number = 300): Promise<{ data: { signedUrl: string } | null; error: any }> {
+    if (!supabase) {
+      return { data: null, error: new Error('Supabase storage not initialized') };
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from(this.bucketName)
+        .createSignedUrl(key, expiresIn);
+
+      return { data, error };
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
   async generateAndUploadExports(userId: string, jobId: number, flashcards: any[]): Promise<{
     csv?: StoredFile;
     json?: StoredFile;

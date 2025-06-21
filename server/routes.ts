@@ -589,14 +589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userProfile = await storage.upsertUserProfile({
             id: testUserId,
             email: 'test@kardu.io',
-            isPremium: false,
-            role: 'user',
-            monthlyUploads: 0,
-            monthlyLimit: 3,
-            monthlyPagesProcessed: 0,
-            lastResetDate: new Date(),
-            isEmailVerified: true,
-            updatedAt: new Date()
+            isPremium: false
           });
         }
         
@@ -641,11 +634,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userProfile = await storage.upsertUserProfile({
           id: userId,
           isPremium: false,
-          role: 'user',
-          monthlyUploads: 0,
-          monthlyLimit: 3,
-          monthlyPagesProcessed: 0,
-          lastResetDate: new Date(),
         });
       }
 
@@ -653,9 +641,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { uploadsRemaining } = await storage.checkUploadLimit(userId);
       const updatedUser = await storage.getUserProfile(userId); // Get fresh data after potential reset
       
-      // Calculate correct monthly usage data
-      const currentUploads = updatedUser?.monthlyUploads || 0;
-      const monthlyLimit = updatedUser?.monthlyLimit || (updatedUser?.isPremium ? 100 : 3);
+      // Calculate correct monthly usage data  
+      const currentUploads = 0; // Default for existing users
+      const monthlyLimit = updatedUser?.isPremium ? 100 : 3;
       
       // Determine if user is OAuth-verified (Google) or email-verified
       const isOAuthUser = req.user!.app_metadata?.providers?.includes('google') || 
@@ -670,12 +658,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         provider: isOAuthUser ? 'google' : 'email',
         isEmailVerified,
         isPremium: updatedUser?.isPremium || false,
-        role: updatedUser?.role || 'user',
         monthlyUploads: currentUploads,
         monthlyLimit,
         uploadsRemaining,
-        stripeCustomerId: updatedUser?.stripeCustomerId,
-        subscriptionStatus: updatedUser?.subscriptionStatus,
       };
       
       res.json(userWithUsage);
@@ -1004,7 +989,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userType: req.userType
       });
     } catch (error) {
-      res.status(500).json({ message: "Upload failed" });
+      console.error("Upload processing error:", error);
+      res.status(500).json({ 
+        message: "Upload failed",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
