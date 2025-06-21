@@ -37,7 +37,7 @@ export class SupabaseStorageService {
       if (!bucketExists) {
         const { error } = await supabase.storage.createBucket(this.bucketName, {
           public: false,
-          allowedMimeTypes: ['application/pdf', 'text/csv', 'application/json'],
+          allowedMimeTypes: ['application/pdf', 'text/csv', 'application/json', 'application/vnd.anki', 'application/octet-stream'],
           fileSizeLimit: 10 * 1024 * 1024, // 10MB
         });
 
@@ -45,6 +45,19 @@ export class SupabaseStorageService {
           console.error('Failed to create Supabase storage bucket:', error);
         } else {
           console.log('✅ Supabase storage bucket created');
+        }
+      } else {
+        // Update existing bucket to allow Anki files
+        const { error } = await supabase.storage.updateBucket(this.bucketName, {
+          public: false,
+          allowedMimeTypes: ['application/pdf', 'text/csv', 'application/json', 'application/vnd.anki', 'application/octet-stream'],
+          fileSizeLimit: 10 * 1024 * 1024, // 10MB
+        });
+
+        if (error) {
+          console.error('Failed to update Supabase storage bucket:', error);
+        } else {
+          console.log('✅ Supabase storage bucket updated with Anki support');
         }
       }
     } catch (error) {
@@ -95,7 +108,7 @@ export class SupabaseStorageService {
     const { data, error } = await supabase.storage
       .from(this.bucketName)
       .upload(fileKey, ankiBuffer, {
-        contentType: 'application/zip',
+        contentType: 'application/octet-stream',
         upsert: true,
       });
 
