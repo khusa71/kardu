@@ -81,6 +81,7 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
   // Optimized data loading using new endpoint with proper authentication
   const { data: studyData, isLoading, error } = useQuery<StudyData>({
     queryKey: ['/api/study-data', jobId],
+    queryFn: () => apiRequest('GET', `/api/study-data/${jobId}`),
     enabled: !!jobId,
     retry: 3,
     retryDelay: 1000
