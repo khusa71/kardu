@@ -1,272 +1,122 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FlashcardEditor } from "@/components/flashcard-editor";
-import { StudyMode } from "@/components/study-mode";
-import { AuthModal } from "@/components/auth-modal";
 import { NavigationBar } from "@/components/navigation-bar";
-import { ResponsiveProgressStepper } from "@/components/responsive-progress-stepper";
-import { ResponsiveUploadZone } from "@/components/responsive-upload-zone";
-import { ResponsiveConfigPanel } from "@/components/responsive-config-panel";
-import { MyFilesModal } from "@/components/my-files-modal";
-import { QuotaStatus } from "@/components/quota-status";
-import { Download, LoaderPinwheel, Check, Star, HelpCircle, ExternalLink, AlertCircle, RotateCcw, Edit, Play } from "lucide-react";
-import type { FlashcardJob, FlashcardPair } from "@shared/schema";
+import { AuthModal } from "@/components/auth-modal";
+import { useLocation } from "wouter";
+import { 
+  Upload as UploadIcon, 
+  FileText, 
+  Settings, 
+  Zap, 
+  CheckCircle, 
+  ArrowRight, 
+  Plus,
+  X,
+  Loader2,
+  Brain,
+  Target,
+  BookOpen,
+  Lightbulb,
+  Sparkles,
+  Play
+} from "lucide-react";
+import type { FlashcardPair } from "@shared/schema";
 
 export default function Upload() {
   const { toast } = useToast();
-  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, sendVerificationEmail, refreshUserData } = useSupabaseAuth();
+  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, sendVerificationEmail } = useSupabaseAuth();
+  const [, setLocation] = useLocation();
   
-  // Form state - updated for multiple files
+  // Core state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [selectedStorageFile, setSelectedStorageFile] = useState<any>(null);
-  const [apiProvider, setApiProvider] = useState<"basic" | "advanced">("basic");
-  const [flashcardCount, setFlashcardCount] = useState(5);
-  const [customFileName, setCustomFileName] = useState<string>("");
-  const [customFlashcardSetName, setCustomFlashcardSetName] = useState<string>("");
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState<number | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
-  // Subject and focus areas
-  const [subject, setSubject] = useState<string>("programming");
+  // Configuration state
+  const [subject, setSubject] = useState("general");
+  const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
+  const [flashcardCount, setFlashcardCount] = useState(10);
+  const [apiProvider, setApiProvider] = useState<"basic" | "advanced">("basic");
   const [focusAreas, setFocusAreas] = useState({
     concepts: true,
     definitions: true,
     examples: false,
     procedures: false,
   });
-  const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
-  const [customContext, setCustomContext] = useState<string>("");
+  const [customContext, setCustomContext] = useState("");
+  const [customFileName, setCustomFileName] = useState("");
   
-  // Processing state
-  const [currentJobId, setCurrentJobId] = useState<number | null>(null);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [previewFlashcards, setPreviewFlashcards] = useState<FlashcardPair[]>([]);
-  const [showAllFlashcards, setShowAllFlashcards] = useState(false);
-  const [viewMode, setViewMode] = useState<'upload' | 'edit' | 'study'>('upload');
-  const [editableFlashcards, setEditableFlashcards] = useState<FlashcardPair[]>([]);
-  
-  // User status states
-  const [showEmailVerificationMessage, setShowEmailVerificationMessage] = useState(false);
-  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showMyFilesModal, setShowMyFilesModal] = useState(false);
+  // Results state
+  const [generatedFlashcards, setGeneratedFlashcards] = useState<FlashcardPair[]>([]);
+  const [previewMode, setPreviewMode] = useState<'grid' | 'list'>('grid');
 
-  // Poll for job status
-  const { data: jobStatus } = useQuery<FlashcardJob>({
-    queryKey: [`/api/jobs/${currentJobId}`],
-    enabled: !!currentJobId,
-    refetchInterval: currentJobId ? 2000 : false,
+  // Fetch user data
+  const { data: userData } = useQuery({
+    queryKey: ['/api/auth/user'],
+    enabled: !!user,
   });
 
-  // Upload mutation
+  const isPremium = (userData as any)?.isPremium || false;
+  const isEmailVerified = user && (user as any).email_confirmed_at != null;
+
+  // File upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiRequest("POST", "/api/upload", formData);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) throw new Error('Upload failed');
       return response.json();
     },
-    onSuccess: async (data) => {
-      // Handle multiple jobs response
-      if (data.jobs && data.jobs.length > 0) {
-        setCurrentJobId(data.jobs[0].jobId);
-      } else if (data.jobId) {
-        setCurrentJobId(data.jobId);
-      }
+    onSuccess: (data) => {
+      setCurrentJobId(data.jobId);
       setCurrentStep(3);
-      
-      // Refresh user data to update upload counter
-      await refreshUserData();
-      
+      setIsProcessing(true);
       toast({
-        title: "Upload successful",
-        description: "Your PDF is being processed...",
+        title: "Upload successful!",
+        description: "Your PDF is being processed. This may take a few minutes.",
       });
     },
     onError: (error: any) => {
-      // Handle specific error types
-      if (error.message.includes("verify your email")) {
-        setShowEmailVerificationMessage(true);
-        toast({
-          title: "Email verification required",
-          description: "Please verify your email to continue generating flashcards.",
-          variant: "destructive",
-        });
-      } else if (error.message.includes("monthly limit")) {
-        setShowUpgradeBanner(true);
-        toast({
-          title: "Upload limit reached",
-          description: "You've reached your monthly limit. Upgrade to generate more flashcards.",
-          variant: "destructive",
-        });
-      } else if (error.message?.includes('401')) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to continue.",
-          variant: "destructive",
-        });
-        setShowAuthModal(true);
-      } else if (error.message?.includes('Only PDF files are allowed')) {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload PDF files only. Other file types are not supported.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Upload failed",
-          description: error.message || "Please try again later.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Upload failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
-  // Map AI quality tiers to actual providers
-  const getActualProvider = (tier: "basic" | "advanced"): "openai" | "anthropic" => {
-    switch (tier) {
-      case "basic":
-        return "anthropic"; // Claude 3.5 Haiku
-      case "advanced":
-        return "openai"; // GPT-4o Mini
-      default:
-        return "anthropic";
-    }
-  };
+  // Job status polling
+  const { data: jobStatus } = useQuery({
+    queryKey: ['/api/jobs', currentJobId],
+    enabled: !!currentJobId && isProcessing,
+    refetchInterval: 2000,
+  });
 
-  // Handle file generation
-  const handleGenerate = useCallback(() => {
-    // Validate inputs
-    if (selectedFiles.length === 0 && !selectedStorageFile) {
-      toast({
-        title: "No files selected",
-        description: "Please select at least one PDF file or choose from your files.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate flashcard count
-    if (flashcardCount < 1 || flashcardCount > 100) {
-      toast({
-        title: "Invalid flashcard count",
-        description: "Please select between 1 and 100 flashcards.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate subject
-    if (!subject.trim()) {
-      toast({
-        title: "Subject required",
-        description: "Please specify a subject for your flashcards.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate premium access for advanced models
-    if (apiProvider === 'advanced' && !isPremium) {
-      toast({
-        title: "Premium required",
-        description: "Advanced AI quality requires a Premium subscription.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Handle storage file regeneration
-    if (selectedStorageFile && selectedFiles.length === 0) {
-      // Use regeneration API for storage files
-      const regenerateData = {
-        customContext: customContext.trim() || undefined,
-        customFileName: customFileName.trim() || undefined,
-        customFlashcardSetName: customFlashcardSetName.trim() || undefined,
-        subject,
-        difficulty,
-        flashcardCount,
-        apiProvider: apiProvider,
-        focusAreas
-      };
-
-      fetch(`/api/regenerate/${selectedStorageFile.id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(regenerateData),
-      })
-      .then(response => response.json())
-      .then(data => {
-        setCurrentJobId(data.jobId || selectedStorageFile.id);
-        setCurrentStep(3);
-        toast({
-          title: "Regeneration started",
-          description: "Your flashcards are being regenerated...",
-        });
-      })
-      .catch(error => {
-        toast({
-          title: "Regeneration failed",
-          description: error.message || "Please try again later.",
-          variant: "destructive",
-        });
-      });
-      return;
-    }
-
-    // Create form data with all files and settings
-    const formData = new FormData();
-    selectedFiles.forEach((file, index) => {
-      formData.append(`pdfs`, file);
-    });
-    
-    formData.append('subject', subject);
-    formData.append('difficulty', difficulty);
-    formData.append('flashcardCount', flashcardCount.toString());
-    formData.append('apiProvider', apiProvider);
-    formData.append('focusAreas', JSON.stringify(focusAreas));
-    if (customContext.trim()) {
-      formData.append('customContext', customContext);
-    }
-    if (customFileName.trim()) {
-      formData.append('customFileName', customFileName);
-    }
-    if (customFlashcardSetName.trim()) {
-      formData.append('customFlashcardSetName', customFlashcardSetName);
-    }
-
-    uploadMutation.mutate(formData);
-  }, [selectedFiles, selectedStorageFile, subject, difficulty, flashcardCount, apiProvider, focusAreas, customContext, customFileName, customFlashcardSetName, uploadMutation, toast]);
-
-  // Reset form
-  const resetForm = () => {
-    setSelectedFiles([]);
-    setSelectedStorageFile(null);
-    setCurrentStep(1);
-    setCurrentJobId(null);
-    setPreviewFlashcards([]);
-    setShowAllFlashcards(false);
-    setViewMode('upload');
-    setEditableFlashcards([]);
-    setCustomFileName("");
-    setCustomFlashcardSetName("");
-  };
-
-  // Monitor job completion and load flashcards
+  // Handle job completion
   useEffect(() => {
-    if (jobStatus?.status === 'completed' && jobStatus.flashcards && viewMode === 'upload') {
+    if (jobStatus && (jobStatus as any).status === 'completed' && (jobStatus as any).flashcards) {
       let flashcards: FlashcardPair[] = [];
       
-      if (Array.isArray(jobStatus.flashcards)) {
-        flashcards = jobStatus.flashcards;
-      } else if (typeof jobStatus.flashcards === 'string') {
+      if (Array.isArray((jobStatus as any).flashcards)) {
+        flashcards = (jobStatus as any).flashcards;
+      } else if (typeof (jobStatus as any).flashcards === 'string') {
         try {
-          const parsed = JSON.parse(jobStatus.flashcards);
+          const parsed = JSON.parse((jobStatus as any).flashcards);
           flashcards = Array.isArray(parsed) ? parsed : [];
         } catch (error) {
           console.error('Failed to parse flashcards:', error);
@@ -274,114 +124,125 @@ export default function Upload() {
         }
       }
       
-      setPreviewFlashcards(flashcards.slice(0, 3));
-      setEditableFlashcards(flashcards);
+      setGeneratedFlashcards(flashcards);
+      setIsProcessing(false);
+      setCurrentStep(4);
+      
+      toast({
+        title: "Flashcards generated!",
+        description: `Successfully created ${flashcards.length} flashcards.`,
+      });
     }
-  }, [jobStatus, viewMode]);
+  }, [jobStatus, toast]);
 
-  // Check user upload limits
-  useEffect(() => {
-    if (!user) return;
+  // File selection handler
+  const handleFileSelect = useCallback((files: FileList | null) => {
+    if (!files) return;
     
-    if (user && (user as any).monthlyUploads >= (user as any).monthlyLimit && !(user as any).isPremium) {
-      setShowUpgradeBanner(true);
-    } else {
-      setShowUpgradeBanner(false);
+    const fileArray = Array.from(files);
+    const pdfFiles = fileArray.filter(file => file.type === 'application/pdf');
+    
+    if (pdfFiles.length !== fileArray.length) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select only PDF files.",
+        variant: "destructive",
+      });
+      return;
     }
-  }, [user]);
-
-  // Advance step when files are selected
-  useEffect(() => {
-    if ((selectedFiles.length > 0 || selectedStorageFile) && currentStep === 1) {
-      setCurrentStep(2);
-    } else if (selectedFiles.length === 0 && !selectedStorageFile && currentStep > 1) {
-      setCurrentStep(1);
+    
+    const maxFiles = isPremium ? 10 : 1;
+    if (pdfFiles.length > maxFiles) {
+      toast({
+        title: "Too many files",
+        description: `${isPremium ? 'Premium' : 'Free'} users can upload up to ${maxFiles} file${maxFiles > 1 ? 's' : ''} at once.`,
+        variant: "destructive",
+      });
+      return;
     }
-  }, [selectedFiles, selectedStorageFile, currentStep]);
+    
+    setSelectedFiles(pdfFiles);
+    setCurrentStep(2);
+  }, [isPremium, toast]);
 
-  // Check if user can upload based on premium status or upload limit
-  const userUploads = (user as any)?.monthlyUploads || 0;
-  const userLimit = (user as any)?.monthlyLimit || 3;
-  const isPremium = (user as any)?.isPremium || false;
-  
-  // Determine if user is OAuth-verified (Google) or email-verified
-  const isOAuthUser = (user as any)?.provider === 'google' || 
-                     (user as any)?.app_metadata?.providers?.includes('google') ||
-                     (user as any)?.user_metadata?.iss === 'https://accounts.google.com';
-  const isEmailVerified = isOAuthUser || (user as any)?.isEmailVerified || !!(user as any)?.email_confirmed_at;
-  
-  const canUpload = user && (isPremium || userUploads < userLimit) && isEmailVerified;
-  const isGenerateDisabled = (selectedFiles.length === 0 && !selectedStorageFile) || !canUpload || uploadMutation.isPending;
+  // Generate flashcards
+  const handleGenerate = useCallback(() => {
+    if (!user || !isEmailVerified) {
+      setShowAuthModal(true);
+      return;
+    }
 
-  // Handle edit mode
-  if (viewMode === 'edit') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <NavigationBar />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <FlashcardEditor
-            flashcards={editableFlashcards}
-            onFlashcardsChange={setEditableFlashcards}
-            onSave={async (updatedFlashcards) => {
-              setEditableFlashcards(updatedFlashcards);
-              setViewMode('upload');
-              toast({
-                title: "Flashcards updated",
-                description: "Your changes have been saved.",
-              });
-            }}
-            jobId={currentJobId || undefined}
-          />
-          <div className="mt-6 flex justify-center">
-            <Button onClick={() => setViewMode('upload')} variant="outline">
-              Back to Upload
-            </Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
+    if (selectedFiles.length === 0) {
+      toast({
+        title: "No files selected",
+        description: "Please select a PDF file first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  // Handle study mode
-  if (viewMode === 'study') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <NavigationBar />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <StudyMode
-            flashcards={editableFlashcards}
-            onExit={() => setViewMode('upload')}
-          />
-        </main>
-      </div>
-    );
-  }
+    const formData = new FormData();
+    selectedFiles.forEach((file) => {
+      formData.append('pdfs', file);
+    });
+    
+    formData.append('subject', subject);
+    formData.append('difficulty', difficulty);
+    formData.append('flashcardCount', flashcardCount.toString());
+    formData.append('apiProvider', apiProvider);
+    formData.append('focusAreas', JSON.stringify(focusAreas));
+    
+    if (customContext.trim()) {
+      formData.append('customContext', customContext);
+    }
+    if (customFileName.trim()) {
+      formData.append('customFileName', customFileName);
+    }
 
-  // Loading state
+    uploadMutation.mutate(formData);
+  }, [selectedFiles, subject, difficulty, flashcardCount, apiProvider, focusAreas, customContext, customFileName, user, isEmailVerified, uploadMutation, toast]);
+
+  // Reset form
+  const resetForm = () => {
+    setSelectedFiles([]);
+    setCurrentStep(1);
+    setCurrentJobId(null);
+    setIsProcessing(false);
+    setGeneratedFlashcards([]);
+    setCustomFileName("");
+    setCustomContext("");
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="flex items-center space-x-3">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="text-lg font-medium">Loading...</span>
         </div>
       </div>
     );
   }
 
-  // Not authenticated - show auth modal
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <NavigationBar />
         <div className="flex items-center justify-center min-h-[80vh]">
-          <Card className="max-w-md">
-            <CardContent className="text-center p-8">
-              <h2 className="text-xl font-semibold mb-4">Sign in required</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Please sign in to upload PDFs and generate flashcards.
-              </p>
-              <Button onClick={() => setShowAuthModal(true)}>
-                Sign In
+          <Card className="w-full max-w-md mx-4 shadow-xl">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Brain className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl">Welcome to Kardu.io</CardTitle>
+              <p className="text-muted-foreground">Sign in to start creating AI-powered flashcards</p>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={() => setShowAuthModal(true)} 
+                className="w-full h-12 text-lg"
+              >
+                Get Started
               </Button>
             </CardContent>
           </Card>
@@ -392,358 +253,478 @@ export default function Upload() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Navigation Bar */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <NavigationBar />
       
-      {/* Auth Modal */}
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <main className="max-w-screen-xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-4">
+            Create Smart Flashcards
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Transform your PDFs into AI-powered flashcards in minutes. Upload, customize, and study smarter.
+          </p>
+        </div>
 
-      <main className="max-w-screen-xl mx-auto px-4 pt-4 pb-16">
-        {/* Email Verification Alert */}
-        {user && !isEmailVerified && (
-          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <AlertCircle className="w-5 h-5 text-blue-600" />
-                <div>
-                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                    Email verification required
-                  </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    Please verify your email address to generate flashcards. Check your inbox and spam folder.
-                  </p>
+        {/* Progress Indicator */}
+        <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center space-x-4">
+            {[
+              { step: 1, label: "Upload", icon: UploadIcon },
+              { step: 2, label: "Configure", icon: Settings },
+              { step: 3, label: "Process", icon: Zap },
+              { step: 4, label: "Study", icon: BookOpen }
+            ].map((item, index) => (
+              <div key={item.step} className="flex items-center">
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
+                  currentStep >= item.step 
+                    ? 'bg-primary border-primary text-white' 
+                    : 'bg-white border-gray-300 text-gray-400'
+                }`}>
+                  {currentStep > item.step ? (
+                    <CheckCircle className="w-6 h-6" />
+                  ) : (
+                    <item.icon className="w-6 h-6" />
+                  )}
                 </div>
+                <span className={`ml-2 font-medium ${
+                  currentStep >= item.step ? 'text-foreground' : 'text-muted-foreground'
+                }`}>
+                  {item.label}
+                </span>
+                {index < 3 && (
+                  <ArrowRight className="w-5 h-5 text-gray-300 mx-4" />
+                )}
               </div>
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    await sendVerificationEmail();
-                    toast({
-                      title: "Verification email sent",
-                      description: "Please check your inbox and spam folder.",
-                    });
-                  } catch (error) {
-                    toast({
-                      title: "Failed to send email",
-                      description: "Please try again later.",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                className="ml-4"
-              >
-                Resend Email
-              </Button>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* Responsive Progress Steps */}
-        <ResponsiveProgressStepper currentStep={currentStep} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
-          {/* Main Workflow */}
-          <div className="lg:col-span-2 space-y-4 lg:space-y-8">
-            
-            {/* Step 1: PDF Upload */}
-            <ResponsiveUploadZone 
-              selectedFiles={selectedFiles}
-              onFilesSelect={setSelectedFiles}
-              onFileRemove={(index: number) => {
-                setSelectedFiles(files => files.filter((_, i) => i !== index));
-              }}
-              onStorageFileSelect={setSelectedStorageFile}
-              selectedStorageFile={selectedStorageFile}
-              isPremium={isPremium}
-              maxFiles={isPremium ? 10 : 1}
-            />
-
-            {/* Step 2: Configuration */}
-            <ResponsiveConfigPanel 
-              apiProvider={apiProvider}
-              onApiProviderChange={setApiProvider}
-              flashcardCount={flashcardCount}
-              onFlashcardCountChange={setFlashcardCount}
-              subject={subject}
-              onSubjectChange={setSubject}
-              focusAreas={focusAreas}
-              onFocusAreasChange={setFocusAreas}
-              difficulty={difficulty}
-              onDifficultyChange={setDifficulty}
-              customContext={customContext}
-              onCustomContextChange={setCustomContext}
-              customFileName={customFileName}
-              onCustomFileNameChange={setCustomFileName}
-              customFlashcardSetName={customFlashcardSetName}
-              onCustomFlashcardSetNameChange={setCustomFlashcardSetName}
-              disabled={currentStep < 2}
-              onGenerate={handleGenerate}
-              isGenerateDisabled={isGenerateDisabled}
-              isPending={uploadMutation.isPending}
-              canUpload={canUpload}
-              user={user}
-              isEmailVerified={isEmailVerified}
-              userUploads={userUploads}
-              userLimit={userLimit}
-              isPremium={isPremium}
-              onAuthModalOpen={() => setShowAuthModal(true)}
-              onSendVerificationEmail={async () => {
-                await sendVerificationEmail();
-              }}
-            />
-
-            {/* Step 3: Processing Status */}
-            {currentStep >= 3 && jobStatus && (
-              <Card>
-                <CardContent className="p-4 lg:p-8">
-                  <div className="text-center space-y-4">
-                    <div className="flex items-center justify-center space-x-3">
-                      {jobStatus.status === 'completed' ? (
-                        <Check className="w-6 h-6 text-green-500" />
-                      ) : (
-                        <LoaderPinwheel className="w-6 h-6 text-primary animate-spin" />
-                      )}
-                      <h3 className="text-lg font-semibold">
-                        {jobStatus.status === 'completed' ? 'Flashcards Ready!' : 'Processing...'}
-                      </h3>
+        {/* Main Content */}
+        <div className="max-w-4xl mx-auto">
+          {/* Step 1: File Upload */}
+          {currentStep === 1 && (
+            <Card className="shadow-xl border-0">
+              <CardHeader className="text-center pb-6">
+                <CardTitle className="text-2xl flex items-center justify-center gap-3">
+                  <UploadIcon className="w-7 h-7 text-primary" />
+                  Upload Your PDF
+                </CardTitle>
+                <p className="text-muted-foreground">
+                  Select the PDF documents you want to convert into flashcards
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  className="border-2 border-dashed border-primary/30 rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer bg-primary/5"
+                  onClick={() => document.getElementById('file-input')?.click()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleFileSelect(e.dataTransfer.files);
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                >
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                      <FileText className="w-8 h-8 text-primary" />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Progress value={jobStatus.progress} className="w-full" />
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        {jobStatus.currentTask}
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                        Drop your PDF here or click to browse
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Supports multiple files • Max {isPremium ? '10' : '1'} file{isPremium ? 's' : ''} • PDF only
                       </p>
                     </div>
+                    <Button size="lg" className="px-8">
+                      <Plus className="w-5 h-5 mr-2" />
+                      Choose Files
+                    </Button>
+                  </div>
+                </div>
+                
+                <input
+                  id="file-input"
+                  type="file"
+                  accept=".pdf"
+                  multiple={isPremium}
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  className="hidden"
+                />
 
-                    {jobStatus.status === 'completed' && (
-                      <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                          <Button 
-                            onClick={async () => {
-                              try {
-                                // Fetch complete job data with flashcards
-                                const response = await fetch(`/api/jobs/${currentJobId}`, {
-                                  method: 'GET',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                  },
-                                });
-                                
-                                if (!response.ok) {
-                                  throw new Error(`Failed to fetch job data: ${response.statusText}`);
-                                }
-                                
-                                const jobData = await response.json();
-                                
-                                if (jobData.flashcards) {
-                                  const flashcards = JSON.parse(jobData.flashcards);
-                                  
-                                  // Transform data structure if needed (question/answer vs front/back)
-                                  const normalizedFlashcards = flashcards.map((card: any) => ({
-                                    id: card.id || Math.random(),
-                                    front: card.front || card.question || '',
-                                    back: card.back || card.answer || '',
-                                    subject: card.subject || card.topic || '',
-                                    difficulty: card.difficulty || 'beginner',
-                                    tags: card.tags || []
-                                  }));
-                                  
-                                  setEditableFlashcards(normalizedFlashcards);
-                                  setViewMode('edit');
-                                } else {
-                                  toast({
-                                    title: "No flashcards found",
-                                    description: "Unable to load flashcards for editing.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              } catch (error: any) {
-                                toast({
-                                  title: "Failed to load flashcards",
-                                  description: error.message || "An error occurred while loading flashcards.",
-                                  variant: "destructive",
-                                });
-                              }
-                            }} 
-                            variant="outline"
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Cards
-                          </Button>
-                          <Button onClick={() => setViewMode('study')}>
-                            <Play className="w-4 h-4 mr-2" />
-                            Study Now
-                          </Button>
-                          <Button onClick={resetForm} variant="outline">
-                            <RotateCcw className="w-4 h-4 mr-2" />
-                            New Upload
-                          </Button>
+                {selectedFiles.length > 0 && (
+                  <div className="mt-6 space-y-3">
+                    <h4 className="font-medium text-foreground">Selected Files:</h4>
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <FileText className="w-5 h-5 text-primary" />
+                          <div>
+                            <p className="font-medium text-foreground">{file.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
                         </div>
-                        
-                        {/* Download Options */}
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {jobStatus.ankiDownloadUrl && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => jobStatus.ankiDownloadUrl && window.open(jobStatus.ankiDownloadUrl, '_blank')}
-                            >
-                              <Download className="w-4 h-4 mr-1" />
-                              Anki Deck
-                            </Button>
-                          )}
-                          {jobStatus.csvDownloadUrl && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => jobStatus.csvDownloadUrl && window.open(jobStatus.csvDownloadUrl, '_blank')}
-                            >
-                              <Download className="w-4 h-4 mr-1" />
-                              CSV
-                            </Button>
-                          )}
-                          {jobStatus.jsonDownloadUrl && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => jobStatus.jsonDownloadUrl && window.open(jobStatus.jsonDownloadUrl, '_blank')}
-                            >
-                              <Download className="w-4 h-4 mr-1" />
-                              JSON
-                            </Button>
-                          )}
-                          {jobStatus.quizletDownloadUrl && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => jobStatus.quizletDownloadUrl && window.open(jobStatus.quizletDownloadUrl, '_blank')}
-                            >
-                              <Download className="w-4 h-4 mr-1" />
-                              Quizlet
-                            </Button>
-                          )}
-                          {jobStatus.pdfDownloadUrl && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => jobStatus.pdfDownloadUrl && window.open(jobStatus.pdfDownloadUrl, '_blank')}
-                            >
-                              <Download className="w-4 h-4 mr-1" />
-                              Original PDF
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {jobStatus.status === 'failed' && (
-                      <div className="space-y-4">
-                        <p className="text-red-600 dark:text-red-400">
-                          {jobStatus.errorMessage || 'An error occurred during processing.'}
-                        </p>
-                        <Button onClick={resetForm} variant="outline">
-                          <RotateCcw className="w-4 h-4 mr-2" />
-                          Try Again
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedFiles(files => files.filter((_, i) => i !== index));
+                            if (selectedFiles.length === 1) setCurrentStep(1);
+                          }}
+                        >
+                          <X className="w-4 h-4" />
                         </Button>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4 lg:space-y-6">
-            {/* Subscription Status Card */}
-            {user && (user as any).isPremium ? (
-              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center mb-4">
-                    <Star className="w-5 h-5 text-green-600 mr-2" />
-                    <h3 className="font-semibold text-green-800 dark:text-green-200">Pro User</h3>
-                    <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">Active</Badge>
-                  </div>
-                  <ul className="space-y-2 text-sm text-green-700 dark:text-green-300">
-                    <li>• 100 uploads per month</li>
-                    <li>• Advanced AI processing</li>
-                    <li>• Multiple export formats</li>
-                    <li>• Priority support</li>
-                  </ul>
-                  <div className="mt-4 text-sm text-green-600 dark:text-green-400">
-                    {(user as any).monthlyUploads}/{(user as any).monthlyLimit} uploads used this month
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center mb-4">
-                    <Star className="w-5 h-5 text-purple-600 mr-2" />
-                    <h3 className="font-semibold text-purple-800 dark:text-purple-200">Free Plan</h3>
-                  </div>
-                  <ul className="space-y-2 text-sm text-purple-700 dark:text-purple-300">
-                    <li>• 3 uploads per month</li>
-                    <li>• Basic AI processing</li>
-                    <li>• Standard export formats</li>
-                    <li>• Community support</li>
-                  </ul>
-                  {user ? (
-                    <div className="mt-4 space-y-2">
-                      <div className="text-sm text-purple-600 dark:text-purple-400">
-                        {(user as any).monthlyUploads || 0}/{(user as any).monthlyLimit || 3} uploads used
-                      </div>
-                      <Button 
-                        className="w-full" 
-                        size="sm"
-                        onClick={() => window.open('/api/create-checkout-session', '_blank')}
-                      >
-                        Upgrade to Pro - $9.99/month
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button className="w-full mt-4" size="sm" onClick={() => setShowAuthModal(true)}>
-                      Sign in to upgrade
+                    ))}
+                    <Button 
+                      onClick={() => setCurrentStep(2)} 
+                      className="w-full mt-4" 
+                      size="lg"
+                    >
+                      Continue to Configuration
+                      <ArrowRight className="w-5 h-5 ml-2" />
                     </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Help Card */}
-            <Card>
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center mb-4">
-                  <HelpCircle className="w-5 h-5 text-gray-500 mr-2" />
-                  <h3 className="font-semibold text-neutral dark:text-white">Need help?</h3>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                  Having trouble with the flashcard generator? Check our guide or contact support.
-                </p>
-                <Button variant="outline" size="sm" className="w-full">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Help Center
-                </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </div>
+          )}
+
+          {/* Step 2: Configuration */}
+          {currentStep === 2 && (
+            <Card className="shadow-xl border-0">
+              <CardHeader className="text-center pb-6">
+                <CardTitle className="text-2xl flex items-center justify-center gap-3">
+                  <Settings className="w-7 h-7 text-primary" />
+                  Customize Your Flashcards
+                </CardTitle>
+                <p className="text-muted-foreground">
+                  Configure how you want your flashcards generated
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Tabs defaultValue="basic" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="basic">Basic Settings</TabsTrigger>
+                    <TabsTrigger value="advanced">Advanced Options</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="basic" className="space-y-6 mt-6">
+                    {/* Subject Selection */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Target className="w-4 h-4" />
+                        Subject Area
+                      </label>
+                      <Select value={subject} onValueChange={setSubject}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Select subject area" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">General Knowledge</SelectItem>
+                          <SelectItem value="programming">Programming & Tech</SelectItem>
+                          <SelectItem value="science">Science & Mathematics</SelectItem>
+                          <SelectItem value="history">History & Social Studies</SelectItem>
+                          <SelectItem value="language">Language & Literature</SelectItem>
+                          <SelectItem value="business">Business & Economics</SelectItem>
+                          <SelectItem value="medicine">Medicine & Health</SelectItem>
+                          <SelectItem value="law">Law & Legal Studies</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Difficulty Level */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Brain className="w-4 h-4" />
+                        Difficulty Level
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {(['beginner', 'intermediate', 'advanced'] as const).map((level) => (
+                          <Button
+                            key={level}
+                            variant={difficulty === level ? "default" : "outline"}
+                            onClick={() => setDifficulty(level)}
+                            className="h-12 flex flex-col"
+                          >
+                            <span className="font-medium capitalize">{level}</span>
+                            <span className="text-xs opacity-70">
+                              {level === 'beginner' && 'Simple & Clear'}
+                              {level === 'intermediate' && 'Balanced'}
+                              {level === 'advanced' && 'Detailed & Complex'}
+                            </span>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Number of Cards */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        Number of Flashcards
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {[5, 10, 15, 20].map((count) => (
+                          <Button
+                            key={count}
+                            variant={flashcardCount === count ? "default" : "outline"}
+                            onClick={() => setFlashcardCount(count)}
+                            className="h-12"
+                          >
+                            {count}
+                          </Button>
+                        ))}
+                      </div>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={flashcardCount}
+                        onChange={(e) => setFlashcardCount(parseInt(e.target.value) || 10)}
+                        className="h-12"
+                        placeholder="Custom amount (1-50)"
+                      />
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="advanced" className="space-y-6 mt-6">
+                    {/* AI Model Selection */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Zap className="w-4 h-4" />
+                        AI Model Quality
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          variant={apiProvider === "basic" ? "default" : "outline"}
+                          onClick={() => setApiProvider("basic")}
+                          className="h-16 flex flex-col"
+                        >
+                          <span className="font-medium">Standard</span>
+                          <span className="text-xs opacity-70">Fast & Reliable</span>
+                          <Badge variant="secondary" className="mt-1">Free</Badge>
+                        </Button>
+                        <Button
+                          variant={apiProvider === "advanced" ? "default" : "outline"}
+                          onClick={() => setApiProvider("advanced")}
+                          className="h-16 flex flex-col"
+                          disabled={!isPremium}
+                        >
+                          <span className="font-medium">Premium</span>
+                          <span className="text-xs opacity-70">Advanced AI</span>
+                          <Badge variant="default" className="mt-1">Pro Only</Badge>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Focus Areas */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Target className="w-4 h-4" />
+                        Focus Areas
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(focusAreas).map(([key, value]) => (
+                          <Button
+                            key={key}
+                            variant={value ? "default" : "outline"}
+                            onClick={() => setFocusAreas(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
+                            className="h-12"
+                          >
+                            <span className="capitalize">{key}</span>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Custom Context */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4" />
+                        Custom Instructions (Optional)
+                      </label>
+                      <Textarea
+                        placeholder="Provide specific instructions for flashcard generation..."
+                        value={customContext}
+                        onChange={(e) => setCustomContext(e.target.value)}
+                        rows={4}
+                        className="resize-none"
+                      />
+                    </div>
+
+                    {/* Custom File Name */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-foreground">
+                        Custom File Name (Optional)
+                      </label>
+                      <Input
+                        placeholder="Enter a custom name for your flashcard set"
+                        value={customFileName}
+                        onChange={(e) => setCustomFileName(e.target.value)}
+                        className="h-12"
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <Separator />
+
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCurrentStep(1)}
+                    className="flex-1 h-12"
+                  >
+                    Back to Upload
+                  </Button>
+                  <Button 
+                    onClick={handleGenerate}
+                    disabled={uploadMutation.isPending}
+                    className="flex-1 h-12 text-lg"
+                  >
+                    {uploadMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5 mr-2" />
+                        Generate Flashcards
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 3: Processing */}
+          {currentStep === 3 && (
+            <Card className="shadow-xl border-0">
+              <CardContent className="py-12">
+                <div className="text-center space-y-6">
+                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-foreground mb-2">
+                      Creating Your Flashcards
+                    </h3>
+                    <p className="text-muted-foreground text-lg">
+                      Our AI is analyzing your PDF and generating smart flashcards...
+                    </p>
+                  </div>
+                  
+                  {jobStatus && (
+                    <div className="max-w-md mx-auto space-y-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-medium">{(jobStatus as any).progress || 0}%</span>
+                      </div>
+                      <Progress value={(jobStatus as any).progress || 0} className="h-3" />
+                      <p className="text-sm text-muted-foreground">
+                        Status: {(jobStatus as any).status || 'Processing...'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 4: Results */}
+          {currentStep === 4 && generatedFlashcards.length > 0 && (
+            <Card className="shadow-xl border-0">
+              <CardHeader className="text-center pb-6">
+                <CardTitle className="text-2xl flex items-center justify-center gap-3">
+                  <CheckCircle className="w-7 h-7 text-green-500" />
+                  Flashcards Generated Successfully!
+                </CardTitle>
+                <p className="text-muted-foreground">
+                  Created {generatedFlashcards.length} flashcards from your PDF
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Preview Controls */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant={previewMode === 'grid' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setPreviewMode('grid')}
+                    >
+                      Grid View
+                    </Button>
+                    <Button
+                      variant={previewMode === 'list' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setPreviewMode('list')}
+                    >
+                      List View
+                    </Button>
+                  </div>
+                  <Badge variant="secondary" className="text-sm">
+                    {generatedFlashcards.length} cards
+                  </Badge>
+                </div>
+
+                {/* Flashcard Preview */}
+                <div className={previewMode === 'grid' 
+                  ? 'grid grid-cols-1 md:grid-cols-2 gap-4' 
+                  : 'space-y-4'
+                }>
+                  {generatedFlashcards.slice(0, 6).map((card, index) => (
+                    <div key={index} className="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Question</p>
+                          <p className="font-medium text-foreground">{card.front}</p>
+                        </div>
+                        <Separator />
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Answer</p>
+                          <p className="text-foreground">{card.back}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {generatedFlashcards.length > 6 && (
+                  <p className="text-center text-muted-foreground">
+                    And {generatedFlashcards.length - 6} more flashcards...
+                  </p>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={resetForm}
+                    className="flex-1 h-12"
+                  >
+                    Create New Set
+                  </Button>
+                  <Button 
+                    onClick={() => setLocation(`/study/${currentJobId}`)}
+                    className="flex-1 h-12 text-lg"
+                  >
+                    <Play className="w-5 h-5 mr-2" />
+                    Start Studying
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
 
-      {/* My Files Modal */}
-      <MyFilesModal 
-        isOpen={showMyFilesModal} 
-        onClose={() => setShowMyFilesModal(false)}
-        onFileSelect={(job) => {
-          // Handle file selection for regeneration
-          setCurrentJobId(job.id);
-          setCurrentStep(3);
-          setShowMyFilesModal(false);
-        }}
-      />
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }
