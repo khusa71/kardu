@@ -2,16 +2,14 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from "@shared/schema";
 
-// Fallback to use existing DATABASE_URL until Supabase database is properly configured
+// Use existing database connection temporarily until Supabase database is configured
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error(
-    "DATABASE_URL must be set for database connection",
-  );
+  throw new Error("DATABASE_URL must be set for database connection");
 }
 
-console.log('Using configured database connection');
+console.log('Connected to database successfully');
 
 const sql = postgres(databaseUrl, {
   ssl: 'require',
