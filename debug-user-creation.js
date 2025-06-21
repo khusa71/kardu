@@ -19,7 +19,7 @@ async function testUserCreation() {
   try {
     const clientSupabase = createClient(supabaseUrl, supabaseAnonKey);
     
-    const testEmail = `test-${Date.now()}@example.com`;
+    const testEmail = `test${Date.now()}@gmail.com`;
     const testPassword = 'TestPassword123!';
     
     console.log('   Attempting signup with:', testEmail);
