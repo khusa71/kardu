@@ -2,12 +2,15 @@ import {
   userProfiles,
   flashcardJobs,
   studyProgress,
+  studySessions,
   type UserProfile,
   type UpsertUserProfile,
   type FlashcardJob,
   type InsertFlashcardJob,
   type StudyProgress,
   type InsertStudyProgress,
+  type StudySession,
+  type InsertStudySession,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -46,6 +49,12 @@ export interface IStorage {
   batchUpdateStudyProgress(progressList: InsertStudyProgress[]): Promise<StudyProgress[]>;
   getStudyStats(userId: string, jobId: number): Promise<{ total: number; known: number; reviewing: number }>;
   getOptimizedFlashcards(jobId: number, userId: string): Promise<{ flashcards: any[]; progress: StudyProgress[] }>;
+  
+  // Study session operations
+  createStudySession(session: InsertStudySession): Promise<StudySession>;
+  updateStudySession(sessionId: string, updates: Partial<StudySession>): Promise<StudySession>;
+  completeStudySession(sessionId: string, stats: { cardsStudied: number; accuracy: number }): Promise<StudySession>;
+  getUserStudySessions(userId: string, jobId?: number): Promise<StudySession[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -465,6 +474,95 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Failed to get optimized flashcards:', error);
       throw new Error('Failed to load study data');
+    }
+  }
+
+  // Study session operations
+  async createStudySession(sessionData: InsertStudySession): Promise<StudySession> {
+    try {
+      const [session] = await db
+        .insert(studySessions)
+        .values(sessionData)
+        .returning();
+      return session;
+    } catch (error) {
+      throw new Error('Failed to create study session');
+    }
+  }
+
+  async updateStudySession(sessionId: string, updates: Partial<StudySession>): Promise<StudySession> {
+    try {
+      const [session] = await db
+        .update(studySessions)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(studySessions.sessionId, sessionId))
+        .returning();
+      
+      if (!session) {
+        throw new Error('Study session not found');
+      }
+      return session;
+    } catch (error) {
+      throw new Error('Failed to update study session');
+    }
+  }
+
+  async completeStudySession(sessionId: string, stats: { cardsStudied: number; accuracy: number }): Promise<StudySession> {
+    try {
+      const session = await db
+        .select()
+        .from(studySessions)
+        .where(eq(studySessions.sessionId, sessionId))
+        .limit(1);
+
+      if (session.length === 0) {
+        throw new Error('Study session not found');
+      }
+
+      const startTime = session[0].startTime;
+      const endTime = new Date();
+      const sessionDuration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+
+      const [completedSession] = await db
+        .update(studySessions)
+        .set({
+          endTime,
+          cardsStudied: stats.cardsStudied,
+          accuracy: stats.accuracy,
+          sessionDuration,
+          status: 'completed',
+          updatedAt: new Date()
+        })
+        .where(eq(studySessions.sessionId, sessionId))
+        .returning();
+
+      return completedSession;
+    } catch (error) {
+      throw new Error('Failed to complete study session');
+    }
+  }
+
+  async getUserStudySessions(userId: string, jobId?: number): Promise<StudySession[]> {
+    try {
+      if (jobId) {
+        const sessions = await db
+          .select()
+          .from(studySessions)
+          .where(and(eq(studySessions.userId, userId), eq(studySessions.jobId, jobId)))
+          .orderBy(desc(studySessions.createdAt))
+          .limit(50);
+        return sessions;
+      } else {
+        const sessions = await db
+          .select()
+          .from(studySessions)
+          .where(eq(studySessions.userId, userId))
+          .orderBy(desc(studySessions.createdAt))
+          .limit(50);
+        return sessions;
+      }
+    } catch (error) {
+      throw new Error('Failed to get user study sessions');
     }
   }
 }

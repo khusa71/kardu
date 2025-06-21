@@ -64,6 +64,9 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
     accuracy: 0
   });
 
+  // Database session tracking
+  const [dbSessionId, setDbSessionId] = useState<string | null>(null);
+
   // Card navigation state
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -100,16 +103,41 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
     }
   });
 
+  // Session management mutations
+  const createSessionMutation = useMutation({
+    mutationFn: async (sessionData: { jobId: number; totalCards: number }) => {
+      return apiRequest('POST', '/api/study-sessions', sessionData);
+    },
+    onSuccess: (data: any) => {
+      setDbSessionId(data.sessionId);
+    }
+  });
+
+  const completeSessionMutation = useMutation({
+    mutationFn: async (stats: { sessionId: string; cardsStudied: number; accuracy: number }) => {
+      return apiRequest('PUT', `/api/study-sessions/${stats.sessionId}/complete`, {
+        cardsStudied: stats.cardsStudied,
+        accuracy: stats.accuracy
+      });
+    }
+  });
+
   const flashcards: OptimizedFlashcard[] = (studyData as StudyData | undefined)?.flashcards || [];
   const currentCard = flashcards[currentIndex];
   const stats = (studyData as StudyData | undefined)?.stats || { total: 0, known: 0, reviewing: 0 };
 
-  // Initialize session
+  // Initialize session and create database session
   useEffect(() => {
     if (flashcards.length > 0) {
       setSession(prev => ({ ...prev, totalCards: flashcards.length }));
+      
+      // Create session in database
+      createSessionMutation.mutate({
+        jobId,
+        totalCards: flashcards.length
+      });
     }
-  }, [flashcards.length]);
+  }, [flashcards.length, jobId, createSessionMutation]);
 
   // Auto-batch progress updates for performance
   useEffect(() => {
@@ -168,11 +196,22 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
       setShowAnswer(false);
       setCardStartTime(Date.now());
     } else {
-      // Session complete - final batch update
+      // Session complete - final batch update and session completion
       if (batchUpdateQueue.current.length > 0) {
         batchUpdateMutation.mutate([...batchUpdateQueue.current]);
         batchUpdateQueue.current = [];
       }
+
+      // Complete database session tracking
+      if (dbSessionId) {
+        const accuracy = Math.round((session.accuracy || 0) * 100);
+        completeSessionMutation.mutate({
+          sessionId: dbSessionId,
+          cardsStudied: session.cardsStudied,
+          accuracy
+        });
+      }
+
       onComplete?.(session);
     }
   }, [currentCard, currentIndex, flashcards.length, queueProgressUpdate, session, onComplete, batchUpdateMutation]);

@@ -1516,6 +1516,56 @@ async function processFlashcardJob(jobId: number) {
     }
   });
 
+  // Study session management endpoints
+  app.post("/api/study-sessions", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { jobId, totalCards } = req.body;
+      const userId = req.user!.id;
+
+      const sessionData = {
+        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        jobId: parseInt(jobId),
+        startTime: new Date(),
+        totalCards,
+        status: 'active'
+      };
+
+      const session = await storage.createStudySession(sessionData);
+      res.json(session);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create study session" });
+    }
+  });
+
+  app.put("/api/study-sessions/:sessionId/complete", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { sessionId } = req.params;
+      const { cardsStudied, accuracy } = req.body;
+
+      const completedSession = await storage.completeStudySession(sessionId, {
+        cardsStudied: parseInt(cardsStudied),
+        accuracy: parseInt(accuracy)
+      });
+
+      res.json(completedSession);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to complete study session" });
+    }
+  });
+
+  app.get("/api/study-sessions", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const jobId = req.query.jobId ? parseInt(req.query.jobId as string) : undefined;
+
+      const sessions = await storage.getUserStudySessions(userId, jobId);
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get study sessions" });
+    }
+  });
+
   // Update flashcards endpoint
   app.put("/api/jobs/:id/flashcards", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {

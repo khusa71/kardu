@@ -8,6 +8,7 @@ import {
   serial,
   integer,
   boolean,
+  numeric,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -94,6 +95,26 @@ export const studyProgress = pgTable("study_progress", {
   index("idx_study_progress_unique").on(table.userId, table.jobId, table.cardIndex),
 ]);
 
+export const studySessions = pgTable("study_sessions", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("session_id").notNull().unique(),
+  userId: varchar("user_id").notNull().references(() => userProfiles.id),
+  jobId: integer("job_id").notNull().references(() => flashcardJobs.id, { onDelete: "cascade" }),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  totalCards: integer("total_cards").notNull(),
+  cardsStudied: integer("cards_studied").default(0),
+  accuracy: integer("accuracy").default(0), // Percentage as integer (0 to 100)
+  sessionDuration: integer("session_duration"), // Duration in seconds
+  status: text("status").notNull().default("active"), // 'active', 'completed', 'abandoned'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_study_sessions_user").on(table.userId),
+  index("idx_study_sessions_job").on(table.jobId),
+  index("idx_study_sessions_date").on(table.createdAt),
+]);
+
 export const insertFlashcardJobSchema = createInsertSchema(flashcardJobs).omit({
   id: true,
   createdAt: true,
@@ -106,12 +127,16 @@ export const insertStudyProgressSchema = createInsertSchema(studyProgress).omit(
   updatedAt: true,
 });
 
+export const insertStudySessionSchema = createInsertSchema(studySessions);
+
 export type InsertFlashcardJob = z.infer<typeof insertFlashcardJobSchema>;
 export type FlashcardJob = typeof flashcardJobs.$inferSelect;
 export type UpsertUserProfile = typeof userProfiles.$inferInsert;
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type StudyProgress = typeof studyProgress.$inferSelect;
 export type InsertStudyProgress = z.infer<typeof insertStudyProgressSchema>;
+export type StudySession = typeof studySessions.$inferSelect;
+export type InsertStudySession = z.infer<typeof insertStudySessionSchema>;
 
 export interface FlashcardPair {
   id?: number;
