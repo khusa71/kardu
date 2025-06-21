@@ -64,13 +64,22 @@ export async function apiRequest(
 
   await throwIfResNotOk(res);
   
-  // Return JSON data for API responses
+  // Always try to return JSON for API responses
   const contentType = res.headers.get('content-type');
   if (contentType && contentType.includes('application/json')) {
     return await res.json();
   }
   
-  return res;
+  // For non-JSON responses, try to parse as JSON anyway (in case content-type is missing)
+  try {
+    const text = await res.text();
+    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      return JSON.parse(text);
+    }
+    return { data: text }; // Wrap plain text in an object
+  } catch {
+    return res; // Return the response object as fallback
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

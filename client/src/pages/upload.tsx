@@ -92,7 +92,25 @@ export default function Upload() {
       return await apiRequest('POST', '/api/upload', formData);
     },
     onSuccess: (data) => {
-      const jobId = data.jobs && data.jobs.length > 0 ? data.jobs[0].jobId : data.jobId;
+      let jobId = null;
+      
+      // Handle different response formats
+      if (data.jobs && data.jobs.length > 0) {
+        jobId = data.jobs[0].jobId || data.jobs[0].id;
+      } else if (data.jobId) {
+        jobId = data.jobId;
+      } else if (data.id) {
+        jobId = data.id;
+      }
+      
+      if (!jobId) {
+        toast({
+          title: "Upload error",
+          description: "Job ID not found in response. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       
       setCurrentJobId(jobId);
       setCurrentStep(3);
@@ -688,7 +706,17 @@ export default function Upload() {
                     <Download className="w-4 h-4 mr-2" />
                     Download CSV
                   </Button>
-                  <Button variant="outline" onClick={() => setLocation(`/study/${currentJobId}`)}>
+                  <Button variant="outline" onClick={() => {
+                    if (currentJobId) {
+                      setLocation(`/study/${currentJobId}`);
+                    } else {
+                      toast({
+                        title: "Error",
+                        description: "Job ID not found. Please try refreshing the page.",
+                        variant: "destructive"
+                      });
+                    }
+                  }}>
                     <Play className="w-4 h-4 mr-2" />
                     Start Studying
                   </Button>
