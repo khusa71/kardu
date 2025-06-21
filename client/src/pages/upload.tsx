@@ -405,8 +405,8 @@ export default function Upload() {
               <div key={item.step} className="flex items-center">
                 <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
                   currentStep >= item.step 
-                    ? 'bg-primary border-primary text-white' 
-                    : 'bg-white border-gray-300 text-gray-400'
+                    ? 'bg-foreground border-foreground text-background' 
+                    : 'bg-background border-border text-muted-foreground'
                 }`}>
                   {currentStep > item.step ? (
                     <CheckCircle className="w-6 h-6" />
@@ -420,7 +420,7 @@ export default function Upload() {
                   {item.label}
                 </span>
                 {index < 3 && (
-                  <ArrowRight className="w-5 h-5 text-gray-300 mx-4" />
+                  <ArrowRight className="w-5 h-5 text-border mx-4" />
                 )}
               </div>
             ))}
@@ -756,66 +756,66 @@ export default function Upload() {
                       Status: {jobStatus ? (jobStatus as any)?.status || 'Processing...' : 'Processing...'}
                     </p>
                     
-                    <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <div className="mt-6 p-6 bg-muted/30 rounded-xl border border-border">
                       <div className="space-y-5">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                             <Brain className="w-5 h-5" />
                             AI Processing Your PDF
                           </h3>
-                          <div className="text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-800/50 px-3 py-1 rounded-full">
+                          <div className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">
                             {Math.round(((jobStatus as any)?.progress || 0))}% Complete
                           </div>
                         </div>
                         
                         <div className="space-y-4">
                           <div className="flex items-center space-x-3 text-sm">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-gray-700 dark:text-gray-300 font-medium">PDF parsed and text extracted</span>
-                            <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                            <div className="w-2 h-2 bg-foreground rounded-full"></div>
+                            <span className="text-foreground font-medium">PDF parsed and text extracted</span>
+                            <CheckCircle className="w-4 h-4 text-foreground ml-auto" />
                           </div>
                           
                           <div className="flex items-center space-x-3 text-sm">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-gray-700 dark:text-gray-300 font-medium">Content analyzed and chunked intelligently</span>
-                            <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                            <div className="w-2 h-2 bg-foreground rounded-full"></div>
+                            <span className="text-foreground font-medium">Content analyzed and chunked intelligently</span>
+                            <CheckCircle className="w-4 h-4 text-foreground ml-auto" />
                           </div>
                           
                           <div className="flex items-center space-x-3 text-sm">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-gray-700 dark:text-gray-300 font-medium">Key concepts and topics identified</span>
-                            <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                            <div className="w-2 h-2 bg-foreground rounded-full"></div>
+                            <span className="text-foreground font-medium">Key concepts and topics identified</span>
+                            <CheckCircle className="w-4 h-4 text-foreground ml-auto" />
                           </div>
                           
                           <div className="flex items-center space-x-3 text-sm">
-                            <div className={`w-2 h-2 rounded-full ${(jobStatus as any)?.status === 'processing' ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
-                            <span className="text-gray-700 dark:text-gray-300 font-medium">
+                            <div className={`w-2 h-2 rounded-full ${(jobStatus as any)?.status === 'processing' ? 'bg-muted-foreground animate-pulse' : 'bg-foreground'}`}></div>
+                            <span className="text-foreground font-medium">
                               {(jobStatus as any)?.status === 'processing' 
                                 ? 'AI generating intelligent questions and answers...' 
                                 : 'AI flashcard generation complete'}
                             </span>
                             {(jobStatus as any)?.status === 'processing' ? (
-                              <Loader2 className="w-4 h-4 text-yellow-500 animate-spin ml-auto" />
+                              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin ml-auto" />
                             ) : (
-                              <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                              <CheckCircle className="w-4 h-4 text-foreground ml-auto" />
                             )}
                           </div>
                           
                           <div className="flex items-center space-x-3 text-sm">
-                            <div className={`w-2 h-2 rounded-full ${(jobStatus as any)?.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                            <span className="text-gray-700 dark:text-gray-300 font-medium">
+                            <div className={`w-2 h-2 rounded-full ${(jobStatus as any)?.status === 'completed' ? 'bg-foreground' : 'bg-muted-foreground'}`}></div>
+                            <span className="text-foreground font-medium">
                               {(jobStatus as any)?.status === 'completed' 
                                 ? `${((jobStatus as any)?.flashcards?.length || 0)} flashcards ready for study` 
                                 : 'Finalizing your study deck...'}
                             </span>
                             {(jobStatus as any)?.status === 'completed' && (
-                              <Sparkles className="w-4 h-4 text-green-500 ml-auto" />
+                              <Sparkles className="w-4 h-4 text-foreground ml-auto" />
                             )}
                           </div>
                         </div>
                         
-                        <div className="mt-5 pt-4 border-t border-blue-200 dark:border-blue-700">
-                          <div className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+                        <div className="mt-5 pt-4 border-t border-border">
+                          <div className="text-xs text-muted-foreground leading-relaxed">
                             Our advanced AI is analyzing your content structure, identifying key learning concepts, 
                             and crafting effective questions that enhance retention and understanding.
                           </div>
@@ -868,10 +868,10 @@ export default function Upload() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Action Bar */}
-                <div className="flex flex-col lg:flex-row gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex flex-col lg:flex-row gap-4 p-4 bg-muted/30 rounded-lg border border-border">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg text-blue-900 dark:text-blue-100 mb-2">Your Flashcard Set</h3>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                    <h3 className="font-semibold text-lg text-foreground mb-2">Your Flashcard Set</h3>
+                    <p className="text-sm text-muted-foreground">
                       {generatedFlashcards.length} cards ready for study • Created from your PDF
                     </p>
                   </div>
@@ -952,11 +952,11 @@ export default function Upload() {
                   : 'space-y-6'
                 }>
                   {generatedFlashcards.slice(0, 6).map((card, index) => (
-                    <div key={index} className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300">
+                    <div key={index} className="group relative bg-card rounded-xl border border-border p-6 hover:shadow-lg hover:border-accent transition-all duration-300">
                       <div className="space-y-4">
                         <div className="relative">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
+                            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
                               Question {index + 1}
                             </span>
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -973,29 +973,29 @@ export default function Upload() {
                               </Button>
                             </div>
                           </div>
-                          <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-relaxed">{card.front}</p>
+                          <p className="font-semibold text-foreground text-sm leading-relaxed">{card.front}</p>
                         </div>
                         
                         <div className="relative">
-                          <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent my-3"></div>
+                          <div className="w-full h-px bg-border my-3"></div>
                           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                              <ArrowRight className="w-3 h-3 text-white rotate-90" />
+                            <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center">
+                              <ArrowRight className="w-3 h-3 text-accent-foreground rotate-90" />
                             </div>
                           </div>
                         </div>
                         
                         <div>
-                          <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
+                          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
                             Answer
                           </span>
-                          <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mt-2">{card.back}</p>
+                          <p className="text-foreground text-sm leading-relaxed mt-2">{card.back}</p>
                         </div>
                       </div>
                       
                       {/* Card Number Indicator */}
-                      <div className="absolute top-3 right-3 w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{index + 1}</span>
+                      <div className="absolute top-3 right-3 w-6 h-6 bg-muted rounded-full flex items-center justify-center">
+                        <span className="text-xs font-medium text-muted-foreground">{index + 1}</span>
                       </div>
                     </div>
                   ))}
@@ -1038,10 +1038,10 @@ export default function Upload() {
                 </div>
 
                 {/* Additional Options */}
-                <div className="flex justify-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-center pt-4 border-t border-border">
                   <p className="text-sm text-muted-foreground">
                     Need help? Visit our{" "}
-                    <Button variant="link" className="p-0 h-auto text-sm">
+                    <Button variant="link" className="p-0 h-auto text-sm text-muted-foreground hover:text-foreground">
                       <ExternalLink className="w-3 h-3 mr-1" />
                       Study Guide
                     </Button>
