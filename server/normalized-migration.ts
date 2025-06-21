@@ -108,9 +108,9 @@ export async function executeNormalizedMigration() {
       WHERE status = 'completed' AND flashcards IS NOT NULL
     `);
 
-    console.log(`Found ${jobs.rows.length} jobs with flashcard data to migrate`);
+    console.log(`Found ${jobs.length} jobs with flashcard data to migrate`);
 
-    for (const job of jobs.rows) {
+    for (const job of jobs) {
       try {
         const jobId = job.id as number;
         const userId = job.user_id as string;
@@ -123,7 +123,7 @@ export async function executeNormalizedMigration() {
           SELECT COUNT(*) as count FROM flashcards WHERE job_id = ${jobId}
         `);
 
-        if ((existing.rows[0].count as number) > 0) {
+        if ((existing[0]?.count as number) > 0) {
           console.log(`Job ${jobId} already migrated, skipping...`);
           continue;
         }

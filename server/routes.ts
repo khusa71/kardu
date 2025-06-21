@@ -12,7 +12,11 @@ import { preprocessingService } from "./preprocessing-service";
 import { exportService } from "./export-service";
 import { supabaseStorage } from "./supabase-storage-service";
 import { verifySupabaseToken, requireEmailVerification, AuthenticatedRequest } from "./supabase-auth";
+import { createNormalizedFlashcards, executeNormalizedMigration, getFlashcardsWithProgress } from "./normalized-migration";
+import { updateJobProgressWithNormalizedFlashcards } from "./flashcard-migration-complete";
+import { flashcards as flashcardsTable } from "@shared/schema";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
+import { inArray } from "drizzle-orm";
 import { healthMonitor } from "./health-monitor";
 
 import { getPageCount } from "./page-count-service";
@@ -41,7 +45,7 @@ function enforceAIModelAccess(userIsPremium: boolean, requestedTier: string): "o
   // Default to basic for any invalid input
   return modelMap.basic;
 }
-import { insertFlashcardJobSchema, userProfiles, flashcardJobs } from "@shared/schema";
+import { insertFlashcardJobSchema, flashcardJobs, userProfiles } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, and } from "drizzle-orm";
 import { z } from "zod";
@@ -854,7 +858,7 @@ async function processFlashcardJob(jobId: number) {
     }));
 
     // Store flashcards in normalized table
-    await storage.createFlashcards(normalizedFlashcards);
+    await createNormalizedFlashcards(job.id, job.userId!, flashcards, job.subject || '', job.difficulty || 'beginner');
 
     // Complete the job
     await storage.updateFlashcardJob(jobId, {
@@ -986,7 +990,7 @@ async function processFlashcardJob(jobId: number) {
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
         processingTime: job.processingTime,
-        hasFlashcards: !!job.flashcards,
+        hasFlashcards: job.flashcardCount > 0,
         hasAnkiDeck: !!job.ankiStorageKey,
         hasCsvExport: !!job.csvStorageKey,
         hasJsonExport: !!job.jsonStorageKey,
@@ -1040,23 +1044,13 @@ async function processFlashcardJob(jobId: number) {
       // Get completed jobs with flashcards
       const jobs = await storage.getUserJobs(userId);
       const completedJobs = jobs.filter(job => 
-        job.status === 'completed' && job.flashcards && job.flashcards.trim() !== ''
+        job.status === 'completed' && job.flashcardCount > 0
       );
 
       // Transform jobs into deck format with metadata
       const decks = completedJobs.map(job => {
-        let flashcardCount = 0;
-        let previewCards = [];
-        
-        try {
-          if (job.flashcards) {
-            const flashcards = JSON.parse(job.flashcards);
-            flashcardCount = Array.isArray(flashcards) ? flashcards.length : 0;
-            previewCards = Array.isArray(flashcards) ? flashcards.slice(0, 3) : [];
-          }
-        } catch (error) {
-          console.error(`Failed to parse flashcards for job ${job.id}:`, error);
-        }
+        const flashcardCount = job.flashcardCount || 0;
+        const previewCards: any[] = []; // Preview cards will be loaded separately if needed
 
         return {
           id: job.id,
@@ -1201,7 +1195,7 @@ async function processFlashcardJob(jobId: number) {
         return res.status(404).json({ message: "Job not found" });
       }
 
-      if (!job.flashcards) {
+      if (job.status !== "completed" || job.flashcardCount === 0) {
         return res.status(404).json({ message: "Flashcards not ready" });
       }
 
@@ -1319,17 +1313,26 @@ async function processFlashcardJob(jobId: number) {
   });
 
   // Get flashcard statistics
-  app.get("/api/stats/:id", async (req, res) => {
+  app.get("/api/stats/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.id);
+      const userId = req.user!.id;
       const job = await storage.getFlashcardJob(jobId);
       
-      if (!job || job.status !== "completed" || !job.flashcards) {
+      if (!job || job.status !== "completed" || job.flashcardCount === 0) {
         return res.status(404).json({ message: "Flashcards not ready" });
       }
 
-      const flashcards = JSON.parse(job.flashcards);
-      const stats = exportService.generateStudyStats(flashcards);
+      // Get flashcards from normalized table
+      const flashcards = await getFlashcardsWithProgress(jobId, userId);
+      // Convert to FlashcardPair format for compatibility
+      const flashcardPairs = flashcards.map(card => ({
+        front: card.front,
+        back: card.back,
+        subject: card.subject || '',
+        difficulty: (card.difficulty as 'beginner' | 'intermediate' | 'advanced') || 'beginner'
+      }));
+      const stats = exportService.generateStudyStats(flashcardPairs);
       
       res.json(stats);
     } catch (error) {
@@ -1473,10 +1476,20 @@ async function processFlashcardJob(jobId: number) {
       const { jobId, cardIndex, status, difficultyRating } = req.body;
       const userId = req.user!.id;
 
+      // Get flashcard ID from normalized table using card index
+      const flashcardRecords = await db.select({ id: flashcardsTable.id })
+        .from(flashcardsTable)
+        .where(and(eq(flashcardsTable.jobId, jobId), eq(flashcardsTable.cardIndex, cardIndex)))
+        .limit(1);
+
+      if (flashcardRecords.length === 0) {
+        return res.status(404).json({ error: "Flashcard not found" });
+      }
+
       const progressData = {
         userId,
         jobId,
-        cardIndex,
+        flashcardId: flashcardRecords[0].id,
         status,
         difficultyRating,
         lastReviewedAt: new Date(),
@@ -1506,16 +1519,28 @@ async function processFlashcardJob(jobId: number) {
         return res.status(400).json({ error: "Too many updates in single batch (max 100)" });
       }
 
-      // Prepare batch data with calculated review dates
+      // Get flashcard IDs for all card indices in batch
+      const cardIndices = progressUpdates.map((update: any) => update.cardIndex);
+      const flashcardRecords = await db.select({ id: flashcardsTable.id, cardIndex: flashcardsTable.cardIndex })
+        .from(flashcardsTable)
+        .where(and(eq(flashcardsTable.jobId, parseInt(jobId)), inArray(flashcardsTable.cardIndex, cardIndices)));
+
+      // Create mapping from cardIndex to flashcardId
+      const cardIndexToFlashcardId = new Map();
+      flashcardRecords.forEach(record => {
+        cardIndexToFlashcardId.set(record.cardIndex, record.id);
+      });
+
+      // Prepare batch data with flashcard IDs and calculated review dates
       const batchData = progressUpdates.map((update: any) => ({
         userId,
         jobId: parseInt(jobId),
-        cardIndex: update.cardIndex,
+        flashcardId: cardIndexToFlashcardId.get(update.cardIndex),
         status: update.status,
         difficultyRating: update.difficultyRating,
         lastReviewedAt: new Date(),
         nextReviewDate: calculateNextReviewDate(update.status, update.difficultyRating, update.reviewCount || 0)
-      }));
+      })).filter(item => item.flashcardId); // Filter out items without valid flashcard IDs
 
       // Execute batch update
       const results = await storage.batchUpdateStudyProgress(batchData);
@@ -1594,9 +1619,29 @@ async function processFlashcardJob(jobId: number) {
         return res.status(404).json({ error: "Job not found or access denied" });
       }
 
-      // Update flashcards
+      // Delete existing flashcards for this job
+      await db.delete(flashcardsTable).where(eq(flashcardsTable.jobId, jobId));
+
+      // Insert new normalized flashcards
+      if (flashcards && flashcards.length > 0) {
+        const normalizedFlashcards = flashcards.map((card: any, index: number) => ({
+          jobId,
+          userId,
+          cardIndex: index,
+          front: card.front || '',
+          back: card.back || '',
+          subject: card.subject || job.subject || '',
+          difficulty: card.difficulty || job.difficulty || 'beginner',
+          tags: card.tags || [],
+          confidence: card.confidence ? parseFloat(card.confidence) : null,
+        }));
+
+        await db.insert(flashcardsTable).values(normalizedFlashcards);
+      }
+
+      // Update job metadata
       const updatedJob = await storage.updateFlashcardJob(jobId, {
-        flashcards,
+        flashcardCount: flashcards ? flashcards.length : 0,
         updatedAt: new Date()
       });
 
@@ -1902,34 +1947,21 @@ async function processFlashcardJob(jobId: number) {
   });
 
   // Manual subscription verification endpoint (fallback for webhook failures)
-  app.put("/api/jobs/:id/flashcards", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/verify-subscription", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const jobId = parseInt(req.params.id);
-      const { flashcards } = req.body;
+      const userId = req.user!.id;
       
-      if (!jobId || !flashcards) {
-        return res.status(400).json({ error: "Job ID and flashcards are required" });
+      // Check current subscription status
+      const users = await db.select().from(userProfiles).where(eq(userProfiles.id, userId)).limit(1);
+      const user = users[0];
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
       }
 
-      // Verify job ownership
-      const [job] = await db.select()
-        .from(flashcardJobs)
-        .where(eq(flashcardJobs.id, jobId))
-        .limit(1);
-
-      if (!job || job.userId !== req.user!.id) {
-        return res.status(404).json({ error: "Job not found" });
-      }
-
-      // Update flashcards
-      await db.update(flashcardJobs)
-        .set({
-          flashcards: JSON.stringify(flashcards),
-          updatedAt: new Date()
-        })
-        .where(eq(flashcardJobs.id, jobId));
-
-      res.json({ success: true, message: "Flashcards updated successfully" });
+      res.json({ 
+        isPremium: user.isPremium || false,
+        subscriptionStatus: user.subscriptionStatus || 'none'
+      });
     } catch (error) {
       console.error("Error updating flashcards:", error);
       res.status(500).json({ error: "Failed to update flashcards" });
@@ -2066,10 +2098,13 @@ async function processFlashcardJobWithPageLimits(
     
     if (cachedFlashcards) {
       flashcards = cachedFlashcards;
+
+      // Create normalized flashcards from cache
+      await createNormalizedFlashcards(jobId, userId, flashcards, subject, difficulty);
       await storage.updateFlashcardJob(jobId, {
         progress: 80,
         currentTask: "Retrieved from cache (cost-optimized)",
-        flashcards: JSON.stringify(flashcards),
+        flashcardCount: flashcards.length,
       });
     } else {
       // Preprocess content for cost optimization
@@ -2123,10 +2158,13 @@ async function processFlashcardJobWithPageLimits(
         focusAreas || "{}"
       );
 
+      // Create normalized flashcards from AI generation
+      await createNormalizedFlashcards(jobId, userId, flashcards, subject, difficulty);
+
       await storage.updateFlashcardJob(jobId, {
         progress: 75,
         currentTask: "Creating flashcard pairs",
-        flashcards: JSON.stringify(flashcards),
+        flashcardCount: flashcards.length,
       });
     }
 
@@ -2241,10 +2279,13 @@ async function processFlashcardJob(
     
     if (cachedFlashcards) {
       flashcards = cachedFlashcards;
+      
+      // Create normalized flashcards from cache
+      await createNormalizedFlashcards(jobId, userId, flashcards, subject, difficulty);
       await storage.updateFlashcardJob(jobId, {
         progress: 80,
         currentTask: "Retrieved from cache (cost-optimized)",
-        flashcards: JSON.stringify(flashcards),
+        flashcardCount: flashcards.length,
       });
     } else {
       // Preprocess content for cost optimization
@@ -2298,10 +2339,13 @@ async function processFlashcardJob(
         focusAreas || "{}"
       );
 
+      // Create normalized flashcards from AI generation
+      await createNormalizedFlashcards(jobId, userId, flashcards, subject, difficulty);
+
       await storage.updateFlashcardJob(jobId, {
         progress: 75,
         currentTask: "Creating flashcard pairs",
-        flashcards: JSON.stringify(flashcards),
+        flashcardCount: flashcards.length,
       });
     }
 
@@ -2567,7 +2611,7 @@ async function processRegeneratedFlashcardJob(jobId: number, pdfStorageKey: stri
       status: "completed",
       progress: 100,
       currentTask: "Regeneration completed!",
-      flashcards: JSON.stringify(flashcards),
+      flashcardCount: flashcards.length,
       ankiStorageKey: ankiResult?.key,
       ankiDownloadUrl: ankiResult?.url,
       csvStorageKey: exportResults.csv?.key,
@@ -2693,7 +2737,7 @@ async function regenerateFlashcardsProcess(
       status: "completed",
       progress: 100,
       currentTask: "Regeneration completed!",
-      flashcards: JSON.stringify(flashcards),
+      flashcardCount: flashcards.length,
       ankiStorageKey: ankiResult?.key,
       ankiDownloadUrl: ankiResult?.url,
       csvStorageKey: exportResults.csv?.key,

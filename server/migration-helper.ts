@@ -18,45 +18,18 @@ export async function migrateFlashcardsToNormalized() {
     console.log(`Found ${jobs.length} completed jobs to migrate`);
 
     for (const job of jobs) {
-      // Skip if job doesn't have legacy flashcards JSON
-      if (!job.flashcards) {
+      // Skip if job doesn't have legacy flashcard count
+      if (!job.flashcardCount || job.flashcardCount === 0) {
         continue;
       }
 
       try {
-        const flashcardsData = JSON.parse(job.flashcards);
-        
-        // Check if flashcards already exist in normalized table
-        const existingFlashcards = await db
-          .select()
-          .from(flashcards)
-          .where(eq(flashcards.jobId, job.id));
+        // This migration helper is no longer needed as JSON storage has been removed
+        console.log(`Job ${job.id} uses normalized storage, no migration needed`);
+        continue;
 
-        if (existingFlashcards.length > 0) {
-          console.log(`Job ${job.id} already has normalized flashcards, skipping...`);
-          continue;
-        }
-
-        // Convert JSON flashcards to normalized records
-        const normalizedFlashcards = flashcardsData.map((card: any, index: number) => ({
-          jobId: job.id,
-          userId: job.userId!,
-          cardIndex: index,
-          front: card.front || card.question || '',
-          back: card.back || card.answer || '',
-          subject: card.subject || job.subject || '',
-          difficulty: card.difficulty || job.difficulty || 'beginner',
-          tags: card.tags || [],
-          confidence: card.confidence ? parseFloat(card.confidence) : null,
-        }));
-
-        // Insert normalized flashcards
-        const insertedFlashcards = await db
-          .insert(flashcards)
-          .values(normalizedFlashcards)
-          .returning();
-
-        console.log(`Migrated ${insertedFlashcards.length} flashcards for job ${job.id}`);
+        // Migration complete - all jobs now use normalized storage
+        console.log(`Job ${job.id} already uses normalized flashcard storage`);
 
         // Update job to remove JSON flashcards field (will be done via schema change)
         // For now, just log successful migration
