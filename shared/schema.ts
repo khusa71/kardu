@@ -47,7 +47,6 @@ export const flashcardJobs = pgTable("flashcard_jobs", {
   subject: text("subject"), // Store subject for better categorization
   difficulty: text("difficulty"), // Store difficulty level
   focusAreas: text("focus_areas"), // Store focus areas as JSON
-  apiProvider: text("api_provider"), // AI provider used ('basic' | 'advanced')
   status: text("status").notNull(), // 'pending' | 'processing' | 'completed' | 'failed'
   progress: integer("progress").default(0), // 0-100
   currentTask: text("current_task"),
