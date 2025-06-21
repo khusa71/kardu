@@ -67,18 +67,18 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden md:flex items-center space-x-3">
             {navItems.map((item) => (
               <Link key={item.path} href={item.path}>
                 <Button
                   variant="ghost"
-                  className={`text-sm font-medium px-4 py-2 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg ${
+                  className={`text-sm font-medium px-5 py-2.5 rounded-lg transition-all duration-200 ease-out ${
                     isActive(item.path) 
-                      ? 'text-primary bg-primary/10 shadow-sm border border-primary/20' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 hover:border-muted'
+                      ? 'text-primary bg-primary/10 shadow-sm' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                   }`}
                 >
-                  <item.icon className="w-4 h-4 mr-2 transition-transform duration-200 hover:rotate-3" />
+                  <item.icon className="w-4 h-4 mr-2 transition-colors duration-200" />
                   {item.label}
                 </Button>
               </Link>
@@ -86,14 +86,14 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
           </div>
 
           {/* User Info & Actions */}
-          <div className="hidden md:flex items-center space-x-4">
-            <div className="text-sm text-muted-foreground">
+          <div className="hidden md:flex items-center space-x-6">
+            <div className="text-sm text-muted-foreground flex items-center space-x-3">
               <span className="font-medium text-foreground">
                 {user.email?.split('@')[0]}
               </span>
               <Badge 
                 variant={(userData as any)?.isPremium ? "default" : "secondary"} 
-                className="ml-2 text-xs transition-all duration-200 hover:scale-105"
+                className="text-xs transition-colors duration-200"
               >
                 {(userData as any)?.isPremium ? "Pro" : "Free"}
               </Badge>
@@ -102,9 +102,9 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
               variant="outline" 
               size="sm" 
               onClick={handleLogout}
-              className="rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-md"
+              className="px-4 py-2 transition-colors duration-200 hover:bg-muted"
             >
-              <LogOut className="w-4 h-4 mr-2 transition-transform duration-200" />
+              <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
           </div>
@@ -126,38 +126,28 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
         </div>
 
         {/* Mobile Navigation Menu */}
-        <div className={`md:hidden border-t border-border bg-background overflow-hidden transition-all duration-500 ease-in-out ${
+        <div className={`md:hidden border-t border-border bg-background overflow-hidden transition-all duration-300 ease-out ${
           isMobileMenuOpen ? 'max-h-96 opacity-100 py-4' : 'max-h-0 opacity-0 py-0'
         }`}>
-          <div className="space-y-2">
-            {navItems.map((item, index) => (
+          <div className="space-y-3 px-2">
+            {navItems.map((item) => (
               <Button
                 key={item.path}
                 variant="ghost"
-                className={`w-full justify-start text-left px-4 py-3 rounded-lg transition-all duration-300 ease-in-out transform hover:translate-x-2 hover:shadow-md ${
+                className={`w-full justify-start text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                   isActive(item.path) 
-                    ? 'text-primary bg-primary/10 shadow-sm border-l-4 border-primary' 
+                    ? 'text-primary bg-primary/10 border-l-4 border-primary' 
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
-                style={{ 
-                  transitionDelay: `${index * 100}ms`,
-                  transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(-20px)',
-                  opacity: isMobileMenuOpen ? 1 : 0
-                }}
                 onClick={() => handleNavigation(item.path)}
               >
-                <item.icon className="w-4 h-4 mr-3 transition-transform duration-200 hover:scale-110" />
+                <item.icon className="w-4 h-4 mr-3" />
                 {item.label}
               </Button>
             ))}
               
             {/* User Info (Mobile) */}
-            <div className="px-4 py-4 border-t border-border mt-4 transition-all duration-500 ease-in-out"
-                 style={{ 
-                   transitionDelay: `${navItems.length * 100}ms`,
-                   transform: isMobileMenuOpen ? 'translateY(0)' : 'translateY(-20px)',
-                   opacity: isMobileMenuOpen ? 1 : 0
-                 }}>
+            <div className="px-4 py-4 border-t border-border mt-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <User className="w-4 h-4 text-muted-foreground" />
@@ -174,7 +164,7 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
                   variant="outline" 
                   size="sm" 
                   onClick={handleLogout}
-                  className="transition-all duration-200 hover:scale-105"
+                  className="transition-colors duration-200 hover:bg-muted"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout
