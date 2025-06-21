@@ -7,5 +7,4 @@ dependencies = [
     "genanki>=0.13.1",
     "pymupdf>=1.26.0",
     "pytesseract>=0.3.13",
-    "replit-object-storage>=1.0.2",
 ]
