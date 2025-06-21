@@ -11,12 +11,29 @@ export function AuthDebug() {
   const testGoogleAuth = async () => {
     console.log('=== TESTING GOOGLE AUTH ===');
     try {
+      // Clear any existing redirect flags
+      localStorage.removeItem('redirectToDashboard');
+      
+      console.log('Starting Google OAuth flow...');
       const result = await signInWithGoogle();
       console.log('Google auth result:', result);
-      setDebugInfo({ type: 'google_auth', result });
+      
+      if (result.error) {
+        setDebugInfo({ 
+          type: 'google_auth_error', 
+          error: result.error.message || result.error,
+          details: result 
+        });
+      } else {
+        setDebugInfo({ 
+          type: 'google_auth_started', 
+          message: 'OAuth redirect initiated',
+          result 
+        });
+      }
     } catch (error) {
       console.error('Google auth error:', error);
-      setDebugInfo({ type: 'google_auth_error', error });
+      setDebugInfo({ type: 'google_auth_exception', error: error.message });
     }
   };
 
@@ -64,6 +81,31 @@ export function AuthDebug() {
     }
   };
 
+  const testEmailAuth = async () => {
+    console.log('=== TESTING EMAIL AUTH ===');
+    try {
+      const testEmail = 'test@example.com';
+      const testPassword = 'testpass123';
+      
+      // Try to sign up with email to test Supabase connection
+      const { data, error } = await supabase.auth.signUp({
+        email: testEmail,
+        password: testPassword,
+      });
+      
+      console.log('Email auth test result:', { data, error });
+      setDebugInfo({ 
+        type: 'email_auth_test', 
+        data, 
+        error: error?.message || null,
+        success: !error
+      });
+    } catch (error) {
+      console.error('Email auth test error:', error);
+      setDebugInfo({ type: 'email_auth_test_error', error: error.message });
+    }
+  };
+
   return (
     <Card className="w-full max-w-2xl mx-auto mb-8">
       <CardHeader>
@@ -86,6 +128,9 @@ export function AuthDebug() {
         </div>
 
         <div className="space-y-2">
+          <Button onClick={testEmailAuth} variant="secondary" className="w-full">
+            Test Supabase Connection (Email)
+          </Button>
           <Button onClick={testGoogleAuth} className="w-full">
             Test Google OAuth
           </Button>
