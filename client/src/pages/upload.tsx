@@ -37,7 +37,8 @@ import {
   Eye,
   Grid3x3,
   List,
-  ExternalLink
+  ExternalLink,
+  Copy
 } from "lucide-react";
 import type { FlashcardPair } from "@shared/schema";
 
@@ -379,48 +380,45 @@ export default function Upload() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <NavigationBar />
       
-      <main className="max-w-screen-xl mx-auto px-4 pt-4 pb-16">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-4">
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Compact Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             Create Smart Flashcards
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Transform your PDFs into AI-powered flashcards in minutes. Upload, customize, and study smarter.
+          <p className="text-muted-foreground max-w-xl mx-auto">
+            Transform PDFs into AI-powered flashcards in minutes
           </p>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center space-x-4">
+        {/* Compact Progress Indicator */}
+        <div className="flex justify-center mb-6">
+          <div className="flex items-center space-x-2">
             {[
               { step: 1, label: "Upload", icon: UploadIcon },
               { step: 2, label: "Configure", icon: Settings },
-              { step: 3, label: "Process", icon: Zap },
+              { step: 3, label: "Process", icon: Brain },
               { step: 4, label: "Study", icon: BookOpen }
             ].map((item, index) => (
               <div key={item.step} className="flex items-center">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-all duration-200 ${
                   currentStep >= item.step 
-                    ? 'bg-foreground border-foreground text-background' 
-                    : 'bg-background border-border text-muted-foreground'
+                    ? 'bg-foreground text-background' 
+                    : 'bg-muted text-muted-foreground'
                 }`}>
                   {currentStep > item.step ? (
-                    <CheckCircle className="w-6 h-6" />
+                    <CheckCircle className="w-4 h-4" />
                   ) : (
-                    <item.icon className="w-6 h-6" />
+                    item.step
                   )}
                 </div>
-                <span className={`ml-2 font-medium ${
-                  currentStep >= item.step ? 'text-foreground' : 'text-muted-foreground'
-                }`}>
-                  {item.label}
-                </span>
                 {index < 3 && (
-                  <ArrowRight className="w-5 h-5 text-border mx-4" />
+                  <div className={`w-8 h-0.5 mx-1 ${
+                    currentStep > item.step ? 'bg-foreground' : 'bg-border'
+                  }`} />
                 )}
               </div>
             ))}
@@ -431,19 +429,19 @@ export default function Upload() {
         <div className="max-w-4xl mx-auto">
           {/* Step 1: File Upload */}
           {currentStep === 1 && (
-            <Card className="shadow-xl border-0">
-              <CardHeader className="text-center pb-6">
-                <CardTitle className="text-2xl flex items-center justify-center gap-3">
-                  <UploadIcon className="w-7 h-7 text-primary" />
-                  Upload Your PDF
+            <Card className="border border-border">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <UploadIcon className="w-5 h-5" />
+                  Upload PDF
                 </CardTitle>
-                <p className="text-muted-foreground">
-                  Select the PDF documents you want to convert into flashcards
+                <p className="text-sm text-muted-foreground">
+                  Select PDF documents to convert into flashcards
                 </p>
               </CardHeader>
               <CardContent>
                 <div 
-                  className="border-2 border-dashed border-primary/30 rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer bg-primary/5"
+                  className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-accent transition-colors cursor-pointer bg-muted/30"
                   onClick={() => document.getElementById('file-input')?.click()}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -451,20 +449,20 @@ export default function Upload() {
                   }}
                   onDragOver={(e) => e.preventDefault()}
                 >
-                  <div className="flex flex-col items-center space-y-4">
-                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                      <FileText className="w-8 h-8 text-primary" />
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-foreground" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-foreground mb-2">
-                        Drop your PDF here or click to browse
+                      <h3 className="font-medium text-foreground mb-1">
+                        Drop PDF here or click to browse
                       </h3>
-                      <p className="text-muted-foreground">
-                        Supports multiple files • Max {isPremium ? '10' : '1'} file{isPremium ? 's' : ''} • PDF only
+                      <p className="text-xs text-muted-foreground">
+                        Max {isPremium ? '10' : '1'} file{isPremium ? 's' : ''} • PDF format only
                       </p>
                     </div>
-                    <Button size="lg" className="px-8">
-                      <Plus className="w-5 h-5 mr-2" />
+                    <Button size="sm" className="h-8">
+                      <Plus className="w-4 h-4 mr-1" />
                       Choose Files
                     </Button>
                   </div>
@@ -856,149 +854,134 @@ export default function Upload() {
 
           {/* Step 4: Results */}
           {currentStep === 4 && generatedFlashcards.length > 0 && (
-            <Card className="shadow-xl border-0">
-              <CardHeader className="text-center pb-6">
-                <CardTitle className="text-2xl flex items-center justify-center gap-3">
-                  <CheckCircle className="w-7 h-7 text-green-500" />
-                  Flashcards Generated Successfully!
-                </CardTitle>
-                <p className="text-muted-foreground">
-                  Created {generatedFlashcards.length} flashcards from your PDF
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Action Bar */}
-                <div className="flex flex-col lg:flex-row gap-4 p-4 bg-muted/30 rounded-lg border border-border">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg text-foreground mb-2">Your Flashcard Set</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {generatedFlashcards.length} cards ready for study • Created from your PDF
-                    </p>
+            <Card className="border border-border">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-6 h-6 text-foreground" />
+                    <div>
+                      <CardTitle className="text-xl">Flashcards Ready</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {generatedFlashcards.length} cards generated
+                      </p>
+                    </div>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2">
-                    {/* Download Options */}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/api/export/${currentJobId}/anki`, '_blank')}
-                        className="h-9"
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        Anki
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/api/export/${currentJobId}/csv`, '_blank')}
-                        className="h-9"
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        CSV
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/api/export/${currentJobId}/json`, '_blank')}
-                        className="h-9"
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        JSON
-                      </Button>
-                    </div>
-                    
-                    {/* Edit Button */}
+                  {/* Compact Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setLocation(`/study/${currentJobId}`)}
+                      size="sm"
+                      className="h-9"
+                    >
+                      <Play className="w-4 h-4 mr-1" />
+                      Study Now
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setLocation(`/edit/${currentJobId}`)}
+                      onClick={() => window.open(`/api/export/${currentJobId}/anki`, '_blank')}
                       className="h-9"
                     >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit Cards
+                      <Download className="w-4 h-4 mr-1" />
+                      Download
                     </Button>
                   </div>
                 </div>
-
-                {/* Preview Controls */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant={previewMode === 'grid' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setPreviewMode('grid')}
-                    >
-                      <Grid3x3 className="w-4 h-4 mr-1" />
-                      Grid
-                    </Button>
-                    <Button
-                      variant={previewMode === 'list' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setPreviewMode('list')}
-                    >
-                      <List className="w-4 h-4 mr-1" />
-                      List
-                    </Button>
-                  </div>
-                  <Badge variant="secondary" className="text-sm">
-                    Previewing {Math.min(6, generatedFlashcards.length)} of {generatedFlashcards.length} cards
-                  </Badge>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {/* Quick Actions Row */}
+                <div className="flex flex-wrap gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(`/api/export/${currentJobId}/csv`, '_blank')}
+                    className="h-8 text-xs"
+                  >
+                    CSV
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(`/api/export/${currentJobId}/json`, '_blank')}
+                    className="h-8 text-xs"
+                  >
+                    JSON
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLocation(`/edit/${currentJobId}`)}
+                    className="h-8 text-xs"
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLocation('/history')}
+                    className="h-8 text-xs"
+                  >
+                    <Eye className="w-3 h-3 mr-1" />
+                    History
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetForm}
+                    className="h-8 text-xs"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    New Set
+                  </Button>
                 </div>
 
-                {/* Enhanced Flashcard Preview */}
-                <div className={previewMode === 'grid' 
-                  ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' 
-                  : 'space-y-6'
-                }>
-                  {generatedFlashcards.slice(0, 6).map((card, index) => (
-                    <div key={index} className="group relative bg-card rounded-xl border border-border p-6 hover:shadow-lg hover:border-accent transition-all duration-300">
-                      <div className="space-y-4">
-                        <div className="relative">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                              Question {index + 1}
-                            </span>
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(`Q: ${card.front}\nA: ${card.back}`);
-                                  toast({ title: "Copied to clipboard" });
-                                }}
-                              >
-                                <FileText className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                          <p className="font-semibold text-foreground text-sm leading-relaxed">{card.front}</p>
+                {/* Compact Flashcard Preview */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">Preview</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {generatedFlashcards.length} cards
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto">
+                    {generatedFlashcards.slice(0, 4).map((card, index) => (
+                      <div key={index} className="bg-muted/30 border border-border rounded-lg p-3 hover:border-accent transition-colors group">
+                        <div className="flex items-start justify-between mb-2">
+                          <span className="text-xs text-muted-foreground font-medium">#{index + 1}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`Q: ${card.front}\nA: ${card.back}`);
+                              toast({ title: "Copied to clipboard" });
+                            }}
+                            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
                         </div>
-                        
-                        <div className="relative">
-                          <div className="w-full h-px bg-border my-3"></div>
-                          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center">
-                              <ArrowRight className="w-3 h-3 text-accent-foreground rotate-90" />
-                            </div>
+                        <div className="space-y-2">
+                          <div className="text-xs font-medium text-foreground line-clamp-2">
+                            {card.front}
+                          </div>
+                          <div className="text-xs text-muted-foreground line-clamp-1 border-t border-border pt-1">
+                            {card.back}
                           </div>
                         </div>
-                        
-                        <div>
-                          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                            Answer
-                          </span>
-                          <p className="text-foreground text-sm leading-relaxed mt-2">{card.back}</p>
-                        </div>
                       </div>
-                      
-                      {/* Card Number Indicator */}
-                      <div className="absolute top-3 right-3 w-6 h-6 bg-muted rounded-full flex items-center justify-center">
-                        <span className="text-xs font-medium text-muted-foreground">{index + 1}</span>
-                      </div>
+                    ))}
+                  </div>
+                  
+                  {generatedFlashcards.length > 4 && (
+                    <div className="text-center">
+                      <span className="text-xs text-muted-foreground">
+                        +{generatedFlashcards.length - 4} more cards available
+                      </span>
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 {generatedFlashcards.length > 6 && (
