@@ -60,6 +60,7 @@ export default function Upload() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   // Configuration state
+  const [configMode, setConfigMode] = useState<"quick" | "custom">("quick");
   const [subject, setSubject] = useState("general");
   const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
   const [flashcardCount, setFlashcardCount] = useState(10);
@@ -508,24 +509,94 @@ export default function Upload() {
             </Card>
           )}
 
-          {/* Step 2: Configuration */}
+          {/* Step 2: Simplified Configuration */}
           {currentStep === 2 && (
-            <Card className="shadow-xl border-0">
-              <CardHeader className="text-center pb-6">
-                <CardTitle className="text-2xl flex items-center justify-center gap-3">
-                  <Settings className="w-7 h-7 text-primary" />
-                  Customize Your Flashcards
-                </CardTitle>
-                <p className="text-muted-foreground">
-                  Configure how you want your flashcards generated
+            <Card className="border border-border">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    <CardTitle className="text-xl">Configure Generation</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={configMode === "quick" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setConfigMode("quick")}
+                      className="h-8"
+                    >
+                      Quick Start
+                    </Button>
+                    <Button
+                      variant={configMode === "custom" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setConfigMode("custom")}
+                      className="h-8"
+                    >
+                      Custom
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {configMode === "quick" 
+                    ? "Smart defaults optimized for most users" 
+                    : "Detailed customization options"}
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Tabs defaultValue="basic" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="basic">Basic Settings</TabsTrigger>
-                    <TabsTrigger value="advanced">Advanced Options</TabsTrigger>
-                  </TabsList>
+                {configMode === "quick" ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Subject</label>
+                        <Select value={subject} onValueChange={setSubject}>
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="general">General</SelectItem>
+                            <SelectItem value="science">Science</SelectItem>
+                            <SelectItem value="programming">Programming</SelectItem>
+                            <SelectItem value="history">History</SelectItem>
+                            <SelectItem value="language">Language</SelectItem>
+                            <SelectItem value="business">Business</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Card Count</label>
+                        <Select value={flashcardCount.toString()} onValueChange={(v) => setFlashcardCount(parseInt(v))}>
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="5">5 Cards</SelectItem>
+                            <SelectItem value="10">10 Cards</SelectItem>
+                            <SelectItem value="15">15 Cards</SelectItem>
+                            <SelectItem value="20">20 Cards</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                      <div className="flex items-start gap-3">
+                        <Brain className="w-5 h-5 text-foreground mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-sm">Smart Defaults Applied</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Intermediate difficulty • Focus on concepts & definitions • Standard AI model
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="basic">Basic Settings</TabsTrigger>
+                      <TabsTrigger value="advanced">Advanced Options</TabsTrigger>
+                    </TabsList>
                   
                   <TabsContent value="basic" className="space-y-6 mt-6">
                     {/* Subject Selection */}
@@ -684,7 +755,8 @@ export default function Upload() {
                       />
                     </div>
                   </TabsContent>
-                </Tabs>
+                  </Tabs>
+                )}
 
                 <Separator />
 
