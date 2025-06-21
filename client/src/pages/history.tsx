@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 import { useLocation } from "wouter";
 import { 
   FileText, 
@@ -79,7 +80,20 @@ export default function History() {
         url = `/api/export/${jobId}/${format}`;
       }
 
-      const response = await apiRequest("GET", url);
+      // Use direct fetch for file downloads with authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
       const blob = await response.blob();
       
       const downloadUrl = URL.createObjectURL(blob);
@@ -112,8 +126,7 @@ export default function History() {
 
   const handleViewFlashcards = async (job: HistoryJob) => {
     try {
-      const response = await apiRequest('GET', `/api/jobs/${job.id}`);
-      const jobData = await response.json();
+      const jobData = await apiRequest('GET', `/api/jobs/${job.id}`);
       
       if (jobData.flashcards) {
         const flashcards = JSON.parse(jobData.flashcards);
@@ -136,16 +149,12 @@ export default function History() {
         const shouldRegenerate = confirm("Flashcards appear to be missing for this completed job. Would you like to regenerate them?");
         if (shouldRegenerate) {
           try {
-            const response = await apiRequest('POST', `/api/regenerate/${job.id}`, {});
+            await apiRequest('POST', `/api/regenerate/${job.id}`, {});
             
-            if (response.ok) {
-              toast({
-                title: "Regeneration Started",
-                description: "Flashcards are being regenerated. Please check back in a few minutes.",
-              });
-            } else {
-              throw new Error('Failed to start regeneration');
-            }
+            toast({
+              title: "Regeneration Started",
+              description: "Flashcards are being regenerated. Please check back in a few minutes.",
+            });
           } catch (error) {
             toast({
               title: "Regeneration Failed",
@@ -194,22 +203,18 @@ export default function History() {
     }
 
     try {
-      const response = await apiRequest("PUT", `/api/jobs/${jobId}/rename`, {
+      await apiRequest("PUT", `/api/jobs/${jobId}/rename`, {
         filename: editingFilename.trim()
       });
 
-      if (response.ok) {
-        toast({
-          title: "Filename updated",
-          description: "The filename has been successfully updated.",
-        });
-        
-        // Refresh the history data
-        queryClient.invalidateQueries({ queryKey: ["/api/history"] });
-        handleCancelRename();
-      } else {
-        throw new Error('Failed to update filename');
-      }
+      toast({
+        title: "Filename updated",
+        description: "The filename has been successfully updated.",
+      });
+      
+      // Refresh the history data
+      queryClient.invalidateQueries({ queryKey: ["/api/history"] });
+      handleCancelRename();
     } catch (error) {
       toast({
         title: "Failed to update filename",
@@ -225,16 +230,15 @@ export default function History() {
     }
 
     try {
-      const response = await apiRequest("DELETE", `/api/jobs/${jobId}`);
-      const result = await response.json();
+      const result = await apiRequest("DELETE", `/api/jobs/${jobId}`);
       
       toast({
         title: "Job deleted successfully",
-        description: `Deleted ${result.deletedFiles} of ${result.totalFiles} associated files.`,
+        description: `Deleted ${result.deletedFiles || 0} of ${result.totalFiles || 1} associated files.`,
       });
       
-      // Refresh the jobs list
-      window.location.reload();
+      // Refresh the jobs list using React Query
+      queryClient.invalidateQueries({ queryKey: ["/api/history"] });
       
     } catch (error: any) {
       toast({
