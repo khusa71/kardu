@@ -72,8 +72,7 @@ export default function StudyMain() {
   // Load flashcards for selected deck
   const loadDeckFlashcards = async (deck: FlashcardDeck) => {
     try {
-      const response = await apiRequest("GET", `/api/jobs/${deck.id}`);
-      const jobData = await response.json();
+      const jobData = await apiRequest("GET", `/api/jobs/${deck.id}`);
       
       if (jobData.flashcards) {
         const rawFlashcards = JSON.parse(jobData.flashcards);

@@ -79,10 +79,12 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
   // Optimized data loading using new endpoint with proper authentication
   const { data: studyData, isLoading, error } = useQuery<StudyData>({
     queryKey: ['/api/study-data', jobId],
-    enabled: !!jobId
+    enabled: !!jobId,
+    retry: 3,
+    retryDelay: 1000
   });
 
-  // Batch progress update mutation
+  // Batch progress update mutation with enhanced error handling
   const batchUpdateMutation = useMutation({
     mutationFn: async (updates: Array<any>) => {
       return apiRequest('POST', '/api/study-progress/batch', {
@@ -100,17 +102,29 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
         description: "Some progress may not be saved. Check your connection.",
         variant: "destructive",
       });
-    }
+    },
+    retry: 2,
+    retryDelay: 1000
   });
 
-  // Session management mutations
+  // Session management mutations with enhanced error handling
   const createSessionMutation = useMutation({
     mutationFn: async (sessionData: { jobId: number; totalCards: number }) => {
       return apiRequest('POST', '/api/study-sessions', sessionData);
     },
     onSuccess: (data: any) => {
       setDbSessionId(data.sessionId);
-    }
+      console.log('Study session created:', data.sessionId);
+    },
+    onError: (error) => {
+      console.error('Failed to create study session:', error);
+      toast({
+        title: "Session Error",
+        description: "Could not start study session. Progress may not be saved.",
+        variant: "destructive",
+      });
+    },
+    retry: 3
   });
 
   const completeSessionMutation = useMutation({
@@ -119,7 +133,14 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
         cardsStudied: stats.cardsStudied,
         accuracy: stats.accuracy
       });
-    }
+    },
+    onSuccess: (data: any) => {
+      console.log('Study session completed:', data);
+    },
+    onError: (error) => {
+      console.error('Failed to complete study session:', error);
+    },
+    retry: 3
   });
 
   const flashcards: OptimizedFlashcard[] = (studyData as StudyData | undefined)?.flashcards || [];
@@ -128,21 +149,22 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
 
   // Initialize session and create database session
   useEffect(() => {
-    if (flashcards.length > 0) {
+    if (flashcards.length > 0 && !dbSessionId && !createSessionMutation.isPending) {
       setSession(prev => ({ ...prev, totalCards: flashcards.length }));
       
-      // Create session in database
+      // Create session in database with proper authentication
+      console.log('Creating study session for job:', jobId);
       createSessionMutation.mutate({
         jobId,
         totalCards: flashcards.length
       });
     }
-  }, [flashcards.length, jobId, createSessionMutation]);
+  }, [flashcards.length, jobId, dbSessionId, createSessionMutation.isPending]);
 
-  // Auto-batch progress updates for performance
+  // Auto-batch progress updates for performance with authentication retry
   useEffect(() => {
     const interval = setInterval(() => {
-      if (batchUpdateQueue.current.length > 0) {
+      if (batchUpdateQueue.current.length > 0 && !batchUpdateMutation.isPending) {
         const updates = [...batchUpdateQueue.current];
         batchUpdateQueue.current = [];
         batchUpdateMutation.mutate(updates);
@@ -204,7 +226,8 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
 
       // Complete database session tracking
       if (dbSessionId) {
-        const accuracy = Math.round((session.accuracy || 0) * 100);
+        const accuracy = Math.round((session.accuracy || 0));
+        console.log('Completing study session:', { sessionId: dbSessionId, cardsStudied: session.cardsStudied, accuracy });
         completeSessionMutation.mutate({
           sessionId: dbSessionId,
           cardsStudied: session.cardsStudied,
@@ -247,7 +270,9 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
     return (
       <div className="text-center py-8">
         <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground mb-4">No flashcards available for study</p>
+        <p className="text-muted-foreground mb-4">
+          {error ? `Error loading study data: ${error.message}` : 'No flashcards available for study'}
+        </p>
         <Button onClick={onExit} variant="outline">Return to Dashboard</Button>
       </div>
     );

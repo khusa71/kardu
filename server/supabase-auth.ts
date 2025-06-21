@@ -44,16 +44,17 @@ export const verifySupabaseToken = async (req: AuthenticatedRequest, res: Respon
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error(`Authentication failed for ${req.method} ${req.path}:`, {
-        hasAuthHeader: !!authHeader,
-        authHeaderStart: authHeader?.substring(0, 20),
-        userAgent: req.headers['user-agent']?.substring(0, 50),
-        referer: req.headers.referer
+      return res.status(401).json({ 
+        error: 'No token provided',
+        message: 'Authorization header missing or invalid format'
       });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const token = authHeader.split(' ')[1];
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {

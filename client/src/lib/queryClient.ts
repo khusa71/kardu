@@ -13,7 +13,7 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
   retryCount = 0
-): Promise<Response> {
+): Promise<any> {
   const isFormData = data instanceof FormData;
   const headers: Record<string, string> = {};
   
@@ -21,19 +21,18 @@ export async function apiRequest(
   const { data: { session }, error } = await supabase.auth.getSession();
   
   if (error) {
-    console.warn('Session error, attempting refresh:', error.message);
     // Attempt to refresh session if there's an error
-    await supabase.auth.refreshSession();
-    const { data: refreshedSession } = await supabase.auth.getSession();
-    if (refreshedSession?.session?.access_token) {
-      headers['Authorization'] = `Bearer ${refreshedSession.session.access_token}`;
-    } else {
-      console.error('Failed to refresh session for API request to:', url);
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    if (!refreshError && refreshData?.session?.access_token) {
+      headers['Authorization'] = `Bearer ${refreshData.session.access_token}`;
     }
   } else if (session?.access_token) {
     headers['Authorization'] = `Bearer ${session.access_token}`;
-  } else {
-    console.warn('No active session for API request to:', url);
+  }
+  
+  // If no token is available, this request will fail with 401
+  if (!headers['Authorization']) {
+    console.error('No valid session token available for:', url);
   }
   
   // Add content type for JSON requests
@@ -50,25 +49,27 @@ export async function apiRequest(
 
   // Handle 401 errors with automatic retry
   if (res.status === 401 && retryCount < 3) {
-    console.warn(`401 error on ${method} ${url}, attempting retry ${retryCount + 1}/3`);
     // Force session refresh and retry
     const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
     if (!refreshError && refreshData?.session?.access_token) {
-      console.log('Session refreshed successfully, retrying request');
       return apiRequest(method, url, data, retryCount + 1);
     }
     
     // If refresh fails, try getting a fresh session
     const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData?.session?.access_token) {
-      console.log('Fresh session obtained, retrying request');
       return apiRequest(method, url, data, retryCount + 1);
     }
-    
-    console.error('Failed to obtain valid session for authentication retry');
   }
 
   await throwIfResNotOk(res);
+  
+  // Return JSON data for API responses
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return await res.json();
+  }
+  
   return res;
 }
 

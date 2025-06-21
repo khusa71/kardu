@@ -1,0 +1,70 @@
+{
+  "hash": "8e364c119eae",
+  "text": "KHUSHAWANT ARYA\n+91 87644 29258  | karya@mt.iitr.ac.in  | Gurugram, Haryana, India  | LinkedIn \nPROFESSIONAL SUMMARY\n \n \nResults-driven professional with 4+ years in data analysis and business analytics, aiming for a role as an AI and analytics \nengineer. I specialize in creating impactful visualizations and developing analytics frameworks that enhance business outcomes \nand improve project efficiency.\nEDUCATION\n \n \nIndian Institute of Technology Roorkee (IITR)\nJune 2015 - July 2019\nBachelor's, B.Tech in Metallurgical and Materials Engineering\nCERTIFICATIONS\n \n \nMicrosoft Power BI Data Analyst (PL-300)\nAssociate Data Engineer - Data Camp\nMicrosoft Azure Fundamentals Certification Course (AZ-900) \nMachine Learning Specialization - DeepLearning.AI Coursera\nPROFESSIONAL EXPERIENCE\n \n \nWNS\nGurugram, HR, India\nAssistant Manager\nJanuary 2025 - Present\n-  \nSupporting a global pharmaceutical client with commercial data analytics, including developing dashboards, tracking \nKPIs, performing comp",
+  "subject": "general",
+  "flashcards": [
+    {
+      "front": "What is the primary purpose of Python's Pandas library, and how does it facilitate data manipulation?",
+      "back": "Pandas is a powerful Python library used for data manipulation and analysis. It provides data structures like DataFrames and Series, which allow users to handle and analyze structured data effectively. Pandas simplifies data cleaning, transformation, and aggregation tasks, making it a crucial tool for data scientists.",
+      "subject": "Programming & Software",
+      "difficulty": "intermediate"
+    },
+    {
+      "front": "Explain the difference between ETL and ELT processes in data management.",
+      "back": "ETL (Extract, Transform, Load) involves extracting data from sources, transforming it into a suitable format, and then loading it into a destination database. ELT (Extract, Load, Transform) differs by loading the raw data into the destination first and then transforming it within the database, leveraging the database’s processing power.",
+      "subject": "Data Manipulation & Management",
+      "difficulty": "intermediate"
+    },
+    {
+      "front": "What are OLAP systems, and how do they support business decision-making?",
+      "back": "OLAP (Online Analytical Processing) systems enable users to analyze data stored in data warehouses. These systems support complex queries and multidimensional analysis, allowing businesses to conduct sophisticated data analysis and insights generation, which aids in strategic decision-making processes.",
+      "subject": "Data Manipulation & Management",
+      "difficulty": "intermediate"
+    },
+    {
+      "front": "Identify and explain one key feature of Power BI that aids in data visualization.",
+      "back": "One key feature of Power BI is its ability to create interactive dashboards. These dashboards allow users to visualize data through dynamic charts and graphs, making it easier to interpret complex data sets and share insights with stakeholders.",
+      "subject": "Programming & Software",
+      "difficulty": "intermediate"
+    },
+    {
+      "front": "Describe the role of feature engineering in machine learning.",
+      "back": "Feature engineering is the process of selecting, modifying, or creating features (input variables) to improve the performance of machine learning models. It involves transforming raw data into suitable formats that enhance the model’s ability to learn patterns and make accurate predictions.",
+      "subject": "Machine Learning & AI",
+      "difficulty": "intermediate"
+    },
+    {
+      "front": "What is the significance of business process modeling in business analysis?",
+      "back": "Business process modeling involves representing an organization's processes to analyze and improve them. It's significant because it helps identify inefficiencies, streamline operations, and ensure that processes align with business goals, leading to improved overall performance.",
+      "subject": "Business Analysis",
+      "difficulty": "intermediate"
+    },
+    {
+      "front": "How does Pyspark enhance big data processing capabilities?",
+      "back": "Pyspark is the Python API for Apache Spark, which enhances big data processing by enabling distributed data processing. It allows for scalable and efficient handling of large datasets, making it easier to perform complex computations across distributed computing environments.",
+      "subject": "Data Manipulation & Management",
+      "difficulty": "intermediate"
+    },
+    {
+      "front": "In the context of healthcare analytics, what is one common application of analytics in the pharmaceutical industry?",
+      "back": "One common application is drug discovery and development, where analytics is used to process and analyze large datasets from clinical trials and research, helping to identify potential drug candidates and optimize development processes.",
+      "subject": "Domain Knowledge",
+      "difficulty": "intermediate"
+    },
+    {
+      "front": "What is the primary benefit of using NumPy in Python programming?",
+      "back": "NumPy is a fundamental library for numerical computing in Python. It provides support for large, multi-dimensional arrays and matrices, along with a collection of mathematical functions to operate on these arrays, which is essential for scientific computing and data analysis.",
+      "subject": "Programming & Software",
+      "difficulty": "intermediate"
+    },
+    {
+      "front": "Explain the importance of requirement gathering in business analysis.",
+      "back": "Requirement gathering is crucial in business analysis as it involves collecting the needs and expectations of stakeholders. This process ensures that the final product or solution aligns with business goals and user needs, reducing the risk of project failure and enhancing stakeholder satisfaction.",
+      "subject": "Business Analysis",
+      "difficulty": "intermediate"
+    }
+  ],
+  "timestamp": 1750519822234,
+  "difficulty": "intermediate",
+  "focusAreas": "{\"concepts\":true,\"definitions\":true,\"examples\":false,\"procedures\":false}"
+}
