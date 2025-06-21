@@ -171,14 +171,12 @@ export async function executeNormalizedMigration() {
  */
 export async function createNormalizedFlashcards(
   jobId: number,
-  userId: string,
   flashcards: any[],
   subject: string,
   difficulty: string
 ): Promise<void> {
   const normalizedFlashcards = flashcards.map((card: any, index: number) => ({
     jobId,
-    userId,
     cardIndex: index,
     front: card.front || card.question || '',
     back: card.back || card.answer || '',
@@ -195,10 +193,9 @@ export async function createNormalizedFlashcards(
     // Insert normalized flashcards one by one
     for (const flashcard of normalizedFlashcards) {
       await db.execute(sql`
-        INSERT INTO flashcards (job_id, user_id, card_index, front, back, subject, difficulty)
+        INSERT INTO flashcards (job_id, card_index, front, back, subject, difficulty)
         VALUES (
           ${flashcard.jobId},
-          ${flashcard.userId},
           ${flashcard.cardIndex},
           ${flashcard.front},
           ${flashcard.back},

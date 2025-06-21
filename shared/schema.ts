@@ -85,7 +85,6 @@ export const studyProgress = pgTable("study_progress", {
 export const flashcards = pgTable("flashcards", {
   id: serial("id").primaryKey(),
   jobId: integer("job_id").notNull().references(() => flashcardJobs.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => userProfiles.id),
   cardIndex: integer("card_index").notNull(), // Position in original set
   front: text("front").notNull(), // Question/prompt
   back: text("back").notNull(), // Answer/explanation
@@ -97,7 +96,6 @@ export const flashcards = pgTable("flashcards", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_flashcards_job").on(table.jobId),
-  index("idx_flashcards_user").on(table.userId),
   index("idx_flashcards_subject").on(table.subject),
   index("idx_flashcards_unique").on(table.jobId, table.cardIndex),
 ]);

@@ -144,7 +144,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         CREATE TABLE IF NOT EXISTS flashcards (
           id SERIAL PRIMARY KEY,
           job_id INTEGER NOT NULL,
-          user_id VARCHAR NOT NULL,
           card_index INTEGER NOT NULL,
           front TEXT NOT NULL,
           back TEXT NOT NULL,
@@ -159,7 +158,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create indexes
       await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcards_job ON flashcards(job_id)`);
-      await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcards_user ON flashcards(user_id)`);
       await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcards_subject ON flashcards(subject)`);
       await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcards_unique ON flashcards(job_id, card_index)`);
 
@@ -169,16 +167,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ALTER TABLE flashcards 
           ADD CONSTRAINT fk_flashcards_job 
           FOREIGN KEY (job_id) REFERENCES flashcard_jobs(id) ON DELETE CASCADE;
-        EXCEPTION
-          WHEN duplicate_object THEN NULL;
-        END $$;
-      `);
-
-      await db.execute(sql`
-        DO $$ BEGIN
-          ALTER TABLE flashcards 
-          ADD CONSTRAINT fk_flashcards_user 
-          FOREIGN KEY (user_id) REFERENCES user_profiles(id);
         EXCEPTION
           WHEN duplicate_object THEN NULL;
         END $$;
