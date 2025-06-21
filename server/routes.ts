@@ -1990,6 +1990,21 @@ async function processFlashcardJob(jobId: number) {
     }
   });
 
+  // Debug endpoint to check table structure
+  app.get("/api/debug/table-structure", async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT column_name, data_type, is_nullable 
+        FROM information_schema.columns 
+        WHERE table_name = 'study_sessions' 
+        ORDER BY ordinal_position;
+      `);
+      res.json({ columns: result });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Study session management endpoints
   app.post("/api/study-sessions", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
@@ -2004,7 +2019,10 @@ async function processFlashcardJob(jobId: number) {
         jobId: parseInt(jobId),
         startTime: new Date(),
         totalCards,
-        status: 'active'
+        cardsStudied: 0,
+        accuracy: 0,
+        status: 'active',
+        flashcardCount: totalCards
       };
 
       const session = await storage.createStudySession(sessionData);

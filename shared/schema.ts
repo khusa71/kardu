@@ -111,6 +111,7 @@ export const studySessions = pgTable("study_sessions", {
   accuracy: integer("accuracy").default(0), // Percentage as integer (0 to 100)
   sessionDuration: integer("session_duration"), // Duration in seconds
   status: text("status").notNull().default("active"), // 'active', 'completed', 'abandoned'
+  flashcardCount: integer("flashcard_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
