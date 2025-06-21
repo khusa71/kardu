@@ -189,7 +189,24 @@ export async function createNormalizedFlashcards(
   }));
 
   if (normalizedFlashcards.length > 0) {
-    await db.insert(flashcards).values(normalizedFlashcards);
+    // Delete existing flashcards for this job first
+    await db.execute(sql`DELETE FROM flashcards WHERE job_id = ${jobId}`);
+    
+    // Insert normalized flashcards one by one
+    for (const flashcard of normalizedFlashcards) {
+      await db.execute(sql`
+        INSERT INTO flashcards (job_id, user_id, card_index, front, back, subject, difficulty)
+        VALUES (
+          ${flashcard.jobId},
+          ${flashcard.userId},
+          ${flashcard.cardIndex},
+          ${flashcard.front},
+          ${flashcard.back},
+          ${flashcard.subject || ''},
+          ${flashcard.difficulty || 'beginner'}
+        )
+      `);
+    }
   }
 }
 

@@ -77,6 +77,219 @@ if (process.env.STRIPE_SECRET_KEY) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Test endpoint to verify flashcards table exists
+  app.get("/api/test-flashcards-table", async (req, res) => {
+    try {
+      // Test if flashcards table exists by querying it
+      const result = await db.execute(sql`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'flashcards'
+      `);
+      
+      if (result.length > 0) {
+        // Try to query the table structure
+        const columns = await db.execute(sql`
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_name = 'flashcards'
+        `);
+        
+        res.json({
+          exists: true,
+          structure: columns,
+          message: "Flashcards table exists and is accessible"
+        });
+      } else {
+        res.json({
+          exists: false,
+          message: "Flashcards table does NOT exist in database"
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        exists: false,
+        error: error.message,
+        message: "Error checking flashcards table"
+      });
+    }
+  });
+
+  // Create flashcards table endpoint
+  app.post("/api/create-flashcards-table", async (req, res) => {
+    try {
+      // Create the flashcards table
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS flashcards (
+          id SERIAL PRIMARY KEY,
+          job_id INTEGER NOT NULL,
+          user_id VARCHAR NOT NULL,
+          card_index INTEGER NOT NULL,
+          front TEXT NOT NULL,
+          back TEXT NOT NULL,
+          subject TEXT,
+          difficulty TEXT,
+          tags TEXT[],
+          confidence NUMERIC(3,2),
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+
+      // Create indexes
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcards_job ON flashcards(job_id)`);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcards_user ON flashcards(user_id)`);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcards_subject ON flashcards(subject)`);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcards_unique ON flashcards(job_id, card_index)`);
+
+      // Add foreign key constraints
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE flashcards 
+          ADD CONSTRAINT fk_flashcards_job 
+          FOREIGN KEY (job_id) REFERENCES flashcard_jobs(id) ON DELETE CASCADE;
+        EXCEPTION
+          WHEN duplicate_object THEN NULL;
+        END $$;
+      `);
+
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE flashcards 
+          ADD CONSTRAINT fk_flashcards_user 
+          FOREIGN KEY (user_id) REFERENCES user_profiles(id);
+        EXCEPTION
+          WHEN duplicate_object THEN NULL;
+        END $$;
+      `);
+
+      res.json({
+        success: true,
+        message: "Flashcards table created successfully"
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        message: "Failed to create flashcards table"
+      });
+    }
+  });
+
+  // Update study_progress table for flashcard_id references
+  app.post("/api/update-study-progress-table", async (req, res) => {
+    try {
+      // Add flashcard_id column if it doesn't exist
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE study_progress 
+          ADD COLUMN flashcard_id INTEGER;
+        EXCEPTION
+          WHEN duplicate_column THEN NULL;
+        END $$;
+      `);
+
+      // Add enhanced progress tracking columns
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE study_progress 
+          ADD COLUMN correct_streak INTEGER DEFAULT 0;
+        EXCEPTION
+          WHEN duplicate_column THEN NULL;
+        END $$;
+      `);
+
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE study_progress 
+          ADD COLUMN total_reviews INTEGER DEFAULT 0;
+        EXCEPTION
+          WHEN duplicate_column THEN NULL;
+        END $$;
+      `);
+
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE study_progress 
+          ADD COLUMN correct_reviews INTEGER DEFAULT 0;
+        EXCEPTION
+          WHEN duplicate_column THEN NULL;
+        END $$;
+      `);
+
+      // Add foreign key constraint to flashcards table
+      await db.execute(sql`
+        DO $$ BEGIN
+          ALTER TABLE study_progress 
+          ADD CONSTRAINT fk_study_progress_flashcard 
+          FOREIGN KEY (flashcard_id) REFERENCES flashcards(id) ON DELETE CASCADE;
+        EXCEPTION
+          WHEN duplicate_object THEN NULL;
+        END $$;
+      `);
+
+      res.json({
+        success: true,
+        message: "Study progress table updated successfully"
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message,
+        message: "Failed to update study progress table"
+      });
+    }
+  });
+
+  // Test normalized flashcard creation with real job
+  app.post("/api/test-normalized-flashcards/:jobId", async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.jobId);
+      
+      // Get job details
+      const job = await db.execute(sql`SELECT * FROM flashcard_jobs WHERE id = ${jobId}`);
+      if (!job.length) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      const jobData = job[0] as any;
+      
+      // Test creating normalized flashcards
+      const testFlashcards = [
+        { front: "Test Question 1", back: "Test Answer 1" },
+        { front: "Test Question 2", back: "Test Answer 2" }
+      ];
+      
+      await createNormalizedFlashcards(
+        jobId, 
+        jobData.user_id, 
+        testFlashcards, 
+        jobData.subject || 'Test Subject', 
+        jobData.difficulty || 'beginner'
+      );
+      
+      // Verify flashcards were created
+      const created = await db.execute(sql`
+        SELECT * FROM flashcards WHERE job_id = ${jobId}
+      `);
+      
+      res.json({
+        success: true,
+        message: "Normalized flashcards created successfully",
+        flashcardsCreated: created.length,
+        flashcards: created
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: (error as Error).message,
+        message: "Normalized flashcard creation failed"
+      });
+    }
+  });
+
   // Raw body middleware for Stripe webhooks
   app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
   
