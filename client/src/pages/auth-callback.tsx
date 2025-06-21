@@ -63,6 +63,9 @@ export default function AuthCallback() {
     const urlParams = new URLSearchParams(window.location.search);
     const fragment = new URLSearchParams(window.location.hash.substring(1));
     
+    console.log('Auth callback: URL params:', Object.fromEntries(urlParams));
+    console.log('Auth callback: Fragment params:', Object.fromEntries(fragment));
+    
     if (urlParams.has('code') || fragment.has('access_token') || fragment.has('error')) {
       console.log('Auth callback: OAuth parameters detected');
       handleAuthCallback();

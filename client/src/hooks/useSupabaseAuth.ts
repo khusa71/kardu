@@ -78,8 +78,19 @@ export function useSupabaseAuth() {
     console.log('Current hostname:', window.location.hostname);
     console.log('Current origin:', window.location.origin);
     
-    // Always use the current origin for redirect
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    // Determine the correct redirect URL based on environment
+    let redirectTo;
+    
+    if (window.location.hostname.includes('.replit.dev')) {
+      // Replit development environment
+      redirectTo = `${window.location.origin}/auth/callback`;
+    } else if (window.location.hostname === 'kardu.io' || window.location.hostname === 'www.kardu.io') {
+      // Production environment
+      redirectTo = 'https://kardu.io/auth/callback';
+    } else {
+      // Default to current origin (localhost or other environments)
+      redirectTo = `${window.location.origin}/auth/callback`;
+    }
     
     console.log('Using redirect URL:', redirectTo);
     
