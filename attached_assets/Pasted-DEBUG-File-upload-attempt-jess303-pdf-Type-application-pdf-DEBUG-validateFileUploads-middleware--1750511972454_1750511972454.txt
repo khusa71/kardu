@@ -1,0 +1,87 @@
+DEBUG: File upload attempt: jess303.pdf Type: application/pdf
+DEBUG: validateFileUploads middleware started
+DEBUG: userId: 29012732-3c3e-465f-ab37-10cf9eccfd57
+DEBUG: Starting validation for 1 files
+DEBUG: Processing file: jess303.pdf Size: 6060619
+DEBUG: Temp file saved at: /tmp/temp_1750511819370_jess303.pdf
+DEBUG: Getting page count for: jess303.pdf
+DEBUG: Page info: { pageCount: 28, hasText: true, isScanned: false }
+DEBUG: Checking user upload permissions for 28 pages
+DEBUG: Upload check result: {
+  canUpload: true,
+  quotaInfo: {
+    monthlyUploads: 8,
+    monthlyPagesProcessed: 396,
+    monthlyLimit: 50,
+    lastResetDate: 2025-06-21T10:34:57.430Z,
+    needsReset: false
+  },
+  limits: {
+    maxPagesPerFile: 100,
+    monthlyPageLimit: 10000,
+    monthlyUploadLimit: 100
+  },
+  pagesWillProcess: 28
+}
+DEBUG: File validation complete
+DEBUG: Validated files count: 1
+DEBUG: Total pages to process: 28
+1:17:00 PM [express] POST /api/upload 200 in 6267ms :: {"jobs":[{"jobId":10,"filename":"jess303.pdf"…
+Unhandled API route: GET /
+1:17:00 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Updated user 29012732-3c3e-465f-ab37-10cf9eccfd57 pages processed: +28
+Cache hit (file): 24cb700a
+Unhandled API route: GET /
+1:17:01 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:02 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:04 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Job 10 completed successfully: 28 pages processed from 28 total pages, 10 flashcards generated
+Unhandled API route: GET /
+1:17:07 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:08 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:10 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:11 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:14 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:16 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:17 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:18 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:22 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:23 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:24 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:26 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:30 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:45 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+1:17:45 PM [express] POST /api/auth/sync 200 in 614ms :: {"id":"29012732-3c3e-465f-ab37-10cf9eccfd57…
+1:17:45 PM [express] POST /api/auth/sync 200 in 650ms :: {"id":"29012732-3c3e-465f-ab37-10cf9eccfd57…
+1:17:45 PM [express] POST /api/auth/sync 200 in 597ms :: {"id":"29012732-3c3e-465f-ab37-10cf9eccfd57…
+1:17:45 PM [express] POST /api/auth/sync 200 in 683ms :: {"id":"29012732-3c3e-465f-ab37-10cf9eccfd57…
+Unhandled API route: GET /
+1:17:46 PM [express] GET /api/jobs 404 in 0ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:48 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:52 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+1:17:53 PM [express] POST /api/auth/sync 200 in 155ms :: {"id":"29012732-3c3e-465f-ab37-10cf9eccfd57…
+1:17:53 PM [express] POST /api/auth/sync 200 in 173ms :: {"id":"29012732-3c3e-465f-ab37-10cf9eccfd57…
+1:17:53 PM [express] POST /api/auth/sync 200 in 208ms :: {"id":"29012732-3c3e-465f-ab37-10cf9eccfd57…
+1:17:53 PM [express] POST /api/auth/sync 200 in 207ms :: {"id":"29012732-3c3e-465f-ab37-10cf9eccfd57…
+Unhandled API route: GET /
+1:17:53 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /
+1:17:55 PM [express] GET /api/jobs 404 in 1ms :: {"error":"API endpoint not found"}
+Unhandled API route: GET /

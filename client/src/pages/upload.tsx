@@ -125,6 +125,11 @@ export default function Upload() {
   // Real-time job status polling with proper state management
   const { data: jobStatus, error: jobStatusError } = useQuery({
     queryKey: ['/api/jobs', currentJobId],
+    queryFn: async () => {
+      if (!currentJobId) throw new Error('No job ID');
+      const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
+      return response.json();
+    },
     enabled: !!currentJobId && isProcessing,
     refetchInterval: 3000, // Poll every 3 seconds
     refetchIntervalInBackground: true,
@@ -135,19 +140,22 @@ export default function Upload() {
   // Monitor job status changes from React Query polling
   useEffect(() => {
     console.log('=== JOB STATUS MONITOR ===');
-    console.log('jobStatus:', jobStatus);
+    console.log('jobStatus:', JSON.stringify(jobStatus, null, 2));
+    console.log('jobStatusError:', jobStatusError);
     console.log('isProcessing:', isProcessing);
     console.log('currentStep:', currentStep);
+    console.log('currentJobId:', currentJobId);
     
     if (!jobStatus || !isProcessing) {
+      console.log('Skipping monitor: no jobStatus or not processing');
       return;
     }
     
     const status = (jobStatus as any)?.status;
-    console.log('Job status from React Query:', status);
+    console.log('🔍 Job status from React Query:', status);
     
     if (status === 'completed') {
-      console.log('JOB COMPLETED - TRANSITIONING TO STEP 4');
+      console.log('🎉 JOB COMPLETED - TRANSITIONING TO STEP 4');
       
       let flashcards = [];
       const flashcardsData = (jobStatus as any)?.flashcards;
@@ -158,17 +166,25 @@ export default function Upload() {
           flashcards = Array.isArray(flashcardsData) 
             ? flashcardsData 
             : JSON.parse(flashcardsData);
-          console.log('Successfully parsed flashcards:', flashcards.length, 'cards');
+          console.log('✅ Successfully parsed flashcards:', flashcards.length, 'cards');
         } catch (error) {
-          console.error('Error parsing flashcards:', error);
+          console.error('❌ Error parsing flashcards:', error);
           flashcards = [];
         }
+      } else {
+        console.log('⚠️ No flashcards data in response');
       }
       
-      console.log('Updating state for job completion...');
+      console.log('🔄 CRITICAL: Updating state for job completion...');
+      console.log('- Setting flashcards:', flashcards.length);
+      console.log('- Setting isProcessing to false');
+      console.log('- Setting currentStep to 4');
+      
       setGeneratedFlashcards(flashcards);
       setIsProcessing(false);
       setCurrentStep(4);
+      
+      console.log('✅ State updates completed');
       
       toast({
         title: "Flashcards Ready!",
@@ -176,7 +192,7 @@ export default function Upload() {
       });
       
     } else if (status === 'failed') {
-      console.log('JOB FAILED');
+      console.log('❌ JOB FAILED');
       const errorMessage = (jobStatus as any)?.errorMessage || "Generation failed. Please try again.";
       
       setIsProcessing(false);
@@ -185,8 +201,10 @@ export default function Upload() {
         description: errorMessage,
         variant: "destructive",
       });
+    } else {
+      console.log('📊 Job status:', status, '- continuing to poll...');
     }
-  }, [jobStatus, isProcessing, currentStep, toast]);
+  }, [jobStatus, jobStatusError, isProcessing, currentStep, currentJobId, toast]);
 
   // Handle job completion
   useEffect(() => {
