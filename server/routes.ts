@@ -84,23 +84,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Supabase Auth routes
   app.post('/api/auth/sync', verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      console.log('Auth sync request body:', req.body);
-      console.log('Auth sync user from token:', req.user);
+      console.log('=== AUTH SYNC DEBUG START ===');
+      console.log('Request headers:', req.headers);
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      console.log('User from token:', JSON.stringify(req.user, null, 2));
       
       // Extract user data from request (could be in req.body.user or directly in req.body)
       const userData = req.body.user || req.body;
       const userId = userData?.id || req.user?.id;
       const userEmail = userData?.email || req.user?.email;
       
+      console.log('Extracted userId:', userId);
+      console.log('Extracted userEmail:', userEmail);
+      
       if (!userId) {
         console.error('No user ID available for sync');
         return res.status(400).json({ error: 'User ID is required' });
       }
       
-      console.log('Syncing user with ID:', userId, 'Email:', userEmail);
-      
       // Try to get existing user first
-      let existingUser = await storage.getUserProfile(userId);
+      console.log('Checking for existing user...');
+      let existingUser;
+      try {
+        existingUser = await storage.getUserProfile(userId);
+        console.log('Existing user check result:', existingUser ? 'FOUND' : 'NOT_FOUND');
+      } catch (getUserError) {
+        console.error('Error getting existing user:', getUserError);
+        console.error('Error details:', {
+          message: getUserError.message,
+          code: getUserError.code,
+          detail: getUserError.detail,
+          stack: getUserError.stack
+        });
+      }
       
       if (existingUser) {
         console.log('User already exists, returning existing profile');
@@ -108,7 +124,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create new user profile with all required fields
-      const profileData = await storage.upsertUserProfile({
+      console.log('Creating new user profile...');
+      const profileDataToInsert = {
         id: userId,
         email: userEmail,
         isEmailVerified: true, // Google OAuth users have verified emails
@@ -120,12 +137,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastResetDate: new Date(),
         createdAt: new Date(),
         updatedAt: new Date()
-      });
+      };
       
-      console.log('User profile synced successfully:', profileData);
+      console.log('Profile data to insert:', JSON.stringify(profileDataToInsert, null, 2));
+      
+      const profileData = await storage.upsertUserProfile(profileDataToInsert);
+      
+      console.log('User profile synced successfully:', JSON.stringify(profileData, null, 2));
+      console.log('=== AUTH SYNC DEBUG END ===');
       res.json(profileData);
     } catch (error) {
-      console.error("Database error saving new user:", error);
+      console.error("=== DATABASE ERROR DETAILS ===");
+      console.error("Error message:", error.message);
+      console.error("Error code:", error.code);
+      console.error("Error detail:", error.detail);
+      console.error("Error constraint:", error.constraint);
+      console.error("Error table:", error.table);
+      console.error("Error column:", error.column);
+      console.error("Full error object:", error);
+      console.error("Error stack:", error.stack);
+      console.error("=== END ERROR DETAILS ===");
       res.status(500).json({ error: "Database error saving new user" });
     }
   });
