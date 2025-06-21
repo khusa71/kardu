@@ -84,23 +84,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Supabase Auth routes
   app.post('/api/auth/sync', verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const { id, email, displayName, photoURL, emailVerified, provider } = req.body;
+      console.log('Auth sync request body:', req.body);
+      console.log('Auth sync user from token:', req.user);
       
-      const userData = await storage.upsertUserProfile({
-        id: id || req.user!.id,
+      // Extract user data from request (could be in req.body.user or directly in req.body)
+      const userData = req.body.user || req.body;
+      const userId = userData?.id || req.user?.id;
+      const userEmail = userData?.email || req.user?.email;
+      
+      if (!userId) {
+        console.error('No user ID available for sync');
+        return res.status(400).json({ error: 'User ID is required' });
+      }
+      
+      console.log('Syncing user with ID:', userId, 'Email:', userEmail);
+      
+      // Try to get existing user first
+      let existingUser = await storage.getUserProfile(userId);
+      
+      if (existingUser) {
+        console.log('User already exists, returning existing profile');
+        return res.json(existingUser);
+      }
+
+      // Create new user profile with all required fields
+      const profileData = await storage.upsertUserProfile({
+        id: userId,
+        email: userEmail,
+        isEmailVerified: true, // Google OAuth users have verified emails
         isPremium: false,
         role: 'user',
         monthlyUploads: 0,
         monthlyLimit: 3,
         monthlyPagesProcessed: 0,
         lastResetDate: new Date(),
+        createdAt: new Date(),
         updatedAt: new Date()
       });
       
-      res.json(userData);
+      console.log('User profile synced successfully:', profileData);
+      res.json(profileData);
     } catch (error) {
-      console.error("Error syncing user:", error);
-      res.status(500).json({ message: "Failed to sync user" });
+      console.error("Database error saving new user:", error);
+      res.status(500).json({ error: "Database error saving new user" });
     }
   });
 

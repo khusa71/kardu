@@ -74,10 +74,21 @@ export default function AuthCallback() {
             if (response.ok) {
               console.log('Auth callback: User synced successfully');
             } else {
-              console.warn('Auth callback: User sync failed, but continuing...');
+              const errorData = await response.text();
+              console.error('Auth callback: User sync failed:', response.status, errorData);
+              
+              // If sync fails, show error and don't redirect
+              setError(errorData || 'Failed to sync user data');
+              setProcessing(false);
+              setTimeout(() => setLocation('/'), 3000);
+              return;
             }
           } catch (syncError) {
-            console.warn('Auth callback: User sync error:', syncError);
+            console.error('Auth callback: User sync error:', syncError);
+            setError('Failed to connect to authentication service');
+            setProcessing(false);
+            setTimeout(() => setLocation('/'), 3000);
+            return;
           }
           
           console.log('Auth callback: Authentication complete, redirecting to dashboard');

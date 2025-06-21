@@ -54,23 +54,34 @@ export class DatabaseStorage implements IStorage {
 
   async upsertUserProfile(userData: UpsertUserProfile): Promise<UserProfile> {
     try {
+      console.log('Attempting to upsert user profile:', userData);
+      
       const [profile] = await db
         .insert(userProfiles)
-        .values(userData)
+        .values({
+          ...userData,
+          createdAt: userData.createdAt || new Date(),
+          updatedAt: userData.updatedAt || new Date(),
+        })
         .onConflictDoUpdate({
           target: userProfiles.id,
           set: {
+            email: userData.email,
             isPremium: userData.isPremium,
             role: userData.role,
             isEmailVerified: userData.isEmailVerified,
+            monthlyLimit: userData.monthlyLimit,
             updatedAt: new Date(),
           },
         })
         .returning();
+      
+      console.log('User profile upserted successfully:', profile);
       return profile;
     } catch (error) {
-      console.error("Error upserting user:", error);
-      throw error;
+      console.error("Database error in upsertUserProfile:", error);
+      console.error("Attempted data:", userData);
+      throw new Error(`Database error saving user profile: ${error.message}`);
     }
   }
 
