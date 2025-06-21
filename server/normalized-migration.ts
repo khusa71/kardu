@@ -188,7 +188,9 @@ export async function createNormalizedFlashcards(
     confidence: card.confidence ? card.confidence.toString() : null,
   }));
 
-  await db.insert(flashcards).values(normalizedFlashcards);
+  if (normalizedFlashcards.length > 0) {
+    await db.insert(flashcards).values(normalizedFlashcards);
+  }
 }
 
 /**

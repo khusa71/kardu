@@ -30,9 +30,6 @@ export async function migrateFlashcardsToNormalized() {
 
         // Migration complete - all jobs now use normalized storage
         console.log(`Job ${job.id} already uses normalized flashcard storage`);
-
-        // Update job to remove JSON flashcards field (will be done via schema change)
-        // For now, just log successful migration
         
       } catch (error) {
         console.error(`Failed to migrate flashcards for job ${job.id}:`, error);
@@ -82,7 +79,7 @@ export async function rollbackFlashcardMigration() {
       await db
         .update(flashcardJobs)
         .set({ 
-          flashcards: JSON.stringify(jsonFlashcards)
+          flashcardCount: jsonFlashcards.length
         })
         .where(eq(flashcardJobs.id, job.id));
 
