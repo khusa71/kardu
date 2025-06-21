@@ -38,6 +38,12 @@ interface StudySession {
   accuracy: number;
 }
 
+interface StudyData {
+  flashcards: OptimizedFlashcard[];
+  progress: any[];
+  stats: { total: number; known: number; reviewing: number };
+}
+
 interface OptimizedStudyModeProps {
   jobId: number;
   onComplete?: (session: StudySession) => void;
@@ -67,19 +73,9 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
   const batchUpdateQueue = useRef<Array<any>>([]);
   const lastBatchUpdate = useRef(Date.now());
 
-  // Optimized data loading using new endpoint
-  const { data: studyData, isLoading, error } = useQuery({
+  // Optimized data loading using new endpoint with proper authentication
+  const { data: studyData, isLoading, error } = useQuery<StudyData>({
     queryKey: ['/api/study-data', jobId],
-    queryFn: async () => {
-      const response = await fetch(`/api/study-data/${jobId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
-        }
-      });
-      if (!response.ok) throw new Error('Failed to load study data');
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     enabled: !!jobId
   });
 
@@ -104,9 +100,9 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
     }
   });
 
-  const flashcards: OptimizedFlashcard[] = studyData?.flashcards || [];
+  const flashcards: OptimizedFlashcard[] = (studyData as StudyData | undefined)?.flashcards || [];
   const currentCard = flashcards[currentIndex];
-  const stats = studyData?.stats || { total: 0, known: 0, reviewing: 0 };
+  const stats = (studyData as StudyData | undefined)?.stats || { total: 0, known: 0, reviewing: 0 };
 
   // Initialize session
   useEffect(() => {

@@ -356,22 +356,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertStudyProgress(progress: InsertStudyProgress): Promise<StudyProgress> {
-    const [updatedProgress] = await db
-      .insert(studyProgress)
-      .values(progress)
-      .onConflictDoUpdate({
-        target: [studyProgress.userId, studyProgress.jobId, studyProgress.cardIndex],
-        set: {
-          status: progress.status,
-          difficultyRating: progress.difficultyRating,
-          lastReviewedAt: progress.lastReviewedAt,
-          nextReviewDate: progress.nextReviewDate,
-          reviewCount: sql`${studyProgress.reviewCount} + 1`,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return updatedProgress;
+    try {
+      // Check if record exists first
+      const existing = await db
+        .select()
+        .from(studyProgress)
+        .where(and(
+          eq(studyProgress.userId, progress.userId),
+          eq(studyProgress.jobId, progress.jobId),
+          eq(studyProgress.cardIndex, progress.cardIndex)
+        ))
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Update existing record
+        const [updatedProgress] = await db
+          .update(studyProgress)
+          .set({
+            status: progress.status,
+            difficultyRating: progress.difficultyRating,
+            lastReviewedAt: progress.lastReviewedAt || new Date(),
+            nextReviewDate: progress.nextReviewDate,
+            reviewCount: sql`${studyProgress.reviewCount} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(eq(studyProgress.id, existing[0].id))
+          .returning();
+        return updatedProgress;
+      } else {
+        // Insert new record
+        const [newProgress] = await db
+          .insert(studyProgress)
+          .values({
+            ...progress,
+            reviewCount: 1,
+            lastReviewedAt: progress.lastReviewedAt || new Date(),
+          })
+          .returning();
+        return newProgress;
+      }
+    } catch (error) {
+      console.error('Error upserting study progress:', error);
+      throw new Error('Failed to save study progress');
+    }
   }
 
   async batchUpdateStudyProgress(progressList: InsertStudyProgress[]): Promise<StudyProgress[]> {
@@ -380,21 +407,19 @@ export class DatabaseStorage implements IStorage {
     try {
       const results: StudyProgress[] = [];
       
-      // Process in batches of 50 to avoid database limits
-      const batchSize = 50;
+      // Process in batches of 20 to avoid database limits and improve performance
+      const batchSize = 20;
       for (let i = 0; i < progressList.length; i += batchSize) {
         const batch = progressList.slice(i, i + batchSize);
         
-        for (const progress of batch) {
-          const result = await this.upsertStudyProgress(progress);
-          results.push(result);
-        }
+        // Process batch items concurrently for better performance
+        const batchPromises = batch.map(progress => this.upsertStudyProgress(progress));
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
       }
       
-      console.log(`Batch updated ${results.length} study progress records`);
       return results;
     } catch (error) {
-      console.error('Batch study progress update failed:', error);
       throw new Error('Failed to batch update study progress');
     }
   }

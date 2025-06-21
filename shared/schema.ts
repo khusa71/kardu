@@ -89,7 +89,10 @@ export const studyProgress = pgTable("study_progress", {
   reviewCount: integer("review_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_study_progress_user_job").on(table.userId, table.jobId),
+  index("idx_study_progress_unique").on(table.userId, table.jobId, table.cardIndex),
+]);
 
 export const insertFlashcardJobSchema = createInsertSchema(flashcardJobs).omit({
   id: true,
