@@ -40,6 +40,20 @@ interface StudySession {
   accuracy: number;
 }
 
+interface DatabaseStudySession {
+  id: number;
+  userId: string;
+  jobId: number;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  durationSeconds: number | null;
+  cardsStudied: number | null;
+  cardsCorrect: number | null;
+  accuracyPercentage: number | null;
+  sessionType: string | null;
+  createdAt: Date | null;
+}
+
 interface StudyData {
   flashcards: OptimizedFlashcard[];
   progress: any[];
@@ -67,7 +81,7 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
   });
 
   // Database session tracking
-  const [dbSessionId, setDbSessionId] = useState<string | null>(null);
+  const [dbSessionId, setDbSessionId] = useState<number | null>(null);
 
   // Card navigation state
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -116,8 +130,8 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
       return apiRequest('POST', '/api/study-sessions', sessionData);
     },
     onSuccess: (data: any) => {
-      setDbSessionId(data.sessionId);
-      console.log('Study session created:', data.sessionId);
+      setDbSessionId(data.id);
+      console.log('Study session created:', data.id);
     },
     onError: (error) => {
       console.error('Failed to create study session:', error);
@@ -131,7 +145,7 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
   });
 
   const completeSessionMutation = useMutation({
-    mutationFn: async (stats: { sessionId: string; cardsStudied: number; accuracy: number }) => {
+    mutationFn: async (stats: { sessionId: number; cardsStudied: number; accuracy: number }) => {
       return apiRequest('PUT', `/api/study-sessions/${stats.sessionId}/complete`, {
         cardsStudied: stats.cardsStudied,
         accuracy: stats.accuracy

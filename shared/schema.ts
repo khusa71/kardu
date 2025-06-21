@@ -8,6 +8,7 @@ import {
   serial,
   integer,
   boolean,
+  real,
   numeric,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -101,23 +102,20 @@ export const flashcards = pgTable("flashcards", {
 
 export const studySessions = pgTable("study_sessions", {
   id: serial("id").primaryKey(),
-  sessionId: varchar("session_id").notNull().unique(),
   userId: varchar("user_id").notNull().references(() => userProfiles.id),
   jobId: integer("job_id").notNull().references(() => flashcardJobs.id, { onDelete: "cascade" }),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time"),
-  totalCards: integer("total_cards").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  durationSeconds: integer("duration_seconds"),
   cardsStudied: integer("cards_studied").default(0),
-  accuracy: integer("accuracy").default(0), // Percentage as integer (0 to 100)
-  sessionDuration: integer("session_duration"), // Duration in seconds
-  status: text("status").notNull().default("active"), // 'active', 'completed', 'abandoned'
-  flashcardCount: integer("flashcard_count").default(0),
+  cardsCorrect: integer("cards_correct").default(0),
+  accuracyPercentage: real("accuracy_percentage").default(0),
+  sessionType: text("session_type").default("review"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("idx_study_sessions_user").on(table.userId),
-  index("idx_study_sessions_job").on(table.jobId),
-  index("idx_study_sessions_date").on(table.createdAt),
+  index("idx_study_sessions_user_id").on(table.userId),
+  index("idx_study_sessions_job_id").on(table.jobId),
+  index("idx_study_sessions_started_at").on(table.startedAt),
 ]);
 
 // Temporary downloads table for on-demand file generation

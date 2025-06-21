@@ -62,8 +62,8 @@ export interface IStorage {
   
   // Study session operations
   createStudySession(session: InsertStudySession): Promise<StudySession>;
-  updateStudySession(sessionId: string, updates: Partial<StudySession>): Promise<StudySession>;
-  completeStudySession(sessionId: string, stats: { cardsStudied: number; accuracy: number }): Promise<StudySession>;
+  updateStudySession(sessionId: number, updates: Partial<StudySession>): Promise<StudySession>;
+  completeStudySession(sessionId: number, stats: { cardsStudied: number; accuracy: number }): Promise<StudySession>;
   getUserStudySessions(userId: string, jobId?: number): Promise<StudySession[]>;
 }
 
@@ -499,12 +499,12 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateStudySession(sessionId: string, updates: Partial<StudySession>): Promise<StudySession> {
+  async updateStudySession(sessionId: number, updates: Partial<StudySession>): Promise<StudySession> {
     try {
       const [session] = await db
         .update(studySessions)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(studySessions.sessionId, sessionId))
+        .set(updates)
+        .where(eq(studySessions.id, sessionId))
         .returning();
       
       if (!session) {
@@ -516,33 +516,32 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async completeStudySession(sessionId: string, stats: { cardsStudied: number; accuracy: number }): Promise<StudySession> {
+  async completeStudySession(sessionId: number, stats: { cardsStudied: number; accuracy: number }): Promise<StudySession> {
     try {
       const session = await db
         .select()
         .from(studySessions)
-        .where(eq(studySessions.sessionId, sessionId))
+        .where(eq(studySessions.id, sessionId))
         .limit(1);
 
       if (session.length === 0) {
         throw new Error('Study session not found');
       }
 
-      const startTime = session[0].startTime;
+      const startTime = session[0].startedAt;
       const endTime = new Date();
-      const sessionDuration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+      const durationSeconds = startTime ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000) : 0;
 
       const [completedSession] = await db
         .update(studySessions)
         .set({
-          endTime,
+          completedAt: endTime,
           cardsStudied: stats.cardsStudied,
-          accuracy: stats.accuracy,
-          sessionDuration,
-          status: 'completed',
-          updatedAt: new Date()
+          cardsCorrect: Math.round(stats.cardsStudied * (stats.accuracy / 100)),
+          accuracyPercentage: stats.accuracy,
+          durationSeconds
         })
-        .where(eq(studySessions.sessionId, sessionId))
+        .where(eq(studySessions.id, sessionId))
         .returning();
 
       return completedSession;
