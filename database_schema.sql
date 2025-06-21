@@ -41,14 +41,6 @@ CREATE TABLE IF NOT EXISTS flashcard_jobs (
     status TEXT NOT NULL DEFAULT 'pending',
     progress INTEGER DEFAULT 0,
     current_task TEXT,
-    anki_storage_key TEXT,
-    anki_download_url TEXT,
-    csv_storage_key TEXT,
-    csv_download_url TEXT,
-    json_storage_key TEXT,
-    json_download_url TEXT,
-    quizlet_storage_key TEXT,
-    quizlet_download_url TEXT,
     error_message TEXT,
     processing_time INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -109,6 +101,18 @@ CREATE TABLE IF NOT EXISTS study_sessions (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Temporary downloads table (on-demand file generation)
+CREATE TABLE IF NOT EXISTS temporary_downloads (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    job_id INTEGER NOT NULL REFERENCES flashcard_jobs(id) ON DELETE CASCADE,
+    format TEXT NOT NULL CHECK (format IN ('anki', 'csv', 'json', 'quizlet')),
+    storage_key TEXT NOT NULL,
+    download_url TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '1 hour'),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Create indexes for performance optimization
 CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON user_profiles(email);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_premium ON user_profiles(is_premium);
@@ -130,6 +134,10 @@ CREATE INDEX IF NOT EXISTS idx_study_progress_next_review ON study_progress(next
 CREATE INDEX IF NOT EXISTS idx_study_sessions_user ON study_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_study_sessions_job ON study_sessions(job_id);
 CREATE INDEX IF NOT EXISTS idx_study_sessions_date ON study_sessions(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_temporary_downloads_user ON temporary_downloads(user_id);
+CREATE INDEX IF NOT EXISTS idx_temporary_downloads_job ON temporary_downloads(job_id);
+CREATE INDEX IF NOT EXISTS idx_temporary_downloads_expires ON temporary_downloads(expires_at);
 
 -- Add unique constraints for data integrity
 ALTER TABLE study_progress 
@@ -311,6 +319,19 @@ CREATE POLICY "Users can update own study sessions" ON study_sessions
 CREATE POLICY "Users can delete own study sessions" ON study_sessions
     FOR DELETE USING (auth.uid() = user_id);
 
+-- Enable RLS on temporary_downloads table
+ALTER TABLE temporary_downloads ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for temporary_downloads
+CREATE POLICY "Users can view own downloads" ON temporary_downloads
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own downloads" ON temporary_downloads
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "System can cleanup expired downloads" ON temporary_downloads
+    FOR DELETE USING (expires_at < NOW());
+
 -- Function to handle new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -344,12 +365,37 @@ CREATE POLICY "Users can view their own files" ON storage.objects
 CREATE POLICY "Users can delete their own files" ON storage.objects
   FOR DELETE USING (bucket_id = 'pdf-uploads' AND auth.uid()::text = (storage.foldername(name))[1]);
 
--- Export files policies
-CREATE POLICY "Users can view their own exports" ON storage.objects
+-- Temporary export files policies (1-hour expiry)
+CREATE POLICY "Users can view their own temporary exports" ON storage.objects
   FOR SELECT USING (bucket_id IN ('exports', 'anki-decks') AND auth.uid()::text = (storage.foldername(name))[1]);
 
-CREATE POLICY "System can manage export files" ON storage.objects
+CREATE POLICY "System can manage temporary export files" ON storage.objects
   FOR ALL USING (bucket_id IN ('exports', 'anki-decks'));
+
+-- Function to cleanup expired downloads and files
+CREATE OR REPLACE FUNCTION cleanup_expired_downloads()
+RETURNS void AS $$
+DECLARE
+    expired_record RECORD;
+BEGIN
+    -- Get expired downloads
+    FOR expired_record IN 
+        SELECT storage_key FROM temporary_downloads WHERE expires_at < NOW()
+    LOOP
+        -- Delete from storage (this would be handled by application code)
+        -- DELETE FROM storage.objects WHERE name = expired_record.storage_key;
+        NULL; -- Placeholder for storage cleanup
+    END LOOP;
+    
+    -- Delete expired records from database
+    DELETE FROM temporary_downloads WHERE expires_at < NOW();
+    
+    RAISE NOTICE 'Cleaned up expired downloads';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Schedule cleanup to run periodically (requires pg_cron extension)
+-- SELECT cron.schedule('cleanup-downloads', '0 * * * *', 'SELECT cleanup_expired_downloads();');
 
 -- Final verification
 SELECT 'Supabase database schema created successfully' as status;
@@ -359,5 +405,5 @@ SELECT
     rowsecurity as rls_enabled
 FROM pg_tables 
 WHERE schemaname = 'public' 
-AND tablename IN ('user_profiles', 'flashcard_jobs', 'flashcards', 'study_progress', 'study_sessions')
+AND tablename IN ('user_profiles', 'flashcard_jobs', 'flashcards', 'study_progress', 'study_sessions', 'temporary_downloads')
 ORDER BY tablename;
