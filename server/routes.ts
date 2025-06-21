@@ -81,63 +81,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // JSON middleware for all other routes
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-  // Debug endpoint to test database connection without auth
-  app.post('/api/debug/test-db', async (req, res) => {
-    try {
-      console.log('Testing database connection...');
-      const testUser = await storage.getUserProfile('test-user-123');
-      console.log('Database test successful:', testUser ? 'user found' : 'no user found');
-      res.json({ status: 'database_ok', hasTestUser: !!testUser });
-    } catch (error) {
-      console.error('Database test failed:', error);
-      res.status(500).json({ error: 'Database connection failed', details: error.message });
-    }
-  });
+
 
   // Supabase Auth routes
   app.post('/api/auth/sync', verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      console.log('=== AUTH SYNC DEBUG START ===');
-      console.log('Request headers:', req.headers);
-      console.log('Request body:', JSON.stringify(req.body, null, 2));
-      console.log('User from token:', JSON.stringify(req.user, null, 2));
-      
       // Extract user data from request (could be in req.body.user or directly in req.body)
       const userData = req.body.user || req.body;
       const userId = userData?.id || req.user?.id;
       const userEmail = userData?.email || req.user?.email;
       
-      console.log('Extracted userId:', userId);
-      console.log('Extracted userEmail:', userEmail);
-      
       if (!userId) {
-        console.error('No user ID available for sync');
         return res.status(400).json({ error: 'User ID is required' });
       }
       
       // Try to get existing user first
-      console.log('Checking for existing user...');
       let existingUser;
       try {
         existingUser = await storage.getUserProfile(userId);
-        console.log('Existing user check result:', existingUser ? 'FOUND' : 'NOT_FOUND');
-      } catch (getUserError) {
-        console.error('Error getting existing user:', getUserError);
-        console.error('Error details:', {
-          message: getUserError.message,
-          code: getUserError.code,
-          detail: getUserError.detail,
-          stack: getUserError.stack
-        });
+      } catch (getUserError: any) {
+        console.error('Error getting existing user:', getUserError?.message);
       }
       
       if (existingUser) {
-        console.log('User already exists, returning existing profile');
         return res.json(existingUser);
       }
 
       // Create new user profile with all required fields
-      console.log('Creating new user profile...');
       const profileDataToInsert = {
         id: userId,
         email: userEmail,
@@ -152,24 +122,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date()
       };
       
-      console.log('Profile data to insert:', JSON.stringify(profileDataToInsert, null, 2));
-      
       const profileData = await storage.upsertUserProfile(profileDataToInsert);
-      
-      console.log('User profile synced successfully:', JSON.stringify(profileData, null, 2));
-      console.log('=== AUTH SYNC DEBUG END ===');
       res.json(profileData);
-    } catch (error) {
-      console.error("=== DATABASE ERROR DETAILS ===");
-      console.error("Error message:", error.message);
-      console.error("Error code:", error.code);
-      console.error("Error detail:", error.detail);
-      console.error("Error constraint:", error.constraint);
-      console.error("Error table:", error.table);
-      console.error("Error column:", error.column);
-      console.error("Full error object:", error);
-      console.error("Error stack:", error.stack);
-      console.error("=== END ERROR DETAILS ===");
+    } catch (error: any) {
+      console.error("Auth sync error:", error?.message || error);
       res.status(500).json({ error: "Database error saving new user" });
     }
   });

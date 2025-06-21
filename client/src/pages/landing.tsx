@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth-modal";
-import { AuthDebug } from "@/components/auth-debug";
+
 import { Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, Menu, X, Upload, Bot, Rocket, ChevronRight, Feather } from "lucide-react";
 
 export default function Landing() {
@@ -84,11 +84,6 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background dark:bg-background">
-      {/* Debug Panel - Temporary for OAuth troubleshooting */}
-      <div className="bg-yellow-50 p-4 border-b">
-        <AuthDebug />
-      </div>
-      
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 dark:bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="container-section py-4">
