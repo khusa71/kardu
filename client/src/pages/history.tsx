@@ -571,15 +571,36 @@ export default function History() {
                     {/* Action buttons */}
                     <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                       {job.hasFlashcards && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewFlashcards(job)}
-                          className="flex items-center justify-center"
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Flashcards
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewFlashcards(job)}
+                            className="flex items-center justify-center"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Flashcards
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => {
+                              if (job.id) {
+                                setLocation(`/study/${job.id}`);
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: "Job ID not found. Please refresh the page and try again.",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            className="flex items-center justify-center"
+                          >
+                            <BarChart3 className="w-4 h-4 mr-2" />
+                            Study Cards
+                          </Button>
+                        </>
                       )}
 
                       <div className="flex flex-wrap gap-2">

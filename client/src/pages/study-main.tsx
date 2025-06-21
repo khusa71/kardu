@@ -69,7 +69,20 @@ export default function StudyMain() {
     enabled: !!user,
   });
 
-  // Load flashcards for selected deck
+  // Navigate to dedicated study page with proper session management
+  const startStudySession = (deck: FlashcardDeck) => {
+    if (deck.id) {
+      setLocation(`/study/${deck.id}`);
+    } else {
+      toast({
+        title: "Error",
+        description: "Deck ID not found. Please refresh the page and try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Load flashcards for viewing (not studying)
   const loadDeckFlashcards = async (deck: FlashcardDeck) => {
     try {
       const jobData = await apiRequest("GET", `/api/jobs/${deck.id}`);
@@ -371,13 +384,22 @@ export default function StudyMain() {
                         </span>
                       </div>
 
-                      <div className="pt-2">
+                      <div className="pt-2 space-y-2">
                         <Button 
-                          onClick={() => loadDeckFlashcards(deck)}
+                          onClick={() => startStudySession(deck)}
                           className="w-full group-hover:bg-blue-600"
                         >
                           <Play className="w-4 h-4 mr-2" />
                           Start Studying
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={() => loadDeckFlashcards(deck)}
+                          className="w-full"
+                          size="sm"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview Cards
                         </Button>
                       </div>
                     </div>
