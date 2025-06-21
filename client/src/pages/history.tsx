@@ -112,17 +112,7 @@ export default function History() {
 
   const handleViewFlashcards = async (job: HistoryJob) => {
     try {
-      const response = await fetch(`/api/jobs/${job.id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch job data: ${response.statusText}`);
-      }
-      
+      const response = await apiRequest('GET', `/api/jobs/${job.id}`);
       const jobData = await response.json();
       
       if (jobData.flashcards) {
@@ -146,13 +136,7 @@ export default function History() {
         const shouldRegenerate = confirm("Flashcards appear to be missing for this completed job. Would you like to regenerate them?");
         if (shouldRegenerate) {
           try {
-            const response = await fetch(`/api/regenerate/${job.id}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({}),
-            });
+            const response = await apiRequest('POST', `/api/regenerate/${job.id}`, {});
             
             if (response.ok) {
               toast({
