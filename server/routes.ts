@@ -1375,6 +1375,47 @@ async function processFlashcardJob(jobId: number) {
     }
   });
 
+  // Download original PDF
+  app.get("/api/download/pdf/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      
+      const job = await storage.getFlashcardJob(jobId);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      
+      if (job.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      if (!job.pdfStorageKey) {
+        return res.status(404).json({ message: "PDF not available" });
+      }
+      
+      // Generate signed download URL from Supabase Storage
+      const { data, error } = await supabaseStorage.createSignedUrl(
+        job.pdfStorageKey,
+        300 // 5 minutes expiry
+      );
+      
+      if (error || !data?.signedUrl) {
+        console.error("PDF download error:", error);
+        return res.status(500).json({ message: "Failed to generate download link" });
+      }
+      
+      res.json({
+        downloadUrl: data.signedUrl,
+        filename: job.filename,
+        expiresIn: 300
+      });
+    } catch (error: any) {
+      console.error("PDF download error:", error);
+      res.status(500).json({ message: "Download failed" });
+    }
+  });
+
   // Download Anki deck (legacy endpoint - redirects to new export system)
   app.get("/api/download/:id", async (req, res) => {
     try {

@@ -24,7 +24,9 @@ import {
   Trash2,
   Edit2,
   Check,
-  X
+  X,
+  RefreshCw,
+  ExternalLink
 } from "lucide-react";
 import { FlashcardEditor } from "@/components/flashcard-editor";
 import { StudyMode } from "@/components/study-mode";
@@ -244,6 +246,31 @@ export default function History() {
       toast({
         title: "Failed to delete job",
         description: error.message || "An error occurred while deleting the job.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRegenerateFlashcards = async (jobId: number, filename: string) => {
+    try {
+      const result = await apiRequest("POST", `/api/regenerate/${jobId}`, {
+        customContext: "Regenerate with improved clarity and detail",
+        flashcardCount: 15,
+        difficulty: "intermediate"
+      });
+      
+      toast({
+        title: "Regeneration started",
+        description: `Creating new flashcards for "${filename}". Check back in a few minutes.`,
+      });
+      
+      // Refresh the jobs list to show the new regeneration job
+      queryClient.invalidateQueries({ queryKey: ["/api/history"] });
+      
+    } catch (error: any) {
+      toast({
+        title: "Regeneration failed",
+        description: error.message || "Failed to start regeneration process.",
         variant: "destructive",
       });
     }
@@ -664,6 +691,19 @@ export default function History() {
                           </>
                         )}
                       </div>
+
+                      {/* Regenerate button - only show for completed jobs */}
+                      {job.status === 'completed' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRegenerateFlashcards(job.id, job.filename)}
+                          className="flex items-center text-blue-600 border-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20 text-xs sm:text-sm"
+                        >
+                          <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                          Regenerate
+                        </Button>
+                      )}
 
                       {/* Delete button */}
                       <Button
