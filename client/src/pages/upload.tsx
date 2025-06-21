@@ -31,7 +31,13 @@ import {
   BookOpen,
   Lightbulb,
   Sparkles,
-  Play
+  Play,
+  Download,
+  Edit,
+  Eye,
+  Grid3x3,
+  List,
+  ExternalLink
 } from "lucide-react";
 import type { FlashcardPair } from "@shared/schema";
 
@@ -861,6 +867,60 @@ export default function Upload() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Action Bar */}
+                <div className="flex flex-col lg:flex-row gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg text-blue-900 dark:text-blue-100 mb-2">Your Flashcard Set</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      {generatedFlashcards.length} cards ready for study • Created from your PDF
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {/* Download Options */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/api/export/${currentJobId}/anki`, '_blank')}
+                        className="h-9"
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        Anki
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/api/export/${currentJobId}/csv`, '_blank')}
+                        className="h-9"
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        CSV
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/api/export/${currentJobId}/json`, '_blank')}
+                        className="h-9"
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        JSON
+                      </Button>
+                    </div>
+                    
+                    {/* Edit Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLocation(`/edit/${currentJobId}`)}
+                      className="h-9"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit Cards
+                    </Button>
+                  </div>
+                </div>
+
                 {/* Preview Controls */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -869,38 +929,73 @@ export default function Upload() {
                       size="sm"
                       onClick={() => setPreviewMode('grid')}
                     >
-                      Grid View
+                      <Grid3x3 className="w-4 h-4 mr-1" />
+                      Grid
                     </Button>
                     <Button
                       variant={previewMode === 'list' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setPreviewMode('list')}
                     >
-                      List View
+                      <List className="w-4 h-4 mr-1" />
+                      List
                     </Button>
                   </div>
                   <Badge variant="secondary" className="text-sm">
-                    {generatedFlashcards.length} cards
+                    Previewing {Math.min(6, generatedFlashcards.length)} of {generatedFlashcards.length} cards
                   </Badge>
                 </div>
 
-                {/* Flashcard Preview */}
+                {/* Enhanced Flashcard Preview */}
                 <div className={previewMode === 'grid' 
-                  ? 'grid grid-cols-1 md:grid-cols-2 gap-4' 
-                  : 'space-y-4'
+                  ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' 
+                  : 'space-y-6'
                 }>
                   {generatedFlashcards.slice(0, 6).map((card, index) => (
-                    <div key={index} className="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow">
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-1">Question</p>
-                          <p className="font-medium text-foreground">{card.front}</p>
+                    <div key={index} className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-300">
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
+                              Question {index + 1}
+                            </span>
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`Q: ${card.front}\nA: ${card.back}`);
+                                  toast({ title: "Copied to clipboard" });
+                                }}
+                              >
+                                <FileText className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-relaxed">{card.front}</p>
                         </div>
-                        <Separator />
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-1">Answer</p>
-                          <p className="text-foreground">{card.back}</p>
+                        
+                        <div className="relative">
+                          <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent my-3"></div>
+                          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                            <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                              <ArrowRight className="w-3 h-3 text-white rotate-90" />
+                            </div>
+                          </div>
                         </div>
+                        
+                        <div>
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
+                            Answer
+                          </span>
+                          <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mt-2">{card.back}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Card Number Indicator */}
+                      <div className="absolute top-3 right-3 w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{index + 1}</span>
                       </div>
                     </div>
                   ))}
@@ -912,22 +1007,45 @@ export default function Upload() {
                   </p>
                 )}
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={resetForm}
-                    className="flex-1 h-12"
-                  >
-                    Create New Set
-                  </Button>
+                {/* Main Action Buttons */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
                   <Button 
                     onClick={() => setLocation(`/study/${currentJobId}`)}
-                    className="flex-1 h-12 text-lg"
+                    size="lg"
+                    className="h-14 text-lg font-semibold"
                   >
                     <Play className="w-5 h-5 mr-2" />
                     Start Studying
                   </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setLocation('/history')}
+                    size="lg"
+                    className="h-14"
+                  >
+                    <Eye className="w-5 h-5 mr-2" />
+                    View All Sets
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={resetForm}
+                    size="lg"
+                    className="h-14"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Create New Set
+                  </Button>
+                </div>
+
+                {/* Additional Options */}
+                <div className="flex justify-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-sm text-muted-foreground">
+                    Need help? Visit our{" "}
+                    <Button variant="link" className="p-0 h-auto text-sm">
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      Study Guide
+                    </Button>
+                  </p>
                 </div>
               </CardContent>
             </Card>
