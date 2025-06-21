@@ -95,7 +95,7 @@ export class SupabaseStorageService {
     const { data, error } = await supabase.storage
       .from(this.bucketName)
       .upload(fileKey, ankiBuffer, {
-        contentType: 'application/octet-stream',
+        contentType: 'application/zip',
         upsert: true,
       });
 

@@ -106,9 +106,13 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
   * Removed all references to apiProvider, pdfDownloadUrl, stripeCustomerId, role, and subscriptionStatus fields that don't exist in current schema
   * Fixed NOT NULL constraint error for pdf_storage_key field by providing temporary placeholder values during job creation
   * Resolved Drizzle ORM query errors with nullable flashcardId fields by using proper conditional query building
+  * Fixed flashcards table schema by removing user_id column - proper normalization uses job_id to reference flashcard_jobs.user_id
+  * Corrected all createNormalizedFlashcards function calls to match updated schema (4 parameters instead of 5)
+  * Fixed Supabase Anki deck upload by changing MIME type from application/octet-stream to application/zip
   * Upload system now returns proper 401/403 errors instead of crashing with database errors
   * Server running successfully with normalized flashcard database and all services operational
   * Authentication and error handling working correctly - system properly validates tokens and permissions
+  * Complete PDF-to-flashcard pipeline now functional without any database constraint errors
 - June 21, 2025: **NORMALIZED FLASHCARD FLOW IMPLEMENTATION COMPLETED** - Successfully completed comprehensive database migration and on-demand file generation system:
   * Completed systematic removal of all permanent export storage fields (ankiStorageKey, csvStorageKey, jsonStorageKey, quizletStorageKey) from database schema and routes
   * Implemented fully functional normalized flashcard storage with individual database records instead of JSON storage
