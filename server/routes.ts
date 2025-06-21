@@ -31,7 +31,7 @@ function serveTemporaryFiles(app: Express) {
   app.use('/temp', express.static(path.join(process.cwd(), 'temp')));
 }
 import { verifySupabaseToken, requireEmailVerification, AuthenticatedRequest } from "./supabase-auth";
-import { createNormalizedFlashcards, executeNormalizedMigration, getFlashcardsWithProgress } from "./normalized-migration";
+import { createNormalizedFlashcards, executeNormalizedMigration, getFlashcardsWithProgress, getNormalizedFlashcards } from "./normalized-migration";
 import { updateJobProgressWithNormalizedFlashcards } from "./flashcard-migration-complete";
 import { flashcards as flashcardsTable } from "@shared/schema";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
@@ -998,7 +998,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      res.json(job);
+      // If job is completed, include flashcards from normalized table
+      if (job.status === 'completed' && job.flashcardCount > 0) {
+        const flashcards = await getNormalizedFlashcards(jobId);
+        const flashcardPairs = flashcards.map((card: any) => ({
+          id: card.id,
+          front: card.front,
+          back: card.back,
+          subject: card.subject,
+          difficulty: card.difficulty,
+          tags: card.tags
+        }));
+        
+        res.json({
+          ...job,
+          flashcards: flashcardPairs
+        });
+      } else {
+        res.json(job);
+      }
     } catch (error) {
       console.error("Job status error:", error);
       res.status(500).json({ message: "Failed to get job status" });
