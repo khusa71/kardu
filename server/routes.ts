@@ -581,13 +581,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get job status
-  app.get("/api/jobs/:id", async (req, res) => {
+  app.get("/api/jobs/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
       const jobId = parseInt(req.params.id);
+      const userId = req.user!.id;
       const job = await storage.getFlashcardJob(jobId);
       
       if (!job) {
         return res.status(404).json({ message: "Job not found" });
+      }
+
+      // Verify job ownership
+      if (job.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       res.json(job);

@@ -106,21 +106,27 @@ export default function Upload() {
 
   // Handle job completion
   useEffect(() => {
-    if (jobStatus && (jobStatus as any).status === 'completed' && (jobStatus as any).flashcards) {
+    console.log('Job status update:', jobStatus);
+    
+    if (jobStatus && (jobStatus as any).status === 'completed') {
+      console.log('Job completed, processing flashcards...');
       let flashcards: FlashcardPair[] = [];
       
-      if (Array.isArray((jobStatus as any).flashcards)) {
-        flashcards = (jobStatus as any).flashcards;
-      } else if (typeof (jobStatus as any).flashcards === 'string') {
-        try {
-          const parsed = JSON.parse((jobStatus as any).flashcards);
-          flashcards = Array.isArray(parsed) ? parsed : [];
-        } catch (error) {
-          console.error('Failed to parse flashcards:', error);
-          flashcards = [];
+      if ((jobStatus as any).flashcards) {
+        if (Array.isArray((jobStatus as any).flashcards)) {
+          flashcards = (jobStatus as any).flashcards;
+        } else if (typeof (jobStatus as any).flashcards === 'string') {
+          try {
+            const parsed = JSON.parse((jobStatus as any).flashcards);
+            flashcards = Array.isArray(parsed) ? parsed : [];
+          } catch (error) {
+            console.error('Failed to parse flashcards:', error);
+            flashcards = [];
+          }
         }
       }
       
+      console.log('Extracted flashcards:', flashcards.length);
       setGeneratedFlashcards(flashcards);
       setIsProcessing(false);
       setCurrentStep(4);
@@ -128,6 +134,16 @@ export default function Upload() {
       toast({
         title: "Flashcards generated!",
         description: `Successfully created ${flashcards.length} flashcards.`,
+      });
+    }
+    
+    if (jobStatus && (jobStatus as any).status === 'failed') {
+      console.log('Job failed:', (jobStatus as any).errorMessage);
+      setIsProcessing(false);
+      toast({
+        title: "Generation failed",
+        description: (jobStatus as any).errorMessage || "Please try again.",
+        variant: "destructive",
       });
     }
   }, [jobStatus, toast]);
