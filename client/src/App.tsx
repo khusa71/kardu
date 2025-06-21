@@ -50,8 +50,11 @@ function Router() {
   useEffect(() => {
     if (!loading && user) {
       const shouldRedirect = localStorage.getItem('redirectToDashboard');
-      if (shouldRedirect === 'true' || location === '/') {
+      if (shouldRedirect === 'true') {
         localStorage.removeItem('redirectToDashboard');
+        navigate('/dashboard');
+      } else if (location === '/' && !location.includes('/auth/callback')) {
+        // Only redirect from home page if not coming from auth callback
         navigate('/dashboard');
       }
     }

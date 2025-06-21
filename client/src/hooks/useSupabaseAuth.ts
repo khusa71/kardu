@@ -9,6 +9,7 @@ export function useSupabaseAuth() {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session);
       setSession(session as AuthSession);
       setUser(session?.user as User || null);
       setLoading(false);
@@ -17,10 +18,35 @@ export function useSupabaseAuth() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session);
       setSession(session as AuthSession);
       setUser(session?.user as User || null);
       setLoading(false);
+      
+      // If user just signed in, sync with backend
+      if (event === 'SIGNED_IN' && session) {
+        try {
+          const response = await fetch('/api/auth/sync', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({
+              user: session.user
+            })
+          });
+          
+          if (response.ok) {
+            console.log('User synced with backend successfully');
+          } else {
+            console.warn('Failed to sync user with backend');
+          }
+        } catch (error) {
+          console.error('Error syncing user with backend:', error);
+        }
+      }
     });
 
     return () => subscription.unsubscribe();

@@ -8,6 +8,9 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        console.log('Auth callback: Starting authentication process...');
+        
+        // First, handle the OAuth callback
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -16,10 +19,40 @@ export default function AuthCallback() {
           return;
         }
 
+        console.log('Auth callback: Session data:', data);
+
         if (data.session) {
-          // Redirect to dashboard on successful authentication
+          console.log('Auth callback: Session found, redirecting to dashboard');
+          
+          // Set a flag to help with redirection
+          localStorage.setItem('redirectToDashboard', 'true');
+          
+          // Sync user data with backend
+          try {
+            const response = await fetch('/api/auth/sync', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${data.session.access_token}`
+              },
+              body: JSON.stringify({
+                user: data.session.user
+              })
+            });
+            
+            if (response.ok) {
+              console.log('Auth callback: User synced successfully');
+            } else {
+              console.warn('Auth callback: User sync failed, but continuing...');
+            }
+          } catch (syncError) {
+            console.warn('Auth callback: User sync error:', syncError);
+          }
+          
+          // Redirect to dashboard
           setLocation('/dashboard');
         } else {
+          console.log('Auth callback: No session found, redirecting to home');
           setLocation('/');
         }
       } catch (error) {

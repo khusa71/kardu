@@ -36,8 +36,13 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setAuthError("");
     try {
       setLoading(true);
+      
+      // Set redirect flag before starting OAuth flow
+      localStorage.setItem('redirectToDashboard', 'true');
+      
       const { error } = await signInWithGoogle();
       if (error) {
+        localStorage.removeItem('redirectToDashboard'); // Clean up on error
         setAuthError(error.message || "Google sign in failed");
       } else {
         // Google OAuth redirects automatically, so we don't need onClose() here
@@ -45,6 +50,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
     } catch (error: any) {
       console.error("Google sign in error:", error);
+      localStorage.removeItem('redirectToDashboard'); // Clean up on error
       setAuthError(error?.message || "An error occurred during Google sign in");
     } finally {
       setLoading(false);
