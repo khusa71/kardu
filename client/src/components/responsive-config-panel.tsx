@@ -327,19 +327,21 @@ export function ResponsiveConfigPanel({
                 onClick={onGenerate}
                 disabled={isGenerateDisabled}
                 size="lg"
-                className="w-full sm:w-auto px-8 py-3 text-lg font-semibold"
+                className="w-full sm:w-auto min-w-[220px] px-8 py-3 text-lg font-semibold transition-colors duration-200"
               >
-                {isPending ? (
-                  <>
-                    <LoaderPinwheel className="w-5 h-5 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-5 h-5 mr-2" />
-                    Generate Flashcards
-                  </>
-                )}
+                <div className="flex items-center justify-center">
+                  {isPending ? (
+                    <>
+                      <LoaderPinwheel className="w-5 h-5 mr-2 animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-5 h-5 mr-2 transition-transform duration-200" />
+                      <span>Generate Flashcards</span>
+                    </>
+                  )}
+                </div>
               </Button>
             </div>
           </div>
