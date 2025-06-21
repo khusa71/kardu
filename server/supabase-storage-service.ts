@@ -322,6 +322,7 @@ export class SupabaseStorageService {
 
     } catch (error) {
       console.error('Error generating exports:', error);
+      throw error; // Re-throw to fail the job properly
     }
 
     return results;
