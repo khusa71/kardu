@@ -97,19 +97,52 @@ export default function Upload() {
     },
   });
 
-  // Job status polling with custom queryFn for authentication
-  const { data: jobStatus, error: jobStatusError } = useQuery({
-    queryKey: ['job-status', currentJobId],
-    enabled: !!currentJobId && isProcessing,
-    refetchInterval: 2000,
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      if (!currentJobId) return null;
-      const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
-      return await response.json();
-    },
-  });
+  // Disable automatic polling - use manual retrieval instead
+  const jobStatus = null;
+  const jobStatusError = null;
+
+  // Auto-check for completion after upload
+  useEffect(() => {
+    if (!currentJobId || !isProcessing) return;
+
+    const checkCompletion = async () => {
+      try {
+        const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
+        const data = await response.json();
+        
+        if (data.status === 'completed' && data.flashcards) {
+          const flashcards = Array.isArray(data.flashcards) 
+            ? data.flashcards 
+            : JSON.parse(data.flashcards);
+          
+          setGeneratedFlashcards(flashcards);
+          setIsProcessing(false);
+          setCurrentStep(4);
+          
+          toast({
+            title: "Flashcards ready!",
+            description: `Generated ${flashcards.length} flashcards successfully.`,
+          });
+        }
+      } catch (error) {
+        console.log('Auto-check failed, manual retrieval available');
+      }
+    };
+
+    // Check immediately, then every 5 seconds
+    checkCompletion();
+    const interval = setInterval(checkCompletion, 5000);
+    
+    // Cleanup after 2 minutes
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+    }, 120000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [currentJobId, isProcessing, toast]);
 
   // Handle job completion
   useEffect(() => {
@@ -662,37 +695,45 @@ export default function Upload() {
                         </p>
                         <div className="flex gap-2 mb-2">
                           <Button 
-                            variant="outline" 
-                            size="sm"
+                            variant="default" 
+                            size="lg"
                             onClick={async () => {
                               try {
                                 const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
                                 const data = await response.json();
-                                console.log('Manual job check:', data);
-                                if (data.status === 'completed') {
+                                
+                                if (data.status === 'completed' && data.flashcards) {
+                                  let flashcards = Array.isArray(data.flashcards) ? data.flashcards : JSON.parse(data.flashcards);
+                                  setGeneratedFlashcards(flashcards);
                                   setIsProcessing(false);
                                   setCurrentStep(4);
-                                  if (data.flashcards) {
-                                    let flashcards = Array.isArray(data.flashcards) ? data.flashcards : JSON.parse(data.flashcards);
-                                    setGeneratedFlashcards(flashcards);
-                                    toast({
-                                      title: "Flashcards retrieved!",
-                                      description: `Found ${flashcards.length} completed flashcards.`,
-                                    });
-                                  }
+                                  toast({
+                                    title: "Flashcards retrieved successfully!",
+                                    description: `Found ${flashcards.length} completed flashcards.`,
+                                  });
+                                } else if (data.status === 'failed') {
+                                  toast({
+                                    title: "Generation failed",
+                                    description: data.errorMessage || "Please try again.",
+                                    variant: "destructive",
+                                  });
                                 } else {
                                   toast({
-                                    title: "Job Status",
-                                    description: `Current status: ${data.status}`,
+                                    title: "Still processing",
+                                    description: `Status: ${data.status}. Please wait and try again.`,
                                   });
                                 }
                               } catch (error) {
-                                console.error('Manual check error:', error);
+                                toast({
+                                  title: "Connection error",
+                                  description: "Unable to check job status. Please try again.",
+                                  variant: "destructive",
+                                });
                               }
                             }}
-                            className="flex-1"
+                            className="w-full"
                           >
-                            Check Status
+                            Get My Flashcards
                           </Button>
                           <Button 
                             variant="outline" 

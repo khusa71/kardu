@@ -126,6 +126,13 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
   * Fixed job status polling authentication to prevent stuck processing state
   * Added recovery buttons for users stuck on processing step with "Check History" and "Start Over" options
   * Enhanced debugging with detailed console logging for job completion tracking
+  * Added manual "Retrieve Flashcards" button to bypass automatic polling authentication issues
+  * Identified that job status polling fails authentication while manual API calls work correctly
+  * Implemented large "Get My Flashcards" button that successfully retrieves completed jobs with proper authentication
+  * Confirmed Job 7 completion with successful API call returning flashcard data to frontend
+  * Replaced broken query polling with reliable useEffect-based auto-check mechanism
+  * Implemented 5-second interval checking with proper authentication and automatic cleanup
+  * Processing screen now transitions automatically to results when flashcards are generated
 - June 21, 2025: **READING/STUDYING ENGINE OPTIMIZED** - Completed comprehensive performance improvements:
   * Implemented batch progress updates to reduce API calls by 80% during study sessions
   * Enhanced spaced repetition algorithm with SM-2 inspired intervals and progressive difficulty scaling
