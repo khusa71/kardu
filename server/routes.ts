@@ -2013,21 +2013,15 @@ async function processFlashcardJob(jobId: number) {
 
       console.log('Study session creation request:', { jobId, totalCards, userId });
 
-      // Return a simple session object without database storage for now
-      // Progress tracking works fine, just session tracking is broken
-      const session = {
-        id: Date.now(),
-        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      // Create actual database session
+      const sessionData = {
         userId,
         jobId: parseInt(jobId),
-        startTime: new Date().toISOString(),
-        totalCards,
-        cardsStudied: 0,
-        accuracy: 0,
-        status: 'active'
+        sessionType: 'review'
       };
 
-      console.log('Study session created (memory only):', session);
+      const session = await storage.createStudySession(sessionData);
+      console.log('Study session created in database:', session);
       res.json(session);
     } catch (error) {
       console.error("Study session creation error:", error);
