@@ -48,16 +48,9 @@ function Router() {
 
   // Handle redirect after successful authentication
   useEffect(() => {
-    console.log('=== APP ROUTER AUTH CHECK ===');
-    console.log('Loading:', loading);
-    console.log('User:', user);
-    console.log('Current location:', location);
-    console.log('Should redirect?', !loading && user && location === '/');
-    
     if (!loading && user && location !== '/auth/callback') {
       // If user is authenticated and not on auth callback, redirect to dashboard
       if (location === '/') {
-        console.log('Redirecting authenticated user from / to /dashboard');
         navigate('/dashboard');
       }
     }

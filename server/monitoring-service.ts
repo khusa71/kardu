@@ -64,9 +64,9 @@ export class MonitoringService {
 
     this.metrics.push(metrics);
     
-    // Keep only last 100 metrics
-    if (this.metrics.length > 100) {
-      this.metrics = this.metrics.slice(-100);
+    // Keep only last 50 metrics to reduce memory usage
+    if (this.metrics.length > 50) {
+      this.metrics = this.metrics.slice(-50);
     }
 
     // Reset counters for next period

@@ -21,6 +21,35 @@ export class CacheService {
     this.cacheDir = path.join(process.cwd(), 'cache');
     this.memoryCache = new Map();
     this.ensureCacheDir();
+    
+    // Implement automatic memory cleanup every 10 minutes
+    setInterval(() => this.enforceMemoryLimits(), 10 * 60 * 1000);
+  }
+
+  // Enforce memory limits to prevent excessive usage
+  private enforceMemoryLimits(): void {
+    // Limit memory cache to 100 items maximum
+    if (this.memoryCache.size > 100) {
+      const entries = Array.from(this.memoryCache.entries());
+      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      
+      // Remove oldest 20 entries
+      for (let i = 0; i < 20; i++) {
+        this.memoryCache.delete(entries[i][0]);
+      }
+    }
+
+    // Remove entries older than 1 hour from memory
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    const expiredKeys: string[] = [];
+    
+    this.memoryCache.forEach((cached, key) => {
+      if (cached.timestamp < oneHourAgo) {
+        expiredKeys.push(key);
+      }
+    });
+    
+    expiredKeys.forEach(key => this.memoryCache.delete(key));
   }
 
   private async ensureCacheDir() {
@@ -48,7 +77,6 @@ export class CacheService {
         const cached = this.memoryCache.get(hash)!;
         // Check if cache is still valid (24 hours)
         if (Date.now() - cached.timestamp < 24 * 60 * 60 * 1000) {
-          console.log('Cache hit (memory):', hash.substring(0, 8));
           return cached.flashcards;
         } else {
           this.memoryCache.delete(hash);
@@ -62,7 +90,6 @@ export class CacheService {
       
       // Check if cache is still valid (7 days for file cache)
       if (Date.now() - cached.timestamp < 7 * 24 * 60 * 60 * 1000) {
-        console.log('Cache hit (file):', hash.substring(0, 8));
         // Store in memory for faster access
         this.memoryCache.set(hash, cached);
         return cached.flashcards;
@@ -94,16 +121,20 @@ export class CacheService {
       focusAreas
     };
 
-    // Store in memory cache
+    // Store in memory cache with size check
     this.memoryCache.set(hash, cached);
+    
+    // Enforce memory limits immediately if cache is getting large
+    if (this.memoryCache.size > 150) {
+      this.enforceMemoryLimits();
+    }
 
     // Store in file cache
     try {
       const cacheFile = path.join(this.cacheDir, `${hash}.json`);
       await writeFile(cacheFile, JSON.stringify(cached, null, 2));
-      console.log('Cached flashcards:', hash.substring(0, 8));
     } catch (error) {
-      console.error('Failed to write cache file:', error);
+      // Silent cache failure - continue without caching
     }
   }
 

@@ -240,12 +240,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced upload validation middleware with page-based limits
   const validateFileUploads = async (req: any, res: any, next: any) => {
     try {
-      console.log('DEBUG: validateFileUploads middleware started');
       const userId = req.user!.id;
-      console.log('DEBUG: userId:', userId);
       
       if (!userId) {
-        console.log('DEBUG: No userId found');
         return res.status(401).json({ message: "Authentication required" });
       }
 
@@ -310,26 +307,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalPagesWillProcess = 0;
       const fileValidations = [];
 
-      console.log('DEBUG: Starting validation for', files.length, 'files');
-      
       for (const file of files) {
-        console.log('DEBUG: Processing file:', file.originalname, 'Size:', file.size);
-        
         // Save file temporarily to check page count
         const tempFilePath = path.join(tempDir, `temp_${Date.now()}_${file.originalname}`);
         fs.writeFileSync(tempFilePath, file.buffer);
-        console.log('DEBUG: Temp file saved at:', tempFilePath);
 
         try {
           // Get page count
-          console.log('DEBUG: Getting page count for:', file.originalname);
           const pageInfo = await getPageCount(tempFilePath);
-          console.log('DEBUG: Page info:', pageInfo);
           
           // Check if user can upload this file
-          console.log('DEBUG: Checking user upload permissions for', pageInfo.pageCount, 'pages');
           const uploadCheck = await canUserUpload(userId, pageInfo.pageCount);
-          console.log('DEBUG: Upload check result:', uploadCheck);
           
           if (!uploadCheck.canUpload) {
             // Clean up temp file
@@ -355,7 +343,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           // Clean up temp file on error
           fs.unlinkSync(tempFilePath);
-          console.error('DEBUG: Page validation error for', file.originalname, ':', error);
           return res.status(400).json({
             message: `Failed to analyze PDF: ${file.originalname}`,
             error: error instanceof Error ? error.message : 'Unknown error'
@@ -367,10 +354,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.fileValidations = fileValidations;
       req.totalPagesWillProcess = totalPagesWillProcess;
       req.userType = user.isPremium ? "premium" : "free";
-      
-      console.log('DEBUG: File validation complete');
-      console.log('DEBUG: Validated files count:', fileValidations.length);
-      console.log('DEBUG: Total pages to process:', totalPagesWillProcess);
       
       next();
     } catch (error) {

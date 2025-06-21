@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
-import { supabase } from "@/lib/supabase";
 import { NavigationBar } from "@/components/navigation-bar";
 import { AuthModal } from "@/components/auth-modal";
 import { useLocation } from "wouter";
@@ -100,16 +99,11 @@ export default function Upload() {
       setCurrentStep(3);
       setIsProcessing(true);
       setUploadProgress(10);
-      setProcessingStage('Upload complete, analyzing PDF...');
-      
-      // Calculate estimated processing time
-      const fileSize = selectedFiles[0]?.size || 0;
-      const estimatedMinutes = Math.ceil((fileSize / 1024 / 1024) * 0.3);
-      setEstimatedTime(Math.max(estimatedMinutes, 1));
+      setProcessingStage('Starting processing...');
       
       toast({
         title: "Upload successful!",
-        description: "Your PDF is being processed. This may take a few minutes.",
+        description: "Processing your PDF now...",
       });
     },
     onError: (error: any) => {
@@ -121,34 +115,22 @@ export default function Upload() {
     },
   });
 
-  // Enhanced job status polling with authentication recovery
+  // Job status polling with enhanced retry logic
   const { data: jobStatus, error: jobStatusError } = useQuery({
     queryKey: ['/api/jobs', currentJobId],
     queryFn: async () => {
-      if (!currentJobId) throw new Error('No job ID');
-      try {
-        const response = await apiRequest('GET', `/api/jobs/${currentJobId}`, undefined);
-        return response.json();
-      } catch (error: any) {
-        // Handle authentication errors gracefully
-        if (error.message?.includes('401')) {
-          setProcessingStage('Reconnecting...');
-          throw new Error('Authentication expired');
-        }
-        throw error;
-      }
+      const response = await apiRequest('GET', `/api/jobs/${currentJobId}`);
+      return response.json();
     },
     enabled: !!currentJobId && isProcessing && !!user,
     refetchInterval: (data) => {
-      // Stop polling if job is complete or failed
       if (data && ((data as any)?.status === 'completed' || (data as any)?.status === 'failed')) {
         return false;
       }
-      return 3000; // Poll every 3 seconds for active jobs
+      return 3000;
     },
     refetchIntervalInBackground: false,
     retry: (failureCount, error: any) => {
-      // Don't retry authentication errors more than once
       if (error.message?.includes('401') || error.message?.includes('Authentication expired')) {
         return failureCount < 1;
       }
@@ -157,123 +139,67 @@ export default function Upload() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 
-  // Monitor job status changes from React Query polling
+  // Monitor job status changes
   useEffect(() => {
-    console.log('=== JOB STATUS MONITOR ===');
-    console.log('jobStatus:', JSON.stringify(jobStatus, null, 2));
-    console.log('jobStatusError:', jobStatusError);
-    console.log('isProcessing:', isProcessing);
-    console.log('currentStep:', currentStep);
-    console.log('currentJobId:', currentJobId);
-    
-    if (!jobStatus || !isProcessing) {
-      console.log('Skipping monitor: no jobStatus or not processing');
-      return;
-    }
+    if (!jobStatus || !isProcessing) return;
     
     const status = (jobStatus as any)?.status;
-    console.log('🔍 Job status from React Query:', status);
+    const progress = (jobStatus as any)?.progress || 0;
+    
+    // Update progress tracking
+    if (progress !== undefined) {
+      setUploadProgress(Math.min(progress, 100));
+      
+      if (progress < 20) {
+        setProcessingStage('Parsing PDF structure...');
+      } else if (progress < 40) {
+        setProcessingStage('Extracting key concepts...');
+      } else if (progress < 60) {
+        setProcessingStage('Analyzing content patterns...');
+      } else if (progress < 80) {
+        setProcessingStage('Generating Q&A pairs...');
+      } else if (progress < 100) {
+        setProcessingStage('Finalizing flashcards...');
+      }
+    }
     
     if (status === 'completed') {
-      console.log('🎉 JOB COMPLETED - TRANSITIONING TO STEP 4');
-      
       let flashcards = [];
       const flashcardsData = (jobStatus as any)?.flashcards;
       
       if (flashcardsData) {
-        console.log('Processing flashcards data, type:', typeof flashcardsData);
         try {
           flashcards = Array.isArray(flashcardsData) 
             ? flashcardsData 
             : JSON.parse(flashcardsData);
-          console.log('✅ Successfully parsed flashcards:', flashcards.length, 'cards');
         } catch (error) {
-          console.error('❌ Error parsing flashcards:', error);
           flashcards = [];
         }
-      } else {
-        console.log('⚠️ No flashcards data in response');
       }
-      
-      console.log('🔄 CRITICAL: Updating state for job completion...');
-      console.log('- Setting flashcards:', flashcards.length);
-      console.log('- Setting isProcessing to false');
-      console.log('- Setting currentStep to 4');
       
       setGeneratedFlashcards(flashcards);
       setIsProcessing(false);
       setCurrentStep(4);
-      
-      console.log('✅ State updates completed');
+      setUploadProgress(100);
+      setProcessingStage('Complete!');
       
       toast({
         title: "Flashcards Ready!",
         description: `Generated ${flashcards.length} flashcards successfully.`,
       });
-      
     } else if (status === 'failed') {
-      console.log('❌ JOB FAILED');
       const errorMessage = (jobStatus as any)?.errorMessage || "Generation failed. Please try again.";
       
       setIsProcessing(false);
+      setUploadProgress(0);
+      setProcessingStage('Processing failed');
       toast({
         title: "Generation Failed",
         description: errorMessage,
         variant: "destructive",
       });
-    } else {
-      console.log('📊 Job status:', status, '- continuing to poll...');
     }
-  }, [jobStatus, jobStatusError, isProcessing, currentStep, currentJobId, toast]);
-
-  // Handle job completion
-  useEffect(() => {
-    console.log('=== JOB STATUS DEBUG ===');
-    console.log('Job status update:', jobStatus);
-    console.log('Job status error:', jobStatusError);
-    console.log('Current processing state:', isProcessing);
-    console.log('Current job ID:', currentJobId);
-    console.log('========================');
-    
-    if (jobStatus && (jobStatus as any).status === 'completed') {
-      console.log('Job completed, processing flashcards...');
-      let flashcards: FlashcardPair[] = [];
-      
-      if ((jobStatus as any).flashcards) {
-        if (Array.isArray((jobStatus as any).flashcards)) {
-          flashcards = (jobStatus as any).flashcards;
-        } else if (typeof (jobStatus as any).flashcards === 'string') {
-          try {
-            const parsed = JSON.parse((jobStatus as any).flashcards);
-            flashcards = Array.isArray(parsed) ? parsed : [];
-          } catch (error) {
-            console.error('Failed to parse flashcards:', error);
-            flashcards = [];
-          }
-        }
-      }
-      
-      console.log('Extracted flashcards:', flashcards.length);
-      setGeneratedFlashcards(flashcards);
-      setIsProcessing(false);
-      setCurrentStep(4);
-      
-      toast({
-        title: "Flashcards generated!",
-        description: `Successfully created ${flashcards.length} flashcards.`,
-      });
-    }
-    
-    if (jobStatus && (jobStatus as any).status === 'failed') {
-      console.log('Job failed:', (jobStatus as any).errorMessage);
-      setIsProcessing(false);
-      toast({
-        title: "Generation failed",
-        description: (jobStatus as any).errorMessage || "Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [jobStatus, toast, isProcessing, currentJobId]);
+  }, [jobStatus, isProcessing, currentStep, toast]);
 
   // File selection handler
   const handleFileSelect = useCallback((files: FileList | null) => {
@@ -355,7 +281,7 @@ export default function Upload() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center space-x-3">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <span className="text-lg font-medium">Loading...</span>
@@ -366,7 +292,7 @@ export default function Upload() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen bg-background">
         <NavigationBar />
         <div className="flex items-center justify-center min-h-[80vh]">
           <Card className="w-full max-w-md mx-4 shadow-xl">
@@ -374,15 +300,17 @@ export default function Upload() {
               <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Brain className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-2xl">Welcome to Kardu.io</CardTitle>
-              <p className="text-muted-foreground">Sign in to start creating AI-powered flashcards</p>
+              <CardTitle className="text-xl">Sign In Required</CardTitle>
             </CardHeader>
             <CardContent>
+              <p className="text-muted-foreground text-center mb-4">
+                Please sign in to upload PDFs and generate flashcards.
+              </p>
               <Button 
-                onClick={() => setShowAuthModal(true)} 
-                className="w-full h-12 text-lg"
+                onClick={() => setShowAuthModal(true)}
+                className="w-full"
               >
-                Get Started
+                Sign In
               </Button>
             </CardContent>
           </Card>
@@ -403,82 +331,52 @@ export default function Upload() {
             Create Smart Flashcards
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Transform PDFs into AI-powered flashcards in minutes
+            Transform your PDFs into study-ready flashcards with AI
           </p>
         </div>
 
         {/* Compact Progress Indicator */}
-        <div className="flex justify-center mb-6">
-          <div className="flex items-center space-x-2">
-            {[
-              { step: 1, label: "Upload", icon: UploadIcon },
-              { step: 2, label: "Configure", icon: Settings },
-              { step: 3, label: "Process", icon: Brain },
-              { step: 4, label: "Study", icon: BookOpen }
-            ].map((item, index) => (
-              <div key={item.step} className="flex items-center">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-all duration-200 ${
-                  currentStep >= item.step 
-                    ? 'bg-foreground text-background' 
-                    : 'bg-muted text-muted-foreground'
-                }`}>
-                  {currentStep > item.step ? (
-                    <CheckCircle className="w-4 h-4" />
-                  ) : (
-                    item.step
-                  )}
-                </div>
-                {index < 3 && (
-                  <div className={`w-8 h-0.5 mx-1 ${
-                    currentStep > item.step ? 'bg-foreground' : 'bg-border'
-                  }`} />
-                )}
+        <div className="flex items-center justify-center mb-8">
+          {[1, 2, 3, 4].map((step) => (
+            <div key={step} className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                currentStep >= step 
+                  ? 'bg-foreground text-background' 
+                  : 'bg-muted text-muted-foreground'
+              }`}>
+                {step}
               </div>
-            ))}
-          </div>
+              {step < 4 && (
+                <div className={`w-12 h-0.5 mx-2 ${
+                  currentStep > step ? 'bg-foreground' : 'bg-border'
+                }`} />
+              )}
+            </div>
+          ))}
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-4xl mx-auto">
-          {/* Step 1: File Upload */}
-          {currentStep === 1 && (
-            <Card className="border border-border">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <UploadIcon className="w-5 h-5" />
-                  Upload PDF
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Select PDF documents to convert into flashcards
-                </p>
-              </CardHeader>
-              <CardContent>
+        {/* Step 1: Upload */}
+        {currentStep === 1 && (
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="p-6">
+              <div className="text-center">
                 <div 
-                  className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-accent transition-colors cursor-pointer bg-muted/30"
+                  className="border-2 border-dashed border-border rounded-lg p-8 transition-colors hover:border-accent cursor-pointer"
                   onClick={() => document.getElementById('file-input')?.click()}
+                  onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
                     handleFileSelect(e.dataTransfer.files);
                   }}
-                  onDragOver={(e) => e.preventDefault()}
                 >
-                  <div className="flex flex-col items-center space-y-3">
-                    <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-foreground mb-1">
-                        Drop PDF here or click to browse
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Max {isPremium ? '10' : '1'} file{isPremium ? 's' : ''} • PDF format only
-                      </p>
-                    </div>
-                    <Button size="sm" className="h-8">
-                      <Plus className="w-4 h-4 mr-1" />
-                      Choose Files
-                    </Button>
-                  </div>
+                  <UploadIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Upload PDFs</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Drag and drop or click to select PDF files
+                  </p>
+                  <Badge variant="secondary">
+                    {isPremium ? 'Up to 10 files' : '1 file max'}
+                  </Badge>
                 </div>
                 
                 <input
@@ -489,675 +387,362 @@ export default function Upload() {
                   onChange={(e) => handleFileSelect(e.target.files)}
                   className="hidden"
                 />
-
+                
                 {selectedFiles.length > 0 && (
-                  <div className="mt-6 space-y-3">
-                    <h4 className="font-medium text-foreground">Selected Files:</h4>
+                  <div className="mt-6 space-y-2">
                     {selectedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <FileText className="w-5 h-5 text-primary" />
-                          <div>
-                            <p className="font-medium text-foreground">{file.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
+                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-4 h-4" />
+                          <span className="text-sm">{file.name}</span>
                         </div>
                         <Button
-                          variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            setSelectedFiles(files => files.filter((_, i) => i !== index));
-                            if (selectedFiles.length === 1) setCurrentStep(1);
-                          }}
+                          variant="ghost"
+                          onClick={() => setSelectedFiles(files => files.filter((_, i) => i !== index))}
                         >
                           <X className="w-4 h-4" />
                         </Button>
                       </div>
                     ))}
-                    <Button 
-                      onClick={() => setCurrentStep(2)} 
-                      className="w-full mt-4" 
-                      size="lg"
-                    >
-                      Continue to Configuration
-                      <ArrowRight className="w-5 h-5 ml-2" />
+                    <Button onClick={() => setCurrentStep(2)} className="w-full mt-4">
+                      Configure Settings
+                      <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-          {/* Step 2: Simplified Configuration */}
-          {currentStep === 2 && (
-            <Card className="border border-border">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    <CardTitle className="text-xl">Configure Generation</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={configMode === "quick" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setConfigMode("quick")}
-                      className="h-8"
-                    >
-                      Quick Start
-                    </Button>
-                    <Button
-                      variant={configMode === "custom" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setConfigMode("custom")}
-                      className="h-8"
-                    >
-                      Custom
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {configMode === "quick" 
-                    ? "Smart defaults optimized for most users" 
-                    : "Detailed customization options"}
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {configMode === "quick" ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Subject</label>
-                        <Select value={subject} onValueChange={setSubject}>
-                          <SelectTrigger className="h-10">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="general">General</SelectItem>
-                            <SelectItem value="science">Science</SelectItem>
-                            <SelectItem value="programming">Programming</SelectItem>
-                            <SelectItem value="history">History</SelectItem>
-                            <SelectItem value="language">Language</SelectItem>
-                            <SelectItem value="business">Business</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Card Count</label>
-                        <Select value={flashcardCount.toString()} onValueChange={(v) => setFlashcardCount(parseInt(v))}>
-                          <SelectTrigger className="h-10">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="5">5 Cards</SelectItem>
-                            <SelectItem value="10">10 Cards</SelectItem>
-                            <SelectItem value="15">15 Cards</SelectItem>
-                            <SelectItem value="20">20 Cards</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                      <div className="flex items-start gap-3">
-                        <Brain className="w-5 h-5 text-foreground mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-sm">Smart Defaults Applied</h4>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Intermediate difficulty • Focus on concepts & definitions • Standard AI model
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <Tabs defaultValue="basic" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="basic">Basic Settings</TabsTrigger>
-                      <TabsTrigger value="advanced">Advanced Options</TabsTrigger>
-                    </TabsList>
-                  
-                  <TabsContent value="basic" className="space-y-6 mt-6">
-                    {/* Subject Selection */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Target className="w-4 h-4" />
-                        Subject Area
-                      </label>
+        {/* Step 2: Configuration */}
+        {currentStep === 2 && (
+          <Card className="max-w-4xl mx-auto">
+            <CardContent className="p-6">
+              <Tabs value={configMode} onValueChange={(value) => setConfigMode(value as "quick" | "custom")}>
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="quick">Quick Start</TabsTrigger>
+                  <TabsTrigger value="custom">Custom Settings</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="quick" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Subject</label>
                       <Select value={subject} onValueChange={setSubject}>
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Select subject area" />
+                        <SelectTrigger>
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="general">General Knowledge</SelectItem>
-                          <SelectItem value="programming">Programming & Tech</SelectItem>
-                          <SelectItem value="science">Science & Mathematics</SelectItem>
-                          <SelectItem value="history">History & Social Studies</SelectItem>
-                          <SelectItem value="language">Language & Literature</SelectItem>
-                          <SelectItem value="business">Business & Economics</SelectItem>
-                          <SelectItem value="medicine">Medicine & Health</SelectItem>
-                          <SelectItem value="law">Law & Legal Studies</SelectItem>
+                          <SelectItem value="general">General Study</SelectItem>
+                          <SelectItem value="science">Science</SelectItem>
+                          <SelectItem value="history">History</SelectItem>
+                          <SelectItem value="language">Language</SelectItem>
+                          <SelectItem value="math">Mathematics</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Difficulty</label>
+                      <Select value={difficulty} onValueChange={(value) => setDifficulty(value as typeof difficulty)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">Beginner</SelectItem>
+                          <SelectItem value="intermediate">Intermediate</SelectItem>
+                          <SelectItem value="advanced">Advanced</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </TabsContent>
 
-                    {/* Difficulty Level */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Brain className="w-4 h-4" />
-                        Difficulty Level
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {(['beginner', 'intermediate', 'advanced'] as const).map((level) => (
-                          <Button
-                            key={level}
-                            variant={difficulty === level ? "default" : "outline"}
-                            onClick={() => setDifficulty(level)}
-                            className="h-12 flex flex-col"
-                          >
-                            <span className="font-medium capitalize">{level}</span>
-                            <span className="text-xs opacity-70">
-                              {level === 'beginner' && 'Simple & Clear'}
-                              {level === 'intermediate' && 'Balanced'}
-                              {level === 'advanced' && 'Detailed & Complex'}
-                            </span>
-                          </Button>
-                        ))}
+                <TabsContent value="custom" className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Subject</label>
+                        <Select value={subject} onValueChange={setSubject}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="general">General Study</SelectItem>
+                            <SelectItem value="science">Science</SelectItem>
+                            <SelectItem value="history">History</SelectItem>
+                            <SelectItem value="language">Language</SelectItem>
+                            <SelectItem value="math">Mathematics</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Difficulty</label>
+                        <Select value={difficulty} onValueChange={(value) => setDifficulty(value as typeof difficulty)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="beginner">Beginner</SelectItem>
+                            <SelectItem value="intermediate">Intermediate</SelectItem>
+                            <SelectItem value="advanced">Advanced</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Number of Cards</label>
+                        <Select value={flashcardCount.toString()} onValueChange={(value) => setFlashcardCount(parseInt(value))}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="5">5 cards</SelectItem>
+                            <SelectItem value="10">10 cards</SelectItem>
+                            <SelectItem value="15">15 cards</SelectItem>
+                            <SelectItem value="20">20 cards</SelectItem>
+                            <SelectItem value="30">30 cards</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
-                    {/* Number of Cards */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Sparkles className="w-4 h-4" />
-                        Number of Flashcards
-                      </label>
-                      <div className="grid grid-cols-4 gap-3">
-                        {[5, 10, 15, 20].map((count) => (
-                          <Button
-                            key={count}
-                            variant={flashcardCount === count ? "default" : "outline"}
-                            onClick={() => setFlashcardCount(count)}
-                            className="h-12"
-                          >
-                            {count}
-                          </Button>
-                        ))}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">AI Model</label>
+                        <Select value={apiProvider} onValueChange={(value) => setApiProvider(value as typeof apiProvider)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="basic">Basic (Claude)</SelectItem>
+                            <SelectItem value="advanced">Advanced (GPT-4)</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="50"
-                        value={flashcardCount}
-                        onChange={(e) => setFlashcardCount(parseInt(e.target.value) || 10)}
-                        className="h-12"
-                        placeholder="Custom amount (1-50)"
-                      />
-                    </div>
-                  </TabsContent>
 
-                  <TabsContent value="advanced" className="space-y-6 mt-6">
-                    {/* AI Model Selection */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Zap className="w-4 h-4" />
-                        AI Model Quality
-                      </label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <Button
-                          variant={apiProvider === "basic" ? "default" : "outline"}
-                          onClick={() => setApiProvider("basic")}
-                          className="h-16 flex flex-col"
-                        >
-                          <span className="font-medium">Standard</span>
-                          <span className="text-xs opacity-70">Fast & Reliable</span>
-                          <Badge variant="secondary" className="mt-1">Free</Badge>
-                        </Button>
-                        <Button
-                          variant={apiProvider === "advanced" ? "default" : "outline"}
-                          onClick={() => setApiProvider("advanced")}
-                          className="h-16 flex flex-col"
-                          disabled={!isPremium}
-                        >
-                          <span className="font-medium">Premium</span>
-                          <span className="text-xs opacity-70">Advanced AI</span>
-                          <Badge variant="default" className="mt-1">Pro Only</Badge>
-                        </Button>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Focus Areas</label>
+                        <div className="space-y-2">
+                          {Object.entries(focusAreas).map(([key, value]) => (
+                            <div key={key} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={key}
+                                checked={value}
+                                onChange={(e) => setFocusAreas(prev => ({
+                                  ...prev,
+                                  [key]: e.target.checked
+                                }))}
+                                className="rounded"
+                              />
+                              <label htmlFor={key} className="text-sm capitalize">
+                                {key}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Focus Areas */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Target className="w-4 h-4" />
-                        Focus Areas
-                      </label>
-                      <div className="grid grid-cols-2 gap-3">
-                        {Object.entries(focusAreas).map(([key, value]) => (
-                          <Button
-                            key={key}
-                            variant={value ? "default" : "outline"}
-                            onClick={() => setFocusAreas(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
-                            className="h-12"
-                          >
-                            <span className="capitalize">{key}</span>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Custom Context */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Lightbulb className="w-4 h-4" />
-                        Custom Instructions (Optional)
-                      </label>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Custom Context (Optional)</label>
                       <Textarea
-                        placeholder="Provide specific instructions for flashcard generation..."
                         value={customContext}
                         onChange={(e) => setCustomContext(e.target.value)}
-                        rows={4}
-                        className="resize-none"
+                        placeholder="Add specific instructions or context for flashcard generation..."
+                        className="min-h-[80px]"
                       />
                     </div>
 
-                    {/* Custom File Name */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-medium text-foreground">
-                        Custom File Name (Optional)
-                      </label>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Custom Filename (Optional)</label>
                       <Input
-                        placeholder="Enter a custom name for your flashcard set"
                         value={customFileName}
                         onChange={(e) => setCustomFileName(e.target.value)}
-                        className="h-12"
+                        placeholder="Enter a custom name for your flashcard set..."
                       />
                     </div>
-                  </TabsContent>
-                  </Tabs>
-                )}
+                  </div>
+                </TabsContent>
+              </Tabs>
 
-                <Separator />
+              <div className="flex justify-between mt-6">
+                <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                  Back
+                </Button>
+                <Button onClick={handleGenerate} disabled={uploadMutation.isPending}>
+                  {uploadMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Generate Flashcards
+                      <Sparkles className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setCurrentStep(1)}
-                    className="flex-1 h-12"
-                  >
-                    Back to Upload
+        {/* Step 3: Processing */}
+        {currentStep === 3 && isProcessing && (
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="p-6">
+              <div className="text-center space-y-6">
+                <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto">
+                  <Brain className="w-8 h-8 text-foreground animate-pulse" />
+                </div>
+                
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">AI Processing</h3>
+                  <p className="text-muted-foreground mb-4">{processingStage}</p>
+                  
+                  <Progress value={uploadProgress} className="w-full mb-2" />
+                  <div className="text-sm text-muted-foreground">
+                    {uploadProgress}% complete
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-accent rounded-full"></div>
+                      <span className="text-sm">Extracting content</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-muted rounded-full"></div>
+                      <span className="text-sm text-muted-foreground">Processing text</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-muted rounded-full"></div>
+                      <span className="text-sm text-muted-foreground">Generating cards</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Target className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">Quality optimization</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Lightbulb className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">Content analysis</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">Final review</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-center space-x-4">
+                  <Button variant="outline" onClick={() => setLocation('/history')}>
+                    Check History
                   </Button>
-                  <Button 
-                    onClick={handleGenerate}
-                    disabled={uploadMutation.isPending}
-                    className="flex-1 h-12 text-lg"
-                  >
-                    {uploadMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-5 h-5 mr-2" />
-                        Generate Flashcards
-                      </>
-                    )}
+                  <Button variant="outline" onClick={resetForm}>
+                    Start Over
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-          {/* Step 3: Enhanced Processing with Progress Tracking */}
-          {currentStep === 3 && (
-            <Card className="border border-border">
-              <CardContent className="py-8">
-                <div className="text-center space-y-6">
-                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
-                    <Loader2 className="w-8 h-8 text-foreground animate-spin" />
-                  </div>
+        {/* Step 4: Results */}
+        {currentStep === 4 && generatedFlashcards.length > 0 && (
+          <div className="max-w-6xl mx-auto space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-foreground mb-2">
-                      Creating Your Flashcards
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      AI is analyzing your PDF and generating smart flashcards
+                    <CardTitle className="text-xl">Flashcards Generated</CardTitle>
+                    <p className="text-muted-foreground">
+                      {generatedFlashcards.length} cards ready for study
                     </p>
                   </div>
-                  
-                  <div className="max-w-md mx-auto space-y-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">{uploadProgress}%</span>
-                    </div>
-                    <Progress value={uploadProgress} className="h-2" />
-                    
-                    {/* Processing Stage Indicator */}
-                    <div className="text-xs text-muted-foreground">
-                      {processingStage}
-                    </div>
-                    
-                    {/* Estimated Time Remaining */}
-                    {estimatedTime && (
-                      <div className="text-xs text-muted-foreground">
-                        Estimated time: ~{estimatedTime} minute{estimatedTime !== 1 ? 's' : ''}
-                      </div>
-                    )}
-                    
-                    {/* Connection Status & Error Recovery */}
-                    {jobStatusError && (
-                      <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
-                          <X className="w-4 h-4 text-destructive" />
-                          <span className="text-sm font-medium text-destructive">Connection Issue</span>
-                        </div>
-                        <p className="text-xs text-destructive/80 mb-3">
-                          Lost connection during processing. Your job is still running on our servers.
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.location.reload()}
-                            className="h-8 text-xs"
-                          >
-                            Reconnect
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setLocation('/history')}
-                            className="h-8 text-xs"
-                          >
-                            Check History
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="mt-6 p-6 bg-muted/30 rounded-xl border border-border">
-                      <div className="space-y-5">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                            <Brain className="w-5 h-5" />
-                            AI Processing Your PDF
-                          </h3>
-                          <div className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                            {Math.round(((jobStatus as any)?.progress || 0))}% Complete
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          <div className="flex items-center space-x-3 text-sm">
-                            <div className="w-2 h-2 bg-foreground rounded-full"></div>
-                            <span className="text-foreground font-medium">PDF parsed and text extracted</span>
-                            <CheckCircle className="w-4 h-4 text-foreground ml-auto" />
-                          </div>
-                          
-                          <div className="flex items-center space-x-3 text-sm">
-                            <div className="w-2 h-2 bg-foreground rounded-full"></div>
-                            <span className="text-foreground font-medium">Content analyzed and chunked intelligently</span>
-                            <CheckCircle className="w-4 h-4 text-foreground ml-auto" />
-                          </div>
-                          
-                          <div className="flex items-center space-x-3 text-sm">
-                            <div className="w-2 h-2 bg-foreground rounded-full"></div>
-                            <span className="text-foreground font-medium">Key concepts and topics identified</span>
-                            <CheckCircle className="w-4 h-4 text-foreground ml-auto" />
-                          </div>
-                          
-                          <div className="flex items-center space-x-3 text-sm">
-                            <div className={`w-2 h-2 rounded-full ${(jobStatus as any)?.status === 'processing' ? 'bg-muted-foreground animate-pulse' : 'bg-foreground'}`}></div>
-                            <span className="text-foreground font-medium">
-                              {(jobStatus as any)?.status === 'processing' 
-                                ? 'AI generating intelligent questions and answers...' 
-                                : 'AI flashcard generation complete'}
-                            </span>
-                            {(jobStatus as any)?.status === 'processing' ? (
-                              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin ml-auto" />
-                            ) : (
-                              <CheckCircle className="w-4 h-4 text-foreground ml-auto" />
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center space-x-3 text-sm">
-                            <div className={`w-2 h-2 rounded-full ${(jobStatus as any)?.status === 'completed' ? 'bg-foreground' : 'bg-muted-foreground'}`}></div>
-                            <span className="text-foreground font-medium">
-                              {(jobStatus as any)?.status === 'completed' 
-                                ? `${((jobStatus as any)?.flashcards?.length || 0)} flashcards ready for study` 
-                                : 'Finalizing your study deck...'}
-                            </span>
-                            {(jobStatus as any)?.status === 'completed' && (
-                              <Sparkles className="w-4 h-4 text-foreground ml-auto" />
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="mt-5 pt-4 border-t border-border">
-                          <div className="text-xs text-muted-foreground leading-relaxed">
-                            Our advanced AI is analyzing your content structure, identifying key learning concepts, 
-                            and crafting effective questions that enhance retention and understanding.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Fallback action buttons */}
-                    <div className="mt-6 space-y-3">
-                      <div className="flex gap-3">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setLocation('/history')}
-                          className="flex-1"
-                        >
-                          Go to History
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setIsProcessing(false);
-                            setCurrentStep(1);
-                            setCurrentJobId(null);
-                          }}
-                          className="flex-1"
-                        >
-                          Start Over
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 4: Results */}
-          {currentStep === 4 && generatedFlashcards.length > 0 && (
-            <Card className="border border-border">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-6 h-6 text-foreground" />
-                    <div>
-                      <CardTitle className="text-xl">Flashcards Ready</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {generatedFlashcards.length} cards generated
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Compact Action Buttons */}
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setLocation(`/study/${currentJobId}`)}
-                      size="sm"
-                      className="h-9"
-                    >
-                      <Play className="w-4 h-4 mr-1" />
-                      Study Now
-                    </Button>
+                  <div className="flex items-center space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`/api/export/${currentJobId}/anki`, '_blank')}
-                      className="h-9"
+                      onClick={() => setPreviewMode(previewMode === 'grid' ? 'list' : 'grid')}
                     >
-                      <Download className="w-4 h-4 mr-1" />
-                      Download
+                      {previewMode === 'grid' ? <List className="w-4 h-4" /> : <Grid3x3 className="w-4 h-4" />}
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
-                {/* Quick Actions Row */}
-                <div className="flex flex-wrap gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(`/api/export/${currentJobId}/csv`, '_blank')}
-                    className="h-8 text-xs"
-                  >
-                    CSV
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Button onClick={() => window.open(`/api/export/${currentJobId}/anki`, '_blank')}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Anki
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(`/api/export/${currentJobId}/json`, '_blank')}
-                    className="h-8 text-xs"
-                  >
-                    JSON
+                  <Button variant="outline" onClick={() => window.open(`/api/export/${currentJobId}/csv`, '_blank')}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download CSV
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setLocation(`/edit/${currentJobId}`)}
-                    className="h-8 text-xs"
-                  >
-                    <Edit className="w-3 h-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setLocation('/history')}
-                    className="h-8 text-xs"
-                  >
-                    <Eye className="w-3 h-3 mr-1" />
-                    History
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={resetForm}
-                    className="h-8 text-xs"
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    New Set
-                  </Button>
-                </div>
-
-                {/* Compact Flashcard Preview */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">Preview</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {generatedFlashcards.length} cards
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto">
-                    {generatedFlashcards.slice(0, 4).map((card, index) => (
-                      <div key={index} className="bg-muted/30 border border-border rounded-lg p-3 hover:border-accent transition-colors group">
-                        <div className="flex items-start justify-between mb-2">
-                          <span className="text-xs text-muted-foreground font-medium">#{index + 1}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              navigator.clipboard.writeText(`Q: ${card.front}\nA: ${card.back}`);
-                              toast({ title: "Copied to clipboard" });
-                            }}
-                            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Copy className="w-3 h-3" />
-                          </Button>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="text-xs font-medium text-foreground line-clamp-2">
-                            {card.front}
-                          </div>
-                          <div className="text-xs text-muted-foreground line-clamp-1 border-t border-border pt-1">
-                            {card.back}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {generatedFlashcards.length > 4 && (
-                    <div className="text-center">
-                      <span className="text-xs text-muted-foreground">
-                        +{generatedFlashcards.length - 4} more cards available
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {generatedFlashcards.length > 6 && (
-                  <p className="text-center text-muted-foreground">
-                    And {generatedFlashcards.length - 6} more flashcards...
-                  </p>
-                )}
-
-                {/* Main Action Buttons */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
-                  <Button 
-                    onClick={() => setLocation(`/study/${currentJobId}`)}
-                    size="lg"
-                    className="h-14 text-lg font-semibold"
-                  >
-                    <Play className="w-5 h-5 mr-2" />
+                  <Button variant="outline" onClick={() => setLocation(`/study/${currentJobId}`)}>
+                    <Play className="w-4 h-4 mr-2" />
                     Start Studying
                   </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => setLocation('/history')}
-                    size="lg"
-                    className="h-14"
-                  >
-                    <Eye className="w-5 h-5 mr-2" />
-                    View All Sets
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={resetForm}
-                    size="lg"
-                    className="h-14"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Create New Set
-                  </Button>
                 </div>
 
-                {/* Additional Options */}
-                <div className="flex justify-center pt-4 border-t border-border">
-                  <p className="text-sm text-muted-foreground">
-                    Need help? Visit our{" "}
-                    <Button variant="link" className="p-0 h-auto text-sm text-muted-foreground hover:text-foreground">
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      Study Guide
-                    </Button>
-                  </p>
+                <div className={previewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4'}>
+                  {generatedFlashcards.slice(0, 4).map((card, index) => (
+                    <Card key={index} className="bg-card border-border hover:border-accent transition-colors">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Badge variant="secondary">Card {index + 1}</Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => navigator.clipboard.writeText(`Q: ${card.front}\nA: ${card.back}`)}
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-foreground mb-2">Question:</h4>
+                            <p className="text-sm text-muted-foreground">{card.front}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-foreground mb-2">Answer:</h4>
+                            <p className="text-sm text-muted-foreground">{card.back}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {generatedFlashcards.length > 4 && (
+                  <div className="text-center mt-4">
+                    <p className="text-muted-foreground">
+                      And {generatedFlashcards.length - 4} more cards...
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex justify-center mt-6">
+                  <Button onClick={resetForm}>
+                    Create Another Set
+                    <Plus className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
+          </div>
+        )}
       </main>
 
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
