@@ -101,6 +101,12 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
+- June 21, 2025: **CONSOLE ERROR FIX - START STUDY BUTTON** - Fixed 404 API endpoint error when clicking start study button:
+  * Resolved "GET /api/jobs 404 - API endpoint not found" console error caused by missing job ID parameter in React Query
+  * Updated study page React Query to properly call `/api/jobs/${jobId}` with authentication instead of `/api/jobs`
+  * Added explicit queryFn with apiRequest to ensure proper URL construction and token handling
+  * Start study button navigation now works correctly from dashboard recent activity section
+  * Study page properly fetches job data using job ID from URL parameters without authentication errors
 - June 21, 2025: **INDIVIDUAL CARD PROGRESS TRACKING IMPLEMENTED** - Completed comprehensive study system with normalized flashcard database and session management:
   * Fixed authentication issues on study page using proper React Query data fetching with apiRequest
   * Implemented individual flashcard progress tracking using flashcard IDs from normalized table instead of card indices

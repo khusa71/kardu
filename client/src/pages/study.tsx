@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { Brain, Trophy, Clock, TrendingUp, Home } from "lucide-react";
 
 interface StudySession {
@@ -30,6 +31,7 @@ export default function Study() {
   // Fetch job data for title and subject with authentication
   const { data: jobData, isLoading: jobLoading } = useQuery({
     queryKey: ['/api/jobs', jobId],
+    queryFn: () => apiRequest('GET', `/api/jobs/${jobId}`),
     enabled: !!jobId
   });
 
