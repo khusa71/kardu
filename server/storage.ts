@@ -16,7 +16,7 @@ import {
   type InsertStudySession,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User profile operations for Supabase Auth
@@ -336,7 +336,8 @@ export class DatabaseStorage implements IStorage {
       .from(studyProgress)
       .where(and(
         eq(studyProgress.userId, progressData.userId),
-        eq(studyProgress.flashcardId, progressData.flashcardId)
+        eq(studyProgress.jobId, progressData.jobId),
+        eq(studyProgress.cardIndex, progressData.cardIndex)
       ))
       .limit(1);
 
@@ -379,7 +380,8 @@ export class DatabaseStorage implements IStorage {
         .from(studyProgress)
         .where(and(
           eq(studyProgress.userId, progress.userId),
-          eq(studyProgress.flashcardId, progress.flashcardId)
+          eq(studyProgress.jobId, progress.jobId),
+          eq(studyProgress.cardIndex, progress.cardIndex)
         ))
         .limit(1);
 

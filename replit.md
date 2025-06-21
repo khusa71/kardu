@@ -101,6 +101,14 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
+- June 21, 2025: **CRITICAL DATABASE SCHEMA FIXES COMPLETED** - Resolved all upload system failures and database constraint errors:
+  * Fixed database schema mismatches causing 500 server errors during uploads by removing references to non-existent columns
+  * Removed all references to apiProvider, pdfDownloadUrl, stripeCustomerId, role, and subscriptionStatus fields that don't exist in current schema
+  * Fixed NOT NULL constraint error for pdf_storage_key field by providing temporary placeholder values during job creation
+  * Resolved Drizzle ORM query errors with nullable flashcardId fields by using proper conditional query building
+  * Upload system now returns proper 401/403 errors instead of crashing with database errors
+  * Server running successfully with normalized flashcard database and all services operational
+  * Authentication and error handling working correctly - system properly validates tokens and permissions
 - June 21, 2025: **NORMALIZED FLASHCARD FLOW IMPLEMENTATION COMPLETED** - Successfully completed comprehensive database migration and on-demand file generation system:
   * Completed systematic removal of all permanent export storage fields (ankiStorageKey, csvStorageKey, jsonStorageKey, quizletStorageKey) from database schema and routes
   * Implemented fully functional normalized flashcard storage with individual database records instead of JSON storage

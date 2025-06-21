@@ -925,6 +925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             currentTask: validation.pagesWillProcess < validation.pageInfo.pageCount 
               ? `Processing first ${validation.pagesWillProcess} of ${validation.pageInfo.pageCount} pages...`
               : "Starting processing...",
+            pdfStorageKey: `temp_${Date.now()}_${file.originalname}`, // Temporary key, will be updated when PDF is uploaded
           };
 
           // Create job record with error handling
