@@ -13,6 +13,7 @@ import { FlashcardEditor } from "@/components/flashcard-editor";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { tomorrow } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -48,6 +49,7 @@ interface StudySession {
 export default function StudyMain() {
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   
   // State management
   const [selectedDeck, setSelectedDeck] = useState<FlashcardDeck | null>(null);
@@ -317,7 +319,7 @@ export default function StudyMain() {
                 }
               </p>
               {decks.length === 0 && (
-                <Button onClick={() => window.location.href = '/upload'}>
+                <Button onClick={() => setLocation('/upload')}>
                   Upload PDF
                 </Button>
               )}

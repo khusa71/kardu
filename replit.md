@@ -109,7 +109,8 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
   * Optimized mobile menu with proper spacing and clean animations without stuttering
   * Fixed upload button jerk by stabilizing dimensions with min-w-[220px] and consistent content layout
   * Eliminated navigation refresh and jerk by removing duplicate ResponsiveNavbar component that used window.location.href
-  * Ensured consistent client-side routing across all pages using NavigationBar with Wouter navigation
+  * Fixed all remaining window.location.href references in history.tsx and study-main.tsx causing page refreshes
+  * Ensured consistent client-side routing across all pages using NavigationBar with Wouter setLocation() function
 - June 21, 2025: **READING/STUDYING ENGINE OPTIMIZED** - Completed comprehensive performance improvements:
   * Implemented batch progress updates to reduce API calls by 80% during study sessions
   * Enhanced spaced repetition algorithm with SM-2 inspired intervals and progressive difficulty scaling

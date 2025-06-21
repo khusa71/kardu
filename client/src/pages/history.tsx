@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import { 
   FileText, 
   Download, 
@@ -54,6 +55,7 @@ export default function History() {
   const { user, loading: authLoading } = useSupabaseAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [viewMode, setViewMode] = useState<'history' | 'view' | 'study'>('history');
   const [selectedJob, setSelectedJob] = useState<HistoryJob | null>(null);
   const [currentFlashcards, setCurrentFlashcards] = useState<FlashcardPair[]>([]);
@@ -355,7 +357,7 @@ export default function History() {
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Button 
-                  onClick={() => window.location.href = `/study/${selectedJob?.id}`} 
+                  onClick={() => setLocation(`/study/${selectedJob?.id}`)} 
                   className="flex items-center flex-1 sm:flex-none" 
                   size="sm"
                 >
@@ -469,7 +471,7 @@ export default function History() {
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               Upload your first PDF to start generating flashcards
             </p>
-            <Button onClick={() => window.location.href = "/"}>
+            <Button onClick={() => setLocation("/upload")}>
               Upload PDF
             </Button>
           </div>
