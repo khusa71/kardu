@@ -683,6 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         provider: isOAuthUser ? 'google' : 'email',
         isEmailVerified,
         isPremium: updatedUser?.isPremium || false,
+        role: updatedUser?.role || 'user',
         monthlyUploads: currentUploads,
         monthlyLimit,
         uploadsRemaining,
