@@ -3,7 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth-modal";
 
-import { Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, Menu, X, Upload, Bot, Rocket, ChevronRight, Feather, Clock, RotateCcw, TrendingUp } from "lucide-react";
+import { 
+  Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, 
+  Menu, X, Upload, Bot, Rocket, ChevronRight, Feather, Clock, RotateCcw, 
+  TrendingUp, Sparkles, Users, Target, Timer, Lightbulb, Globe, Award
+} from "lucide-react";
 
 export default function Landing() {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -261,41 +265,74 @@ export default function Landing() {
       </div>
 
       {/* Hero Section */}
-      <main className="bg-background">
-        <section className="container-content py-16 md:py-24 lg:py-32 text-center">
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <h1 className="text-hero text-foreground">
-                Turn Any PDF Into AI-Powered Flashcards —
-                <span className="block text-primary"> in Seconds</span>
+      <main className="bg-background relative overflow-hidden">
+        {/* Background Grid Pattern */}
+        <div className="absolute inset-0 bg-grid-small-black/[0.2] bg-grid-small-white/[0.2] dark:bg-grid-small-white/[0.2]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/90" />
+        
+        <section className="relative container-content py-20 md:py-32 lg:py-40">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-sm font-medium text-primary">
+              <Sparkles className="w-4 h-4" />
+              Beta Access Available
+            </div>
+            
+            {/* Main Headline */}
+            <div className="space-y-6">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground">
+                PDF to{" "}
+                <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
+                  Smart Flashcards
+                </span>{" "}
+                in Seconds
               </h1>
-              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
-                We're in beta — but already helping early users study smarter and save time.
+              <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+                AI transforms your study materials into scientifically optimized flashcards. 
+                <span className="text-foreground font-medium"> Study smarter, not harder.</span>
               </p>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
               <Button 
                 onClick={() => setShowAuthModal(true)}
                 size="lg"
-                className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg font-semibold rounded-xl min-w-[200px]"
+                className="group bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-4 text-lg font-semibold rounded-2xl min-w-[220px] shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                Try Free Beta
+                Start Free Trial
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button 
                 variant="outline"
                 size="lg"
-                className="px-8 py-3 text-lg font-medium rounded-xl min-w-[180px] border-border hover:bg-muted"
-                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                className="px-8 py-4 text-lg font-medium rounded-2xl min-w-[200px] border-border hover:bg-muted/50 transition-all duration-300"
+                onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                See How It Works
+                Watch Demo
               </Button>
             </div>
 
-            <div className="pt-8">
-              <p className="text-sm text-muted-foreground">
-                3 free PDFs every month — no credit card required
-              </p>
+            {/* Social Proof */}
+            <div className="pt-12 space-y-4">
+              <div className="flex justify-center items-center gap-2 text-sm text-muted-foreground">
+                <Users className="w-4 h-4" />
+                Join 500+ students already using StudyCards AI
+              </div>
+              <div className="flex justify-center items-center gap-6 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  No credit card required
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  3 free PDFs/month
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  Cancel anytime
+                </div>
+              </div>
             </div>
           </div>
         </section>
