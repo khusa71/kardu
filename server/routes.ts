@@ -938,6 +938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // CRITICAL: Increment quota BEFORE creating jobs to prevent race conditions
+      // Only for new uploads, not reprocessing existing PDFs
       await incrementUploadCount(userId, req.totalPagesWillProcess);
 
       // Process files using page-based validation results with transaction safety
@@ -1110,7 +1111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reprocess historical PDF with new settings
+  // Reprocess historical PDF with new settings (doesn't consume quota)
   app.post("/api/reprocess", verifySupabaseToken as any, requireApiKeys, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -1161,6 +1162,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Check quota limits for reprocessing (reprocessing counts against quota)
+      const pageCount: number = originalJob.pageCount || 1; // Default to 1 if null
+      const uploadCheck = await canUserUpload(userId, pageCount);
+      if (!uploadCheck.canUpload) {
+        return res.status(429).json({
+          message: uploadCheck.reason,
+          quotaInfo: uploadCheck.quotaInfo,
+          limits: uploadCheck.limits,
+          upgradeAvailable: uploadCheck.upgradeAvailable,
+          resetDate: uploadCheck.resetDate,
+          daysUntilReset: uploadCheck.daysUntilReset,
+          errorType: 'QUOTA_EXCEEDED'
+        });
+      }
+
       // Create new job for reprocessing
       const newJobData = {
         userId,
@@ -1177,11 +1193,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         progress: 0,
         currentTask: 'Starting reprocessing...',
         pdfStorageKey: originalJob.pdfStorageKey, // Reuse the same PDF file
+        regeneratedFromJobId: originalJob.id, // Mark as regenerated from original job
         createdAt: new Date(),
         updatedAt: new Date()
       };
 
       const newJob = await storage.createFlashcardJob(newJobData);
+
+      // Increment quota for reprocessing job
+      await incrementUploadCount(userId, pageCount);
 
       // Start processing in background
       processFlashcardJob(newJob.id);
@@ -1341,7 +1361,7 @@ async function processFlashcardJob(jobId: number) {
       // Extract text using Python processor with proper resource management
       const result = await new Promise<{ text: string }>((resolve, reject) => {
         const pythonProcess = spawn('python', [
-          path.join(__dirname, 'pdf-processor.py'),
+          path.join(process.cwd(), 'server', 'pdf-processor.py'),
           tempFilePath,
           (job.pagesProcessed || 20).toString()
         ]);

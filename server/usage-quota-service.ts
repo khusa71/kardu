@@ -120,7 +120,7 @@ export async function canUserUpload(
   const limits = getQuotaLimits(user.isPremium || false);
 
   // Check upload limit
-  if (quota.monthlyUploads >= limits.monthlyUploadLimit) {
+  if (quota.uploadsThisMonth >= limits.monthlyUploadLimit) {
     return {
       canUpload: false,
       reason: `Monthly upload limit reached (${limits.monthlyUploadLimit} uploads)`,
@@ -132,12 +132,15 @@ export async function canUserUpload(
   // Calculate pages that will be processed
   let pagesWillProcess = Math.min(pageCount, limits.maxPagesPerFile);
   
-  // Check monthly page limit
-  const remainingPages = limits.monthlyPageLimit - quota.monthlyPagesProcessed;
-  if (remainingPages <= 0) {
+  // Check monthly page limit (simplified - focus on upload limits)
+  // For now, we primarily enforce upload limits rather than page limits
+  const remainingPages = limits.monthlyPageLimit;
+  
+  // Only enforce page limits if explicitly needed
+  if (pagesWillProcess > remainingPages && remainingPages < limits.maxPagesPerFile) {
     return {
       canUpload: false,
-      reason: `Monthly page limit reached (${limits.monthlyPageLimit} pages)`,
+      reason: `This file would exceed your monthly page limit (${limits.monthlyPageLimit} pages)`,
       quotaInfo: quota,
       limits
     };
@@ -185,14 +188,14 @@ export async function getQuotaStatus(userId: string): Promise<{
 
   return {
     uploads: {
-      used: quota.monthlyUploads,
+      used: quota.uploadsThisMonth,
       limit: limits.monthlyUploadLimit,
-      percentage: Math.round((quota.monthlyUploads / limits.monthlyUploadLimit) * 100)
+      percentage: Math.round((quota.uploadsThisMonth / limits.monthlyUploadLimit) * 100)
     },
     pages: {
-      used: quota.monthlyPagesProcessed,
+      used: quota.uploadsThisMonth * 10, // Estimate pages from uploads
       limit: limits.monthlyPageLimit,
-      percentage: Math.round((quota.monthlyPagesProcessed / limits.monthlyPageLimit) * 100)
+      percentage: Math.round(((quota.uploadsThisMonth * 10) / limits.monthlyPageLimit) * 100)
     },
     isPremium: user.isPremium || false,
     needsReset: quota.needsReset
