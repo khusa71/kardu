@@ -191,7 +191,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="relative bg-background overflow-hidden">
         {/* Subtle Grid Background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808003_1px,transparent_1px),linear-gradient(to_bottom,#80808003_1px,transparent_1px)] bg-[size:24px_24px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:20px_20px]" />
         <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/20" />
         
         {/* Enhanced Floating Animation */}
@@ -227,13 +227,13 @@ export default function Landing() {
             <div className="space-y-6">
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[0.95]">
                 Turn any PDF into{" "}
-                <span className="relative">
-                  <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
+                <span className="relative inline-block">
+                  <span className="relative z-10 bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
                     smart flashcards
                   </span>
                   {/* Yellow highlighter animation */}
-                  <div className="absolute inset-0 bg-yellow-200/40 animate-highlight-sweep rounded-sm -z-10" />
-                  <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-foreground/30 via-foreground/50 to-foreground/30 rounded-full" />
+                  <div className="absolute inset-0 animate-highlight-sweep rounded-lg z-0" />
+                  <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-foreground/30 via-foreground/50 to-foreground/30 rounded-full z-10" />
                 </span>{" "}
                 — in seconds.
               </h1>

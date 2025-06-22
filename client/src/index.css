@@ -177,21 +177,28 @@
 
 /* Yellow highlighter sweep animation */
 .animate-highlight-sweep {
-  animation: highlightSweep 2s ease-out 1.5s forwards;
+  animation: highlightSweep 3s ease-in-out 1.5s forwards;
+  background: linear-gradient(90deg, transparent 0%, #eab308 20%, #fbbf24 50%, #eab308 80%, transparent 100%);
+  background-size: 300% 100%;
+  background-position: -100% 0;
   opacity: 0;
+  mix-blend-mode: multiply;
 }
 
 @keyframes highlightSweep {
   0% {
     opacity: 0;
-    transform: translateX(-100%);
+    background-position: -100% 0;
   }
-  50% {
+  20% {
     opacity: 0.6;
-    transform: translateX(0%);
+  }
+  70% {
+    opacity: 0.6;
+    background-position: 100% 0;
   }
   100% {
     opacity: 0.3;
-    transform: translateX(0%);
+    background-position: 100% 0;
   }
 }
