@@ -373,51 +373,159 @@ export default function Landing() {
       </section>
 
       {/* Who Is It For Section */}
-      <section className="py-20 md:py-28 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-              Perfect for Every Learner
+      <section className="py-20 md:py-28 bg-gradient-to-b from-background to-muted/20 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(0,0,0,.05)_25%,rgba(0,0,0,.05)_50%,transparent_50%,transparent_75%,rgba(0,0,0,.05)_75%)] bg-[size:20px_20px]" />
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight">
+              Perfect for{" "}
+              <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
+                Every Learner
+              </span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Whether you're cramming for exams or pursuing lifelong learning
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              From students to professionals — discover how StudyCards AI adapts to your unique learning journey
             </p>
           </div>
 
-          {/* Persona Tabs */}
-          <div className="flex flex-wrap justify-center gap-3 mb-12">
+          {/* Enhanced Persona Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             {personas.map((persona, index) => (
               <button
                 key={index}
                 onClick={() => setActivePersona(index)}
-                className={`flex items-center gap-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                className={`group relative p-6 rounded-2xl border-2 transition-all duration-500 hover:scale-105 ${
                   activePersona === index
-                    ? 'bg-foreground text-background shadow-lg scale-105'
-                    : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                    ? 'bg-gradient-to-br from-foreground to-foreground/90 text-background border-foreground shadow-2xl scale-105'
+                    : 'bg-card/80 backdrop-blur-sm border-border hover:border-foreground/30 hover:shadow-lg'
                 }`}
               >
-                <persona.icon className="w-5 h-5" />
-                {persona.title}
+                {/* Animated background effect */}
+                <div className={`absolute inset-0 rounded-2xl transition-opacity duration-500 ${
+                  activePersona === index 
+                    ? 'bg-gradient-to-br from-foreground/10 to-foreground/5 opacity-100' 
+                    : 'opacity-0'
+                }`} />
+                
+                <div className="relative text-center">
+                  {/* Icon */}
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                    activePersona === index
+                      ? 'bg-background/20 text-background'
+                      : 'bg-gradient-to-br from-foreground/10 to-foreground/5 text-foreground group-hover:bg-foreground/10'
+                  }`}>
+                    <persona.icon className="w-8 h-8" />
+                  </div>
+                  
+                  {/* Title */}
+                  <h3 className={`text-lg font-semibold mb-2 transition-colors duration-300 ${
+                    activePersona === index ? 'text-background' : 'text-foreground'
+                  }`}>
+                    {persona.title}
+                  </h3>
+                  
+                  {/* Indicator */}
+                  <div className={`w-8 h-1 mx-auto rounded-full transition-all duration-500 ${
+                    activePersona === index 
+                      ? 'bg-background/60' 
+                      : 'bg-foreground/20 group-hover:bg-foreground/40'
+                  }`} />
+                </div>
               </button>
             ))}
           </div>
 
-          {/* Active Persona Content */}
-          <div className="max-w-3xl mx-auto text-center">
+          {/* Enhanced Active Persona Content */}
+          <div className="max-w-5xl mx-auto">
             <div 
               key={activePersona}
-              className="bg-card border border-border rounded-2xl p-12 animate-fade-in shadow-sm"
+              className="relative bg-gradient-to-br from-card via-card to-card/90 border border-border rounded-3xl p-12 md:p-16 shadow-xl animate-fade-in overflow-hidden"
             >
-              <div className="w-20 h-20 bg-gradient-to-br from-foreground to-foreground/80 text-background rounded-2xl flex items-center justify-center mx-auto mb-8">
-                {React.createElement(personas[activePersona].icon, { className: "w-10 h-10" })}
+              {/* Background decoration */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-foreground/5 to-transparent rounded-full transform translate-x-32 -translate-y-32" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-foreground/5 to-transparent rounded-full transform -translate-x-24 translate-y-24" />
+              
+              <div className="relative">
+                <div className="grid lg:grid-cols-2 gap-12 items-center">
+                  {/* Content */}
+                  <div className="space-y-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-20 bg-gradient-to-br from-foreground to-foreground/80 text-background rounded-2xl flex items-center justify-center shadow-lg">
+                        {React.createElement(personas[activePersona].icon, { className: "w-10 h-10" })}
+                      </div>
+                      <div>
+                        <h3 className="text-3xl md:text-4xl font-bold text-foreground">
+                          {personas[activePersona].title}
+                        </h3>
+                        <div className="w-16 h-1 bg-gradient-to-r from-foreground to-foreground/60 rounded-full mt-2" />
+                      </div>
+                    </div>
+                    
+                    <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed">
+                      {personas[activePersona].description}
+                    </p>
+                    
+                    {/* Feature highlights for each persona */}
+                    <div className="space-y-3">
+                      {[
+                        activePersona === 0 ? ["Turn textbooks into flashcards", "Track exam progress", "Optimize study time"] :
+                        activePersona === 1 ? ["Target weak areas", "Practice under pressure", "Build confidence"] :
+                        activePersona === 2 ? ["Convert training materials", "Skill development tracking", "Flexible learning"] :
+                        ["Continuous learning", "Knowledge retention", "Personal growth"]
+                      ][0].map((feature, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          <span className="text-foreground font-medium">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Visual element */}
+                  <div className="relative lg:block hidden">
+                    <div className="relative w-full h-80 bg-gradient-to-br from-muted/50 to-muted/20 rounded-2xl overflow-hidden">
+                      {/* Simulated interface mockup */}
+                      <div className="absolute inset-4 bg-background/60 backdrop-blur-sm rounded-xl border border-border p-6">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="w-32 h-4 bg-foreground/20 rounded" />
+                            <div className="w-16 h-4 bg-green-500/30 rounded" />
+                          </div>
+                          <div className="space-y-2">
+                            <div className="w-full h-3 bg-foreground/10 rounded" />
+                            <div className="w-4/5 h-3 bg-foreground/10 rounded" />
+                            <div className="w-3/4 h-3 bg-foreground/10 rounded" />
+                          </div>
+                          <div className="flex gap-2 mt-6">
+                            <div className="flex-1 h-8 bg-foreground/5 rounded border-2 border-foreground/10" />
+                            <div className="w-16 h-8 bg-gradient-to-r from-foreground to-foreground/80 rounded" />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Floating elements */}
+                      <div className="absolute top-8 right-8 w-12 h-12 bg-foreground/10 rounded-full animate-pulse" />
+                      <div className="absolute bottom-12 left-8 w-8 h-8 bg-foreground/5 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-2xl font-semibold text-foreground mb-6">
-                As a {personas[activePersona].title}
-              </h3>
-              <p className="text-xl text-muted-foreground leading-relaxed">
-                {personas[activePersona].description}
-              </p>
             </div>
+          </div>
+          
+          {/* Bottom CTA */}
+          <div className="text-center mt-16">
+            <Button
+              onClick={() => setShowAuthModal(true)}
+              className="group bg-gradient-to-r from-foreground to-foreground/90 text-background hover:from-foreground/90 hover:to-foreground/80 px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              Start Your Learning Journey
+              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+            </Button>
           </div>
         </div>
       </section>
