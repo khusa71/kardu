@@ -1,100 +1,216 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth-modal";
 
 import { 
-  Brain, Download, Shield, CheckCircle, Star, ArrowRight, 
-  Menu, X, Upload, Bot, Feather, Clock, 
-  TrendingUp, Sparkles, Users, Zap, FileText, Play,
-  BarChart3, Activity, Lightbulb, Target
+  Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, 
+  Menu, X, Upload, Bot, Rocket, ChevronRight, Feather, Clock, RotateCcw, 
+  TrendingUp, Sparkles, Users, Target, Timer, Lightbulb, Globe, Award
 } from "lucide-react";
 
 export default function Landing() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [demoStep, setDemoStep] = useState(0);
-  const [activeChartDemo, setActiveChartDemo] = useState('retention');
-  const [animatedRetention, setAnimatedRetention] = useState(0);
-  const [animatedEfficiency, setAnimatedEfficiency] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showAllSteps, setShowAllSteps] = useState(false);
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
+  const [spacedRepetitionStep, setSpacedRepetitionStep] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
-  const demoSteps = [
-    { text: "Uploading PDF...", progress: 25 },
-    { text: "AI analyzing content...", progress: 60 },
-    { text: "Generating flashcards...", progress: 90 },
-    { text: "Ready to study!", progress: 100 }
+  const steps = [
+    {
+      number: "1",
+      icon: Upload,
+      title: "Upload a PDF",
+      description: "Simply drag and drop your study material, textbook, or notes in PDF format"
+    },
+    {
+      number: "2", 
+      icon: Bot,
+      title: "Generate Smart Flashcards",
+      description: "Our AI analyzes your content and creates targeted flashcards automatically"
+    },
+    {
+      number: "3",
+      icon: Rocket,
+      title: "Study or Export",
+      description: "Study directly in the app or export to Anki, Quizlet, CSV and more"
+    }
   ];
 
-  const spacedRepetitionData = [
-    { day: 0, interval: "Today", retention: 100, forgetting: 0 },
-    { day: 1, interval: "Day 1", retention: 85, forgetting: 15 },
-    { day: 3, interval: "Day 3", retention: 75, forgetting: 25 },
-    { day: 7, interval: "Week 1", retention: 90, forgetting: 10 },
-    { day: 14, interval: "Week 2", retention: 85, forgetting: 15 },
-    { day: 30, interval: "Month 1", retention: 95, forgetting: 5 }
+  const features = [
+    {
+      icon: Brain,
+      title: "AI-powered flashcard generation from your real content",
+      description: "Advanced AI analyzes your PDFs and creates high-quality flashcards tailored to your content and learning style"
+    },
+    {
+      icon: Download,
+      title: "Export to Anki, CSV, Quizlet & more",
+      description: "Export to Anki, CSV, JSON, or Quizlet format. Compatible with all major study platforms and tools"
+    },
+    {
+      icon: Shield,
+      title: "Private & secure — no files stored permanently",
+      description: "Your documents are processed securely with enterprise-grade encryption and never stored permanently"
+    }
   ];
 
-  const aiProcessingSteps = [
-    { step: "OCR Scan", time: "0.5s", accuracy: 98 },
-    { step: "Content Analysis", time: "2.1s", accuracy: 94 },
-    { step: "Key Extraction", time: "1.3s", accuracy: 96 },
-    { step: "Question Generation", time: "3.2s", accuracy: 92 },
-    { step: "Quality Check", time: "0.8s", accuracy: 99 }
+  const spacedRepetitionSteps = [
+    {
+      day: "Today",
+      interval: "New card",
+      description: "First time seeing this card",
+      color: "bg-blue-500",
+      position: 10
+    },
+    {
+      day: "Day 1",
+      interval: "1 day",
+      description: "Review after 1 day",
+      color: "bg-green-500",
+      position: 25
+    },
+    {
+      day: "Day 4",
+      interval: "3 days",
+      description: "Review after 3 days",
+      color: "bg-yellow-500",
+      position: 40
+    },
+    {
+      day: "Day 11",
+      interval: "1 week",
+      description: "Review after 1 week",
+      color: "bg-orange-500",
+      position: 55
+    },
+    {
+      day: "Day 25",
+      interval: "2 weeks",
+      description: "Review after 2 weeks",
+      color: "bg-red-500",
+      position: 70
+    },
+    {
+      day: "Day 55",
+      interval: "1 month",
+      description: "Review after 1 month",
+      color: "bg-purple-500",
+      position: 85
+    }
   ];
 
+  const handleStepSpin = () => {
+    setCurrentStep((prev) => (prev + 1) % steps.length);
+  };
+
+  const handleSpacedRepetitionAnimation = () => {
+    if (isAnimating) return;
+    
+    setIsAnimating(true);
+    setSpacedRepetitionStep(0);
+    
+    const animateStep = (step: number) => {
+      if (step < spacedRepetitionSteps.length) {
+        setTimeout(() => {
+          setSpacedRepetitionStep(step);
+          animateStep(step + 1);
+        }, 800);
+      } else {
+        setTimeout(() => {
+          setIsAnimating(false);
+          setSpacedRepetitionStep(0);
+        }, 1500);
+      }
+    };
+    
+    animateStep(0);
+  };
+
+  // Auto-play spaced repetition animation
   useEffect(() => {
     const interval = setInterval(() => {
-      setDemoStep((prev) => (prev + 1) % demoSteps.length);
-    }, 2500);
+      if (!isAnimating) {
+        handleSpacedRepetitionAnimation();
+      }
+    }, 8000); // Start new cycle every 8 seconds
+
     return () => clearInterval(interval);
-  }, []);
+  }, [isAnimating]);
 
-  // Animate chart values
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimatedRetention(200);
-      setAnimatedEfficiency(95);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const retentionChartHeight = 120;
-  const pathPoints = spacedRepetitionData.map((point, index) => {
-    const x = (index / (spacedRepetitionData.length - 1)) * 280;
-    const y = retentionChartHeight - (point.retention / 100) * retentionChartHeight;
-    return `${x},${y}`;
-  }).join(' ');
+  // Custom Owl Icon Component
+  const OwlIcon = ({ className }: { className?: string }) => (
+    <svg 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      className={className}
+    >
+      {/* Owl body */}
+      <ellipse cx="12" cy="16" rx="6" ry="7" />
+      {/* Owl eyes */}
+      <circle cx="9" cy="11" r="2" />
+      <circle cx="15" cy="11" r="2" />
+      {/* Eye pupils */}
+      <circle cx="9" cy="11" r="0.5" fill="currentColor" />
+      <circle cx="15" cy="11" r="0.5" fill="currentColor" />
+      {/* Beak */}
+      <path d="M12 13 L11 15 L13 15 Z" fill="currentColor" />
+      {/* Ear tufts */}
+      <path d="M7 7 L8 9 L9 7" />
+      <path d="M15 7 L16 9 L17 7" />
+    </svg>
+  );
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background dark:bg-background">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <header className="sticky top-0 z-50 bg-background/95 dark:bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+        <div className="container-section py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Feather className="w-5 h-5 text-white" />
+            {/* Logo */}
+            <button 
+              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              <div className="bg-primary text-primary-foreground rounded-xl p-2.5">
+                <Feather className="w-6 h-6" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">StudyCards AI</span>
-            </div>
+              <span className="text-xl font-bold text-foreground">Kardu.io</span>
+            </button>
 
+            {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
               <nav className="flex items-center space-x-6">
-                <Button variant="ghost" className="text-slate-600 hover:text-slate-900 font-medium">
+                <Button 
+                  variant="ghost" 
+                  className="text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                  onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                >
                   Features
                 </Button>
-                <Button variant="ghost" className="text-slate-600 hover:text-slate-900 font-medium">
+                <Button 
+                  variant="ghost" 
+                  className="text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                  onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+                >
                   Pricing
                 </Button>
               </nav>
               <Button 
                 onClick={() => setShowAuthModal(true)} 
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 px-6 py-2.5 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 font-medium rounded-xl"
               >
                 Get Started
               </Button>
             </div>
 
+            {/* Mobile Menu Button */}
             <Button 
               variant="ghost" 
               size="sm"
@@ -105,14 +221,33 @@ export default function Landing() {
             </Button>
           </div>
 
+          {/* Mobile Menu */}
           {mobileMenuOpen && (
-            <div className="md:hidden mt-4 pb-4 border-t border-slate-200 pt-4">
-              <div className="flex flex-col space-y-3">
-                <Button variant="ghost" className="justify-start text-slate-600">Features</Button>
-                <Button variant="ghost" className="justify-start text-slate-600">Pricing</Button>
+            <div className="md:hidden mt-4 pb-6 border-t border-border pt-6">
+              <div className="flex flex-col space-y-4">
+                <Button 
+                  variant="ghost" 
+                  className="justify-start text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                  onClick={() => {
+                    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Features
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="justify-start text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                  onClick={() => {
+                    document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Pricing
+                </Button>
                 <Button 
                   onClick={() => setShowAuthModal(true)} 
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white justify-center mt-3"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 justify-center font-medium rounded-xl mt-4"
                 >
                   Get Started
                 </Button>
@@ -122,360 +257,747 @@ export default function Landing() {
         </div>
       </header>
 
+      {/* Beta Badge */}
+      <div className="bg-primary/10 border-primary/20 border-b text-center py-3">
+        <p className="text-sm text-primary font-medium">
+          🚀 In Beta – Help shape the future of learning with AI flashcards
+        </p>
+      </div>
+
       {/* Hero Section */}
-      <section className="relative py-20 md:py-32 overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50"></div>
-        <div className="absolute top-20 right-20 w-72 h-72 bg-gradient-to-br from-blue-200/30 to-purple-200/30 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-br from-purple-200/20 to-pink-200/20 rounded-full blur-3xl"></div>
+      <main className="bg-background relative overflow-hidden">
+        {/* Background Grid Pattern */}
+        <div className="absolute inset-0 bg-grid-small-black/[0.2] bg-grid-small-white/[0.2] dark:bg-grid-small-white/[0.2]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/90" />
         
-        <div className="relative max-w-6xl mx-auto px-6 text-center">
-          <div className="space-y-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm border border-blue-200 rounded-full text-sm font-medium text-blue-700 shadow-sm">
+        <section className="relative container-content py-20 md:py-32 lg:py-40">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-sm font-medium text-primary">
               <Sparkles className="w-4 h-4" />
               Beta Access Available
             </div>
             
+            {/* Main Headline */}
             <div className="space-y-6">
-              <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-                <span className="bg-gradient-to-r from-slate-900 via-blue-900 to-purple-900 bg-clip-text text-transparent">
-                  Turn PDFs into
-                </span>
-                <br />
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  smart flashcards
-                </span>
-                <br />
-                <span className="text-slate-700">in seconds</span>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground">
+                PDF to{" "}
+                <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
+                  Smart Flashcards
+                </span>{" "}
+                in Seconds
               </h1>
-              
-              <p className="text-xl md:text-2xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-                Upload any document. Our AI creates optimized flashcards automatically. 
-                <span className="font-semibold text-slate-800"> Study smarter with science-based spaced repetition.</span>
+              <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+                AI transforms your study materials into scientifically optimized flashcards. 
+                <span className="text-foreground font-medium"> Study smarter, not harder.</span>
               </p>
             </div>
             
+            {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
               <Button 
                 onClick={() => setShowAuthModal(true)}
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 px-10 py-4 text-lg font-semibold shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105"
+                className="group bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-4 text-lg font-semibold rounded-2xl min-w-[220px] shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 Start Free Trial
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button 
                 variant="outline"
                 size="lg"
-                className="px-10 py-4 text-lg border-2 border-slate-300 text-slate-700 hover:bg-white hover:border-blue-300 hover:text-blue-700 transition-all duration-300"
+                className="px-8 py-4 text-lg font-medium rounded-2xl min-w-[200px] border-border hover:bg-muted/50 transition-all duration-300"
+                onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                <Play className="w-5 h-5 mr-2" />
                 Watch Demo
               </Button>
             </div>
 
-            <div className="pt-8 flex flex-wrap justify-center gap-6 text-sm text-slate-500">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                No credit card required
+            {/* Social Proof */}
+            <div className="pt-12 space-y-4">
+              <div className="flex justify-center items-center gap-2 text-sm text-muted-foreground">
+                <Users className="w-4 h-4" />
+                Join 500+ students already using StudyCards AI
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                3 free PDFs monthly
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                Cancel anytime
+              <div className="flex justify-center items-center gap-6 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  No credit card required
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  3 free PDFs/month
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  Cancel anytime
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Demo Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">
-              See the magic in action
-            </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Transform any PDF into study-ready flashcards with our AI-powered platform
-            </p>
-          </div>
+        {/* How It Works Section */}
+        <section id="how-it-works" className="py-16 md:py-24 bg-background">
+          <div className="container-section">
+            <div className="text-center mb-16">
+              <h2 className="text-section text-foreground mb-4">
+                How It Works
+              </h2>
+              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                Three simple steps to transform your PDFs into smart flashcards
+              </p>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {/* Main Demo Card */}
-            <Card className="lg:col-span-2 md:col-span-2 p-8 bg-gradient-to-br from-blue-50 to-purple-50 border-0 shadow-xl hover:shadow-2xl transition-all duration-500">
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <Bot className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900">AI Processing</h3>
-                    <p className="text-slate-600">Live demo running</p>
+            {/* Mobile Slot Machine Spinner */}
+            <div className="md:hidden">
+              {!showAllSteps ? (
+                <div className="max-w-sm mx-auto">
+                  <Card 
+                    className="p-6 border-border hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 active:scale-95"
+                    onClick={handleStepSpin}
+                  >
+                    <CardContent className="p-0 text-center">
+                      <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-colors">
+                        {currentStep === 0 && <Upload className="w-8 h-8 text-primary" />}
+                        {currentStep === 1 && <Bot className="w-8 h-8 text-primary" />}
+                        {currentStep === 2 && <Rocket className="w-8 h-8 text-primary" />}
+                      </div>
+                      <div className="text-3xl font-bold text-primary mb-2">
+                        {steps[currentStep].number}
+                      </div>
+                      <h3 className="text-xl font-semibold text-foreground mb-4">
+                        {steps[currentStep].title}
+                      </h3>
+                      <p className="text-muted-foreground leading-relaxed mb-6">
+                        {steps[currentStep].description}
+                      </p>
+                      <div className="flex justify-center space-x-2 mb-4">
+                        {steps.map((_, index) => (
+                          <div
+                            key={index}
+                            className={`w-2 h-2 rounded-full transition-colors ${
+                              index === currentStep ? 'bg-primary' : 'bg-muted'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Tap to see next step</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <div className="text-center mt-6">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAllSteps(true)}
+                      className="px-6 py-2"
+                    >
+                      Show All Steps
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="space-y-5">
-                  <div className="p-5 bg-white/70 backdrop-blur-sm rounded-2xl border-2 border-dashed border-blue-200">
-                    <div className="flex items-center gap-3 mb-4">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                      <span className="font-semibold text-slate-800">biology_chapter_5.pdf</span>
-                      <span className="text-sm text-slate-500">• 42 pages</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                      <div 
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-1000 relative"
-                        style={{ width: `${demoSteps[demoStep].progress}%` }}
-                      >
-                        <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              ) : (
+                <div className="space-y-6">
+                  {steps.map((step, index) => (
+                    <Card key={index} className="p-6 border-border">
+                      <CardContent className="p-0 text-center">
+                        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          {index === 0 && <Upload className="w-6 h-6 text-primary" />}
+                          {index === 1 && <Bot className="w-6 h-6 text-primary" />}
+                          {index === 2 && <Rocket className="w-6 h-6 text-primary" />}
+                        </div>
+                        <div className="text-2xl font-bold text-primary mb-2">{step.number}</div>
+                        <h3 className="text-lg font-semibold text-foreground mb-3">{step.title}</h3>
+                        <p className="text-muted-foreground leading-relaxed">{step.description}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  <div className="text-center">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShowAllSteps(false)}
+                      className="px-6 py-2"
+                    >
+                      Show Interactive Steps
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Horizontal Layout */}
+            <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
+              {steps.map((step, index) => (
+                <div key={index} className="text-center group">
+                  <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                    {index === 0 && <Upload className="w-8 h-8 text-primary" />}
+                    {index === 1 && <Bot className="w-8 h-8 text-primary" />}
+                    {index === 2 && <Rocket className="w-8 h-8 text-primary" />}
+                  </div>
+                  <div className="text-2xl font-bold text-primary mb-2">{step.number}</div>
+                  <h3 className="text-xl font-semibold text-foreground mb-4">{step.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{step.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Spaced Repetition Explanation Section */}
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container-section">
+            <div className="text-center mb-16">
+              <h2 className="text-section text-foreground mb-4">
+                Smart Learning with Spaced Repetition
+              </h2>
+              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                Our platform uses scientifically-proven spaced repetition to help you remember more with less effort
+              </p>
+            </div>
+
+            <div className="max-w-5xl mx-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                {/* Interactive Timeline */}
+                <div className="order-2 lg:order-1">
+                  <Card className="p-8 border-border bg-background/50 backdrop-blur">
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-semibold text-foreground">Learning Timeline</h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSpacedRepetitionAnimation}
+                          disabled={isAnimating}
+                          className="px-4 py-2"
+                        >
+                          {isAnimating ? (
+                            <>
+                              <RotateCcw className="w-4 h-4 mr-2 animate-spin" />
+                              Playing
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="w-4 h-4 mr-2" />
+                              Show Timeline
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Timeline Visualization */}
+                      <div className="relative">
+                        {/* Timeline Line */}
+                        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border transform -translate-y-1/2"></div>
+                        
+                        {/* Timeline Points */}
+                        <div className="relative flex justify-between items-center h-16">
+                          {spacedRepetitionSteps.map((step, index) => (
+                            <div
+                              key={index}
+                              className={`relative transition-all duration-500 ${
+                                index <= spacedRepetitionStep && isAnimating
+                                  ? 'scale-110 opacity-100'
+                                  : index === spacedRepetitionStep && isAnimating
+                                  ? 'scale-125 opacity-100'
+                                  : 'scale-100 opacity-60'
+                              }`}
+                              style={{ left: `${step.position}%` }}
+                            >
+                              {/* Timeline Point */}
+                              <div
+                                className={`w-4 h-4 rounded-full border-2 border-background transition-all duration-500 ${
+                                  index <= spacedRepetitionStep && isAnimating
+                                    ? step.color
+                                    : 'bg-muted border-border'
+                                }`}
+                              ></div>
+                              
+                              {/* Timeline Label */}
+                              <div className="absolute top-6 left-1/2 transform -translate-x-1/2 text-center">
+                                <div className={`text-xs font-medium transition-colors duration-300 ${
+                                  index <= spacedRepetitionStep && isAnimating
+                                    ? 'text-foreground'
+                                    : 'text-muted-foreground'
+                                }`}>
+                                  {step.day}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Current Step Description */}
+                      <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+                        <div className="flex items-center mb-2">
+                          <div className={`w-3 h-3 rounded-full mr-3 transition-colors duration-300 ${
+                            isAnimating ? spacedRepetitionSteps[spacedRepetitionStep]?.color || 'bg-muted' : 'bg-muted'
+                          }`}></div>
+                          <span className="text-sm font-medium text-foreground">
+                            {isAnimating ? spacedRepetitionSteps[spacedRepetitionStep]?.interval || 'Ready to start' : 'Click "Show Timeline" to see how it works'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground ml-6">
+                          {isAnimating ? spacedRepetitionSteps[spacedRepetitionStep]?.description || 'Watch the learning progression' : 'Spaced repetition shows you cards just before you forget them'}
+                        </p>
                       </div>
                     </div>
-                    <p className="text-sm text-slate-600 mt-3">{demoSteps[demoStep].text}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                      <div className="text-sm font-semibold text-slate-800 mb-2">Generated Card #1</div>
-                      <div className="text-sm text-slate-600">"What is photosynthesis?"</div>
+                  </Card>
+                </div>
+
+                {/* Explanation Content */}
+                <div className="order-1 lg:order-2">
+                  <div className="space-y-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                        <Brain className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Science-Based Learning</h3>
+                        <p className="text-muted-foreground">
+                          Spaced repetition is backed by cognitive science research. It increases long-term retention by up to 200% compared to traditional study methods.
+                        </p>
+                      </div>
                     </div>
-                    <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                      <div className="text-sm font-semibold text-slate-800 mb-2">Generated Card #2</div>
-                      <div className="text-sm text-slate-600">"Define mitochondria..."</div>
+
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                        <Clock className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Optimal Timing</h3>
+                        <p className="text-muted-foreground">
+                          Cards appear just before you're likely to forget them. This timing strengthens memory pathways and reduces study time.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                        <TrendingUp className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Progressive Intervals</h3>
+                        <p className="text-muted-foreground">
+                          As you master each card, review intervals automatically increase from 1 day to several months, maximizing efficiency.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <p className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-lg">
+                        <strong className="text-foreground">Fun fact:</strong> This method was originally developed in the 1880s by Hermann Ebbinghaus and has been refined by modern research to become the most effective learning technique available.
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
+          </div>
+        </section>
 
-            {/* Stats Cards */}
-            <Card className="p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300">
-              <div className="text-center">
-                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-7 h-7 text-white" />
-                </div>
-                <div className="text-3xl font-bold mb-2">95%</div>
-                <div className="text-blue-100 font-medium">Faster creation</div>
-              </div>
-            </Card>
+        {/* Features Section */}
+        <section id="features" className="py-16 md:py-24 bg-background">
+          <div className="container-section">
+            <div className="text-center mb-16">
+              <h2 className="text-section text-foreground mb-4">
+                Everything You Need
+              </h2>
+              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                Powerful features designed to transform how you create and study with flashcards
+              </p>
+            </div>
 
-            <Card className="p-6 bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300">
-              <div className="text-center">
-                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <TrendingUp className="w-7 h-7 text-white" />
-                </div>
-                <div className="text-3xl font-bold mb-2">200%</div>
-                <div className="text-green-100 font-medium">Better retention</div>
+            {/* Mobile and Small Screens - Progressive Disclosure */}
+            <div className="md:hidden">
+              <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
+                {features.slice(0, showAllFeatures ? features.length : 2).map((feature, index) => (
+                  <Card 
+                    key={index} 
+                    className="p-6 border-border hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 active:scale-95"
+                    onClick={() => {/* Add tap scale animation */}}
+                  >
+                    <CardContent className="p-0 text-center">
+                      <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors hover:bg-primary/20">
+                        {index === 0 && <Brain className="w-8 h-8 text-primary transition-transform hover:scale-110" />}
+                        {index === 1 && <Download className="w-8 h-8 text-primary transition-transform hover:scale-110" />}
+                        {index === 2 && <Shield className="w-8 h-8 text-primary transition-transform hover:scale-110" />}
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground mb-3">{feature.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed text-sm">{feature.description}</p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            </Card>
+              
+              {!showAllFeatures && (
+                <div className="text-center mt-8">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAllFeatures(true)}
+                    className="px-6 py-2"
+                  >
+                    See All Features
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              )}
+            </div>
 
-            {/* Feature Cards */}
-            <Card className="lg:col-span-2 p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-0 shadow-xl hover:shadow-2xl transition-all duration-500">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900">Spaced Repetition Timeline</h3>
-              </div>
-              <div className="flex justify-between items-center">
-                {["Today", "Day 1", "Day 4", "Day 11", "Day 25"].map((day, index) => (
-                  <div key={day} className="text-center">
-                    <div className={`w-4 h-4 rounded-full mb-3 ${index === 0 ? 'bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg' : 'bg-slate-300'}`}></div>
-                    <div className="text-xs font-medium text-slate-600">{day}</div>
+            {/* Tablet and Desktop - 2-Column Grid (switches to 1-column on <375px) */}
+            <div className="hidden md:block">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
+                {features.map((feature, index) => (
+                  <div key={index} className="text-center group">
+                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
+                      {index === 0 && <Brain className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />}
+                      {index === 1 && <Download className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />}
+                      {index === 2 && <Shield className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />}
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground mb-4">{feature.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
                   </div>
                 ))}
               </div>
-              <div className="mt-4 text-center">
-                <div className="text-sm text-slate-600">
-                  <span className="font-semibold text-purple-600">Optimal timing</span> increases retention by 200%
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-orange-500 to-red-500 text-white border-0 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300">
-              <div className="text-center">
-                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Download className="w-7 h-7 text-white" />
-                </div>
-                <div className="text-lg font-bold mb-3">Export Anywhere</div>
-                <div className="space-y-2">
-                  <div className="text-sm text-orange-100">Anki • Quizlet • CSV</div>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-slate-600 to-slate-700 text-white border-0 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300">
-              <div className="text-center">
-                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-7 h-7 text-white" />
-                </div>
-                <div className="text-lg font-bold mb-3">Bank-Grade Security</div>
-                <div className="text-sm text-slate-300">Your data is always protected</div>
-              </div>
-            </Card>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Social Proof */}
-      <section className="py-20 bg-slate-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
-              Trusted by students worldwide
-            </h2>
-            <p className="text-xl text-slate-600">Join thousands who've transformed their studying</p>
+        {/* Testimonials Section */}
+        <section className="py-16 md:py-24 bg-background">
+          <div className="container-section">
+            <div className="text-center mb-16">
+              <h2 className="text-section text-foreground mb-4">
+                What Our Early Users Say
+              </h2>
+              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                Used by early learners in our beta who gave us a 4.7/5 average rating.
+              </p>
+            </div>
+
+            {/* Mobile/Tablet: Staggered Layout */}
+            <div className="lg:hidden max-w-4xl mx-auto space-y-6">
+              {/* First testimonial - 90% width */}
+              <div className="w-[90%] mx-auto">
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4 italic text-base leading-relaxed">
+                      "This beta tool saved me hours of manual flashcard creation. The AI really understands the content."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-sm font-medium text-primary">SM</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Sarah M.</p>
+                        <p className="text-muted-foreground">Medical Student</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Second testimonial - 85% width, offset right */}
+              <div className="w-[85%] ml-auto">
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4 italic text-base leading-relaxed">
+                      "Perfect for studying complex textbooks. The export to Anki feature is exactly what I needed."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-sm font-medium text-primary">AR</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Alex R.</p>
+                        <p className="text-muted-foreground">Graduate Student</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Third testimonial - 90% width, offset left */}
+              <div className="w-[90%] mr-auto">
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(4)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                        <Star className="w-4 h-4 text-gray-300" />
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4 italic text-base leading-relaxed">
+                      "Great potential! Looking forward to more features as the beta progresses."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-sm font-medium text-primary">JK</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Jordan K.</p>
+                        <p className="text-muted-foreground">Professional Learner</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Desktop: Traditional Grid Layout */}
+            <div className="hidden lg:block">
+              <div className="grid grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4 italic">
+                      "This beta tool saved me hours of manual flashcard creation. The AI really understands the content."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
+                        <span className="text-xs font-medium text-primary">SM</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Sarah M.</p>
+                        <p className="text-muted-foreground">Medical Student</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4 italic">
+                      "Perfect for studying complex textbooks. The export to Anki feature is exactly what I needed."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
+                        <span className="text-xs font-medium text-primary">AR</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Alex R.</p>
+                        <p className="text-muted-foreground">Graduate Student</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                  <CardContent className="p-0">
+                    <div className="flex items-center mb-4">
+                      <div className="flex text-yellow-400">
+                        {[...Array(4)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                        <Star className="w-4 h-4 text-gray-300" />
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4 italic">
+                      "Great potential! Looking forward to more features as the beta progresses."
+                    </p>
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
+                        <span className="text-xs font-medium text-primary">JK</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-foreground">Jordan K.</p>
+                        <p className="text-muted-foreground">Professional Learner</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { name: "Sarah M.", role: "Medical Student, Harvard", rating: 5, quote: "Cut my study time in half while improving my grades. This is revolutionary.", avatar: "SM", color: "blue" },
-              { name: "Alex R.", role: "PhD Student, MIT", rating: 5, quote: "Finally, a tool that actually understands my textbooks. Game changer.", avatar: "AR", color: "green" },
-              { name: "Jordan K.", role: "Medical Resident", rating: 5, quote: "Passed my board exams thanks to the spaced repetition system.", avatar: "JK", color: "purple" }
-            ].map((testimonial, index) => (
-              <Card key={index} className="p-8 bg-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300">
-                <div className="flex text-yellow-400 mb-6">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-current" />
-                  ))}
-                </div>
-                <p className="text-slate-700 mb-6 text-lg leading-relaxed italic">
-                  "{testimonial.quote}"
-                </p>
-                <div className="flex items-center">
-                  <div className={`w-12 h-12 bg-gradient-to-br from-${testimonial.color}-400 to-${testimonial.color}-600 rounded-full flex items-center justify-center mr-4 shadow-lg`}>
-                    <span className="text-white font-bold">{testimonial.avatar}</span>
+        {/* Pricing Section */}
+        <section id="pricing" className="py-16 md:py-24 bg-background">
+          <div className="container-content">
+            <div className="text-center mb-16">
+              <h2 className="text-section text-foreground mb-4">
+                Simple, transparent pricing
+              </h2>
+              <p className="text-body-lg text-muted-foreground">
+                Start free, upgrade when you need more
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {/* Free Plan */}
+              <Card className="relative p-8 border-border hover:shadow-lg transition-shadow">
+                <CardHeader className="p-0 pb-6">
+                  <CardTitle className="text-2xl font-bold text-foreground">Free</CardTitle>
+                  <CardDescription className="text-muted-foreground mt-2">
+                    3 free PDFs every month — no credit card required
+                  </CardDescription>
+                  <div className="text-4xl font-bold text-foreground mt-4">
+                    $0<span className="text-lg font-normal text-muted-foreground">/month</span>
                   </div>
-                  <div>
-                    <div className="font-bold text-slate-900">{testimonial.name}</div>
-                    <div className="text-slate-600">{testimonial.role}</div>
-                  </div>
-                </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <ul className="space-y-4 mb-8">
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                      <span className="text-foreground">3 PDF uploads per month</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                      <span className="text-foreground">Basic AI flashcard generation</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                      <span className="text-foreground">Export to all formats</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                      <span className="text-foreground">Built-in study mode</span>
+                    </li>
+                  </ul>
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    onClick={() => setShowAuthModal(true)}
+                    size="lg"
+                  >
+                    Get Started Free
+                  </Button>
+                </CardContent>
               </Card>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Pricing */}
-      <section className="py-20 bg-white">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
-              Simple, transparent pricing
-            </h2>
-            <p className="text-xl text-slate-600">
-              Start free, upgrade when you need more power
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <Card className="p-10 bg-white border-2 border-slate-200 shadow-xl hover:shadow-2xl transition-all duration-300">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">Free</h3>
-                <div className="text-5xl font-bold text-slate-900 mb-4">
-                  $0<span className="text-xl font-normal text-slate-600">/month</span>
+              {/* Premium Plan */}
+              <Card className="relative p-8 border-2 border-primary hover:shadow-lg transition-shadow">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium">
+                    Most Popular
+                  </div>
                 </div>
-                <p className="text-slate-600">Perfect for getting started</p>
-              </div>
-              
-              <ul className="space-y-4 mb-10">
-                {["3 PDF uploads per month", "Up to 50 pages per PDF", "Basic AI quality", "Export to all formats"].map((feature) => (
-                  <li key={feature} className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                    <span className="text-slate-700">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <Button 
-                onClick={() => setShowAuthModal(true)}
-                className="w-full py-4 text-lg border-2 border-slate-300 text-slate-700 bg-white hover:bg-slate-50 hover:border-blue-300 transition-all duration-200"
-                variant="outline"
-              >
-                Start Free
-              </Button>
-            </Card>
-
-            <Card className="relative p-10 bg-gradient-to-br from-blue-600 to-purple-600 text-white border-0 shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-slate-900 px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                  Most Popular
-                </span>
-              </div>
-              
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold mb-2">Premium</h3>
-                <div className="text-5xl font-bold mb-4">
-                  $9.99<span className="text-xl font-normal text-blue-100">/month</span>
-                </div>
-                <p className="text-blue-100">For serious students & professionals</p>
-              </div>
-              
-              <ul className="space-y-4 mb-10">
-                {["100 PDF uploads per month", "Up to 200 pages per PDF", "Advanced AI quality", "Priority processing", "Advanced analytics"].map((feature) => (
-                  <li key={feature} className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-300 mr-3 flex-shrink-0" />
-                    <span className="text-blue-50">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <Button 
-                onClick={() => setShowAuthModal(true)}
-                className="w-full py-4 text-lg bg-white text-blue-600 hover:bg-blue-50 font-bold shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                Upgrade to Premium
-              </Button>
-            </Card>
+                <CardHeader className="p-0 pb-6">
+                  <CardTitle className="text-2xl font-bold text-foreground">Premium</CardTitle>
+                  <CardDescription className="text-muted-foreground mt-2">
+                    Ready for more? Unlock advanced AI and more uploads
+                  </CardDescription>
+                  <div className="text-4xl font-bold text-foreground mt-4">
+                    $9<span className="text-lg font-normal text-muted-foreground">/month</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <ul className="space-y-4 mb-8">
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                      <span className="text-foreground">100 PDF uploads per month</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                      <span className="text-foreground">Advanced AI with multiple providers</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                      <span className="text-foreground">OCR for scanned documents</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                      <span className="text-foreground">Priority processing</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+                      <span className="text-foreground">Advanced study analytics</span>
+                    </li>
+                  </ul>
+                  <Button 
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90" 
+                    onClick={() => setShowAuthModal(true)}
+                    size="lg"
+                  >
+                    Start Premium Trial
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Final CTA */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600">
-        <div className="max-w-4xl mx-auto px-6 text-center text-white">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Ready to revolutionize your studying?
-          </h2>
-          <p className="text-xl mb-10 text-blue-100">
-            Join thousands of students who've transformed their learning with AI-powered flashcards
-          </p>
-          <Button 
-            onClick={() => setShowAuthModal(true)}
-            size="lg"
-            className="bg-white text-blue-600 hover:bg-blue-50 px-12 py-4 text-xl font-bold shadow-2xl hover:shadow-white/25 transition-all duration-300 hover:scale-105"
-          >
-            Start Your Free Trial Now
-            <ArrowRight className="w-6 h-6 ml-3" />
-          </Button>
-          <p className="text-blue-200 mt-6">
-            No credit card required • 3 free PDFs every month • Cancel anytime
-          </p>
-        </div>
-      </section>
+        {/* CTA Section */}
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container-content text-center">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <h2 className="text-section text-foreground">
+                  Ready to transform your learning?
+                </h2>
+                <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                  Join thousands of students and professionals who are already studying smarter with AI-generated flashcards
+                </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Button 
+                  onClick={() => setShowAuthModal(true)}
+                  size="lg"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg font-semibold rounded-xl min-w-[220px]"
+                >
+                  Get Started Now - Free
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  No credit card required
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
       {/* Footer */}
-      <footer className="py-12 bg-slate-900 text-white">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <div className="flex items-center justify-center space-x-3 mb-6">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg">
-              <Feather className="w-4 h-4 text-white" />
+      <footer className="bg-background border-t border-border py-12">
+        <div className="container-section">
+          <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+            <div className="flex items-center space-x-3">
+              <div className="bg-primary text-primary-foreground rounded-xl p-2">
+                <Brain className="w-5 h-5" />
+              </div>
+              <span className="text-lg font-bold text-foreground">Kardu.io</span>
             </div>
-            <span className="text-xl font-bold">StudyCards AI</span>
+            
+            <div className="text-center md:text-right">
+              <p className="text-sm text-muted-foreground">
+                &copy; 2024 Kardu.io. Powered by advanced AI technology.
+              </p>
+            </div>
           </div>
-          <p className="text-slate-400">
-            © 2025 StudyCards AI. All rights reserved.
-          </p>
         </div>
       </footer>
 
-      <AuthModal 
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
+      {/* Authentication Modal */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }

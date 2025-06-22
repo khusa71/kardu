@@ -101,15 +101,6 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
-- June 22, 2025: **LANDING PAGE REDESIGNED WITH NOTION-LIKE AESTHETICS** - Completely rebuilt landing page with clean, minimal design:
-  * Replaced complex animations and gradients with simple, elegant Notion-style interface
-  * Fixed scaling issues by implementing proper container constraints (max-w-4xl, max-w-5xl, max-w-6xl)
-  * Created clean bento box grid layout that respects screen sizes and doesn't overflow
-  * Simplified color palette to black, white, and grays with minimal accent colors
-  * Removed excessive micro-animations and visual noise for better focus on content
-  * Implemented proper responsive breakpoints ensuring clean mobile-to-desktop scaling
-  * Enhanced readability with better typography hierarchy and generous whitespace
-  * Maintained functionality while prioritizing clean, professional aesthetic over flashy effects
 - June 22, 2025: **COMPREHENSIVE PROJECT DOCUMENTATION CREATED** - Created complete documentation suite for future development and maintenance:
   * Generated technical README.md with full architecture documentation, setup instructions, and API specifications
   * Created PROJECT_OVERVIEW.md covering business logic, user flows, and conceptual architecture for non-technical understanding
