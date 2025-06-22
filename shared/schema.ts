@@ -32,6 +32,7 @@ export const userProfiles = pgTable("user_profiles", {
   fullName: text("full_name"),
   avatarUrl: text("avatar_url"),
   isPremium: boolean("is_premium").default(false),
+  role: text("role").default("user"), // user, admin, moderator
   subscriptionStatus: text("subscription_status"),
   subscriptionTier: text("subscription_tier").default("free"),
   uploadsThisMonth: integer("uploads_this_month").default(0),

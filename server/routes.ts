@@ -2737,6 +2737,29 @@ async function processFlashcardJob(jobId: number) {
     }
   });
 
+  // Grant admin access endpoint (temporary development endpoint)
+  app.post("/api/admin/grant-access", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Add role column if it doesn't exist, then update user role
+      await db.execute(sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user'`);
+      await db.update(userProfiles)
+        .set({ role: 'admin' })
+        .where(eq(userProfiles.id, userId));
+      
+      const updatedUser = await storage.getUserProfile(userId);
+      res.json({ 
+        message: "Admin access granted successfully", 
+        user: updatedUser,
+        userId: userId
+      });
+    } catch (error) {
+      console.error("Grant admin error:", error);
+      res.status(500).json({ message: "Failed to grant admin access" });
+    }
+  });
+
   // ============ USER PREFERENCES API ============
   
   // Get user preferences
@@ -2980,7 +3003,7 @@ async function processFlashcardJob(jobId: number) {
       const subjects = await db.select({
         name: flashcardsTable.subject,
         value: sql`count(*)`,
-        accuracy: sql`avg(${studyProgress.correctReviews}::float / ${studyProgress.totalReviews}::float * 100)`
+        accuracy: sql`avg(CASE WHEN ${studyProgress.totalReviews} > 0 THEN ${studyProgress.correctReviews}::float / ${studyProgress.totalReviews}::float * 100 ELSE 0 END)`
       })
         .from(flashcardsTable)
         .innerJoin(flashcardJobs, eq(flashcardsTable.jobId, flashcardJobs.id))
