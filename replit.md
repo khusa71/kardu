@@ -101,6 +101,15 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
+- June 22, 2025: **HISTORICAL PDF REUSE FEATURE & ENHANCED QUOTA FEEDBACK IMPLEMENTED** - Added cost-saving historical PDF selection and improved user experience for quota limits:
+  * Implemented historical PDF selection on upload page allowing users to reuse previously uploaded files for new flashcard generation
+  * Created backend reprocessing endpoint that generates new flashcards from existing PDFs with different settings (subject, difficulty, AI model)
+  * Enhanced quota limit error feedback with detailed messages showing days until reset and upgrade options
+  * Added intelligent error handling distinguishing between new uploads and reprocessing with appropriate guidance
+  * Improved user experience by suggesting historical PDF reuse when quota limits are reached
+  * System now saves storage costs by reusing existing PDF files while allowing different flashcard configurations
+  * Enhanced UI shows file details (size, date, existing flashcard count) for better selection experience
+  * Added proper authentication and validation for reprocess feature with premium model restrictions
 - June 21, 2025: **QUOTA ENFORCEMENT & DASHBOARD REFRESH ISSUES COMPLETELY RESOLVED** - Successfully fixed all user account tracking, learning statistics, and real-time updates:
   * Fixed database schema mismatch by aligning with actual user_profiles table structure (uploads_this_month, max_monthly_uploads columns)
   * Updated usage quota service to use correct database column names matching production schema

@@ -110,6 +110,9 @@ export async function canUserUpload(
   quotaInfo: UsageQuota;
   limits: QuotaLimits;
   pagesWillProcess?: number;
+  upgradeAvailable?: boolean;
+  resetDate?: string;
+  daysUntilReset?: number;
 }> {
   const user = await db.query.userProfiles.findFirst({
     where: eq(userProfiles.id, userId)
@@ -132,11 +135,23 @@ export async function canUserUpload(
 
   if (quota.uploadsThisMonth >= limits.monthlyUploadLimit) {
     console.log(`DEBUG: Upload blocked - limit reached`);
+    
+    const nextResetDate = new Date();
+    nextResetDate.setMonth(nextResetDate.getMonth() + 1, 1);
+    nextResetDate.setHours(0, 0, 0, 0);
+    
+    const daysUntilReset = Math.ceil((nextResetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    
     return {
       canUpload: false,
-      reason: `Monthly upload limit reached (${quota.uploadsThisMonth}/${limits.monthlyUploadLimit} uploads)`,
+      reason: user.isPremium 
+        ? `You've reached your premium monthly limit of ${limits.monthlyUploadLimit} uploads. Your quota will reset in ${daysUntilReset} days on ${nextResetDate.toLocaleDateString()}.`
+        : `You've reached your free tier limit of ${limits.monthlyUploadLimit} uploads this month. Upgrade to Premium for ${getQuotaLimits(true).monthlyUploadLimit} uploads per month, or wait ${daysUntilReset} days until ${nextResetDate.toLocaleDateString()} for your quota to reset.`,
       quotaInfo: quota,
-      limits
+      limits,
+      upgradeAvailable: !user.isPremium,
+      resetDate: nextResetDate.toISOString(),
+      daysUntilReset
     };
   }
 

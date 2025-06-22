@@ -134,11 +134,39 @@ export default function Upload() {
       });
     },
     onError: (error: any) => {
-      toast({
-        title: "Upload failed",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
+      // Enhanced error handling for quota limits
+      if (error.status === 429 && error.errorType === 'QUOTA_EXCEEDED') {
+        const { upgradeAvailable, daysUntilReset, resetDate } = error;
+        
+        if (upgradeAvailable) {
+          toast({
+            title: "Monthly Upload Limit Reached",
+            description: `You've used all 3 free uploads this month. Try reusing your historical PDFs below with different settings, upgrade to Premium for 100 uploads per month, or wait ${daysUntilReset} days for your quota to reset.`,
+            variant: "destructive",
+            action: (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setLocation('/pricing')}
+              >
+                Upgrade Now
+              </Button>
+            ),
+          });
+        } else {
+          toast({
+            title: "Monthly Upload Limit Reached",
+            description: `Your premium quota will reset in ${daysUntilReset} days. You can still reprocess historical PDFs with different settings.`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Upload failed",
+          description: error.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -171,11 +199,35 @@ export default function Upload() {
       });
     },
     onError: (error: any) => {
-      toast({
-        title: "Reprocess failed",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
+      // Enhanced error handling for reprocessing
+      if (error.status === 429 && error.errorType === 'QUOTA_EXCEEDED') {
+        toast({
+          title: "Cannot Reprocess - Quota Exceeded",
+          description: "You've reached your monthly upload limit. Reprocessing creates a new job that counts toward your quota.",
+          variant: "destructive",
+        });
+      } else if (error.status === 403 && error.upgrade) {
+        toast({
+          title: "Premium Required",
+          description: "Advanced AI models require a Premium subscription.",
+          variant: "destructive",
+          action: (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setLocation('/pricing')}
+            >
+              Upgrade
+            </Button>
+          ),
+        });
+      } else {
+        toast({
+          title: "Reprocess failed",
+          description: error.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 

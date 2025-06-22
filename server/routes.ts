@@ -776,7 +776,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               pageCount: pageInfo.pageCount,
               quotaInfo: uploadCheck.quotaInfo,
               limits: uploadCheck.limits,
-              requiresUpgrade: !user.isPremium
+              upgradeAvailable: uploadCheck.upgradeAvailable,
+              resetDate: uploadCheck.resetDate,
+              daysUntilReset: uploadCheck.daysUntilReset,
+              errorType: 'QUOTA_EXCEEDED'
             });
           }
 
