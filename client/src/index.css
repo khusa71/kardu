@@ -174,3 +174,24 @@
 .bg-neutral {
   background-color: hsl(var(--neutral));
 }
+
+/* Yellow highlighter sweep animation */
+.animate-highlight-sweep {
+  animation: highlightSweep 2s ease-out 1.5s forwards;
+  opacity: 0;
+}
+
+@keyframes highlightSweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateX(0%);
+  }
+  100% {
+    opacity: 0.3;
+    transform: translateX(0%);
+  }
+}
