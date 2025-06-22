@@ -191,7 +191,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="relative bg-background overflow-hidden">
         {/* Grid Background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000020_1px,transparent_1px),linear-gradient(to_bottom,#00000020_1px,transparent_1px)] bg-[size:32px_32px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000040_1px,transparent_1px),linear-gradient(to_bottom,#00000040_1px,transparent_1px)] bg-[size:28px_28px]" />
         <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/20" />
         
         {/* Enhanced Floating Animation */}
