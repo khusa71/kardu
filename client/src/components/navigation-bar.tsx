@@ -137,7 +137,7 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/admin-panel" className="flex items-center gap-2 w-full">
+                      <Link href="/admin" className="flex items-center gap-2 w-full">
                         <Shield className="w-4 h-4" />
                         Admin Panel
                       </Link>

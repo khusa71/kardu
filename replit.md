@@ -101,7 +101,8 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
-- June 22, 2025: **ENHANCED ADMIN PORTAL WITH CONFIGURABLE AI MODELS** - Added comprehensive admin functionality for business flexibility:
+- June 22, 2025: **CONSOLIDATED ADMIN PANEL WITH CONFIGURABLE AI MODELS** - Streamlined admin functionality with comprehensive features:
+  * Consolidated duplicate admin dashboard and admin panel into single unified admin interface at /admin route
   * Implemented Recent User Signups tab showing latest 10 platform registrations with user details and subscription status
   * Created configurable AI model system allowing admins to change Basic and Advanced tier models through admin panel
   * Added AI Models configuration tab with dropdown selection for multiple providers (OpenAI, Anthropic, Llama, Gemini)
@@ -110,6 +111,7 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
   * Added backend API endpoints for recent signups (/api/admin/recent-signups) and model configuration (/api/admin/model-config)
   * Implemented real-time model configuration updates with form validation and success feedback
   * Updated upload interface and configuration panels to use business-friendly terminology instead of technical provider names
+  * Eliminated redundant admin routes and consolidated all admin functionality into single comprehensive interface
 - June 22, 2025: **ROLE-BASED ADMIN ACCESS COMPLETED** - Implemented proper database-driven admin access control system:
   * Added role column to user_profiles table supporting 'user', 'admin', and 'moderator' roles
   * Updated all admin API endpoints to properly check user role instead of hardcoded access
