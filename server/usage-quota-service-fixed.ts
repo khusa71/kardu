@@ -48,9 +48,22 @@ export async function getUserQuota(userId: string): Promise<UsageQuota> {
                      (lastUpdateYear === currentYear && lastUpdateMonth < currentMonth) ||
                      (user.uploadsThisMonth === null); // First time user
 
+  const currentUploads = needsReset ? 0 : (user.uploadsThisMonth || 0);
+  const maxUploads = user.maxMonthlyUploads || (user.isPremium ? 100 : 3);
+  
+  console.log(`DEBUG: getUserQuota for ${userId}:`, {
+    currentUploads,
+    maxUploads,
+    isPremium: user.isPremium,
+    needsReset,
+    lastUpdate: user.updatedAt,
+    currentMonth,
+    currentYear
+  });
+
   return {
-    uploadsThisMonth: needsReset ? 0 : (user.uploadsThisMonth || 0),
-    maxMonthlyUploads: user.maxMonthlyUploads || (user.isPremium ? 100 : 3),
+    uploadsThisMonth: currentUploads,
+    maxMonthlyUploads: maxUploads,
     needsReset
   };
 }

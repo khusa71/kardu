@@ -101,7 +101,7 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
 - Performance monitoring for AI API usage
 
 ## Recent Changes
-- June 21, 2025: **QUOTA ENFORCEMENT & LEARNING STATISTICS FIXED** - Completely resolved free user account tracking and learning metrics issues:
+- June 21, 2025: **QUOTA ENFORCEMENT & DASHBOARD REFRESH ISSUES COMPLETELY RESOLVED** - Successfully fixed all user account tracking, learning statistics, and real-time updates:
   * Fixed database schema mismatch by aligning with actual user_profiles table structure (uploads_this_month, max_monthly_uploads columns)
   * Updated usage quota service to use correct database column names matching production schema
   * Fixed user authentication endpoint to return actual quota usage instead of hardcoded zero values
@@ -110,6 +110,9 @@ StudyCards AI (kardu.io) is a full-stack web application that transforms PDF doc
   * Updated dashboard to display accurate statistics from database instead of calculated values from history
   * Quota system now properly tracks and enforces limits: free users limited to 3 uploads/month, premium users 100 uploads/month
   * Learning statistics show real metrics: total flashcards created, pages processed, study sessions completed, and accuracy percentages
+  * Fixed dashboard refresh issue by adding automatic data updates every 30 seconds and immediate cache invalidation on study completion
+  * Enhanced PDF error handling with user-friendly messages for corrupted or invalid files
+  * Added comprehensive debugging to quota system confirming proper enforcement (status 429 with clear limit messages)
   * All TypeScript compilation errors resolved and database operations aligned with production schema
 - June 21, 2025: **CONSOLE ERROR FIX - START STUDY BUTTON** - Fixed all 404 API endpoint errors when clicking start study button:
   * Resolved "GET /api/jobs 404 - API endpoint not found" console error caused by missing job ID parameter in React Query

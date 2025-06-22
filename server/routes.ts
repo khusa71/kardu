@@ -791,9 +791,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           // Clean up temp file on error
           fs.unlinkSync(tempFilePath);
+          
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          
+          // Provide user-friendly error messages for common PDF issues
+          if (errorMessage.includes('no objects found') || errorMessage.includes('FileDataError')) {
+            return res.status(400).json({
+              message: `The PDF file "${file.originalname}" appears to be corrupted or invalid. Please try uploading a different PDF file.`,
+              error: "INVALID_PDF_FILE",
+              fileName: file.originalname
+            });
+          }
+          
           return res.status(400).json({
             message: `Failed to analyze PDF: ${file.originalname}`,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: errorMessage,
+            fileName: file.originalname
           });
         }
       }
