@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,11 +70,57 @@ export default function AdminPanel() {
     enabled: !!user,
   });
 
+  const { data: recentSignups, isLoading: signupsLoading } = useQuery({
+    queryKey: ['/api/admin/recent-signups'],
+    enabled: !!user,
+  });
+
+  const { data: modelConfig, isLoading: modelConfigLoading } = useQuery({
+    queryKey: ['/api/admin/model-config'],
+    enabled: !!user,
+  });
+
   // Response form
   const responseForm = useForm({
     resolver: zodResolver(responseSchema),
     defaultValues: {
       response: "",
+    },
+  });
+
+  // Model configuration form
+  const modelConfigSchema = z.object({
+    basic: z.string().min(1, "Basic model is required"),
+    advanced: z.string().min(1, "Advanced model is required"),
+  });
+
+  const modelForm = useForm({
+    resolver: zodResolver(modelConfigSchema),
+    defaultValues: {
+      basic: "",
+      advanced: "",
+    },
+  });
+
+  // Set form defaults when data loads
+  useEffect(() => {
+    if (modelConfig && (modelConfig as any).basic && (modelConfig as any).advanced) {
+      modelForm.setValue("basic", (modelConfig as any).basic);
+      modelForm.setValue("advanced", (modelConfig as any).advanced);
+    }
+  }, [modelConfig, modelForm]);
+
+  // Update model configuration mutation
+  const updateModelMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof modelConfigSchema>) => {
+      return apiRequest('POST', '/api/admin/model-config', data);
+    },
+    onSuccess: () => {
+      toast({ title: "AI model configuration updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/model-config'] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to update model configuration", description: error.message, variant: "destructive" });
     },
   });
 
@@ -171,13 +217,141 @@ export default function AdminPanel() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="signups">Recent Signups</TabsTrigger>
+              <TabsTrigger value="models">AI Models</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="support">Support</TabsTrigger>
               <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="signups">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent User Signups</CardTitle>
+                  <CardDescription>Latest 10 users who joined the platform</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {signupsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Clock className="w-6 h-6 animate-spin" />
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Plan</TableHead>
+                          <TableHead>Joined</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(recentSignups as any)?.map((user: any) => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="font-medium">{user.fullName || 'Unknown'}</div>
+                            </TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <Badge variant={user.isPremium ? "default" : "secondary"}>
+                                {user.isPremium ? "Premium" : "Free"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {new Date(user.createdAt).toLocaleDateString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="models">
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Model Configuration</CardTitle>
+                  <CardDescription>Configure AI models for Basic and Advanced tiers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {modelConfigLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Clock className="w-6 h-6 animate-spin" />
+                    </div>
+                  ) : (
+                    <Form {...modelForm}>
+                      <form onSubmit={modelForm.handleSubmit((data) => updateModelMutation.mutate(data))} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <FormField
+                            control={modelForm.control}
+                            name="basic"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Basic Tier Model</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select basic model" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
+                                    <SelectItem value="anthropic/claude-3-haiku">Claude 3 Haiku</SelectItem>
+                                    <SelectItem value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B</SelectItem>
+                                    <SelectItem value="google/gemini-pro">Gemini Pro</SelectItem>
+                                    <SelectItem value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={modelForm.control}
+                            name="advanced"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Advanced Tier Model</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select advanced model" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="openai/gpt-4o">GPT-4o</SelectItem>
+                                    <SelectItem value="openai/gpt-4o-mini">GPT-4o Mini</SelectItem>
+                                    <SelectItem value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
+                                    <SelectItem value="anthropic/claude-3-opus">Claude 3 Opus</SelectItem>
+                                    <SelectItem value="google/gemini-pro-1.5">Gemini Pro 1.5</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4">
+                          <div className="text-sm text-muted-foreground">
+                            Changes will apply to all new flashcard generation requests
+                          </div>
+                          <Button type="submit" disabled={updateModelMutation.isPending}>
+                            {updateModelMutation.isPending ? "Updating..." : "Update Configuration"}
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="overview" className="space-y-6">
               {/* Key Metrics */}

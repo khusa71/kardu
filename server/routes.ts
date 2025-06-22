@@ -51,14 +51,41 @@ import { db } from "./db";
 import { getPageCount } from "./page-count-service";
 import { canUserUpload, incrementUploadCount, getQuotaStatus } from "./usage-quota-service-fixed";
 
-// AI Model mapping for quality tiers
-const modelMap = {
-  basic: 'anthropic', // Claude 3.5 Haiku
-  advanced: 'openai'  // GPT-4o Mini
+// AI Model mapping for quality tiers - configurable through admin panel
+let modelMap = {
+  basic: 'anthropic/claude-3.5-sonnet', // Default basic model
+  advanced: 'openai/gpt-4o'  // Default advanced model
 } as const;
 
+// Function to get current model configuration
+async function getModelConfiguration() {
+  try {
+    // For now, return default configuration
+    // In production, this would fetch from admin_settings table
+    return {
+      basic: 'anthropic/claude-3.5-sonnet',
+      advanced: 'openai/gpt-4o'
+    };
+  } catch (error) {
+    // Fallback to defaults
+    return {
+      basic: 'anthropic/claude-3.5-sonnet',
+      advanced: 'openai/gpt-4o'
+    };
+  }
+}
+
+// Update model configuration
+async function updateModelConfiguration(basic: string, advanced: string) {
+  // For now, update in-memory configuration
+  // In production, this would update the admin_settings table
+  (modelMap as any).basic = basic;
+  (modelMap as any).advanced = advanced;
+  return true;
+}
+
 // Enforce AI model selection based on user tier
-function enforceAIModelAccess(userIsPremium: boolean, requestedTier: string): "openai" | "anthropic" {
+function enforceAIModelAccess(userIsPremium: boolean, requestedTier: string): string {
   const tier = requestedTier as keyof typeof modelMap;
   
   // Free users can only use basic tier
@@ -3167,6 +3194,69 @@ async function processFlashcardJob(jobId: number) {
     } catch (error) {
       console.error("Admin users error:", error);
       res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  // Get recent user signups (last 10)
+  app.get("/api/admin/recent-signups", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const recentUsers = await db.select({
+        id: userProfiles.id,
+        email: userProfiles.email,
+        fullName: userProfiles.fullName,
+        isPremium: userProfiles.isPremium,
+        createdAt: userProfiles.createdAt
+      }).from(userProfiles)
+        .orderBy(desc(userProfiles.createdAt))
+        .limit(10);
+      
+      res.json(recentUsers);
+    } catch (error) {
+      console.error("Recent signups error:", error);
+      res.status(500).json({ message: "Failed to get recent signups" });
+    }
+  });
+
+  // Get current AI model configuration
+  app.get("/api/admin/model-config", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const config = await getModelConfiguration();
+      res.json(config);
+    } catch (error) {
+      console.error("Model config error:", error);
+      res.status(500).json({ message: "Failed to get model configuration" });
+    }
+  });
+
+  // Update AI model configuration
+  app.post("/api/admin/model-config", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { basic, advanced } = req.body;
+      
+      if (!basic || !advanced) {
+        return res.status(400).json({ message: "Both basic and advanced models are required" });
+      }
+      
+      await updateModelConfiguration(basic, advanced);
+      res.json({ message: "Model configuration updated successfully" });
+    } catch (error) {
+      console.error("Update model config error:", error);
+      res.status(500).json({ message: "Failed to update model configuration" });
     }
   });
   

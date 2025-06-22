@@ -183,6 +183,19 @@ export const supportTickets = pgTable("support_tickets", {
   index("idx_support_tickets_category").on(table.category),
 ]);
 
+// Admin settings table for configurable AI models
+export const adminSettings = pgTable("admin_settings", {
+  id: serial("id").primaryKey(),
+  settingKey: varchar("setting_key", { length: 50 }).notNull().unique(),
+  settingValue: text("setting_value").notNull(),
+  description: text("description"),
+  updatedBy: varchar("updated_by").references(() => userProfiles.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_admin_settings_key").on(table.settingKey),
+]);
+
 // Subscription history table for billing management
 export const subscriptionHistory = pgTable("subscription_history", {
   id: serial("id").primaryKey(),

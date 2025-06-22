@@ -195,7 +195,7 @@ export function ResponsiveConfigPanel({
                     <SelectItem value="basic" className="flex items-center">
                       <div className="flex items-center gap-2">
                         <Zap className="w-4 h-4 text-blue-500" />
-                        <span>Basic (Fast & Cost-Efficient)</span>
+                        <span>Basic Quality (Fast & Efficient)</span>
                       </div>
                     </SelectItem>
                     
@@ -208,7 +208,7 @@ export function ResponsiveConfigPanel({
                         >
                           <div className="flex items-center gap-2">
                             <Crown className="w-4 h-4 text-purple-500" />
-                            <span>Advanced (High Accuracy)</span>
+                            <span>Advanced Quality (Premium)</span>
                             {!isPremium && <span className="text-xs text-gray-400 ml-2">Premium Only</span>}
                           </div>
                         </SelectItem>

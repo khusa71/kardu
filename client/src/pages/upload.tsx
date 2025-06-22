@@ -711,8 +711,8 @@ export default function Upload() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="basic">Basic (Claude)</SelectItem>
-                            <SelectItem value="advanced">Advanced (GPT-4)</SelectItem>
+                            <SelectItem value="basic">Basic Quality</SelectItem>
+                            <SelectItem value="advanced">Advanced Quality</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
