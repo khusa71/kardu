@@ -1,0 +1,85 @@
+1. Hero Section — Bold First Impression
+	•	Black grid background (subtle, modern tech look)
+	•	Large bold H1:
+“Turn any PDF into smart flashcards — in seconds.”
+	•	Subheadline: Short benefit-led line, e.g.
+“AI-powered spaced repetition to help you learn faster, retain longer.”
+	•	Two CTAs:
+→ Start Free Trial (primary)
+→ Watch Demo (secondary)
+	•	✨ Optional detail: Minimal animation in the background grid (floating points, pulsating dots)
+
+⸻
+
+2. “Who Is It For?” — Auto-Toggling Personas
+
+A horizontal section right below the hero
+
+	•	Toggleable persona buttons (e.g., tabs or ghost buttons):
+🎓 Student | 📝 Exam Prepper | 👨‍💼 Professional | 🧠 Lifelong Learner
+	•	When toggled:
+	•	Smoothly fades in a matching mini-illustration or icon + short blurb
+	•	Example:
+“As a student, you can turn dense PDFs into bite-sized recall prompts, and crush your finals 2x faster.”
+	•	Keep it minimal, animated using framer-motion or CSS fade/slide
+
+⸻
+
+3. Spaced Repetition Explanation (with Retention Graph)
+
+Clean, educational — but conversion-aware
+
+	•	Section title:
+“Smarter Studying Through Spaced Repetition”
+	•	Left: 1–2 sentence explanation of the method
+	•	Right: Animated graph showing memory decay vs. reinforced review
+(Graph animates on scroll using IntersectionObserver)
+	•	Small caption:
+“StudyCards AI adapts this model for your content and recall pace.”
+
+⸻
+
+4. Pricing Section — Simple, Trust-Focused
+	•	Two-column card layout (Free vs Pro)
+	•	Key differences highlighted with checkmarks
+	•	CTA buttons on both — highlight free trial path
+	•	Subtext below:
+“No credit card required. Cancel anytime.”
+
+⸻
+
+5. Testimonials Section — Real + Brief
+	•	Keep it minimal and honest (Notion-style quotes or card layout)
+	•	Include:
+	•	User name or initials
+	•	Short quote (max 2 lines)
+	•	Optional photo/icon
+	•	Optional: Logo strip above (“Used by learners at XYZ University”)
+
+⸻
+
+6. Final CTA — Power Close
+	•	One-liner H1 again:
+“Start learning smarter — today.”
+	•	CTA button: Start Free Trial
+	•	Supporting text:
+“Takes less than 60 seconds. Works with any PDF.”
+
+⸻
+
+7. Footer
+	•	Clean horizontal layout
+	•	Links: About, Privacy, Terms, Contact
+	•	Optional email: hello@studycards.ai
+
+⸻
+
+🧑‍💻 Interaction & Visual Style Guidelines
+	•	Strict black-and-white theme
+	•	Add 1 accent gradient color sparingly (CTAs, H1 highlights)
+	•	Notion-style font scale and padding
+	•	Clear hierarchy, whitespace-rich layout
+	•	Smooth scroll animations using IntersectionObserver
+	•	Bento-style layout only if reused in the hero or animation, but not in separate sections
+	•	Micro-interactions: button hover, toggle slide, graph animate on scroll
+	•	Use framer-motion, tailwindcss, and next/image for performance
