@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth-modal";
 
-import { Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, Menu, X, Upload, Bot, Rocket, ChevronRight, Feather } from "lucide-react";
+import { Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, Menu, X, Upload, Bot, Rocket, ChevronRight, Feather, Clock, RotateCcw, TrendingUp } from "lucide-react";
 
 export default function Landing() {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -11,6 +11,8 @@ export default function Landing() {
   const [currentStep, setCurrentStep] = useState(0);
   const [showAllSteps, setShowAllSteps] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
+  const [spacedRepetitionStep, setSpacedRepetitionStep] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const steps = [
     {
@@ -51,9 +53,88 @@ export default function Landing() {
     }
   ];
 
+  const spacedRepetitionSteps = [
+    {
+      day: "Today",
+      interval: "New card",
+      description: "First time seeing this card",
+      color: "bg-blue-500",
+      position: 10
+    },
+    {
+      day: "Day 1",
+      interval: "1 day",
+      description: "Review after 1 day",
+      color: "bg-green-500",
+      position: 25
+    },
+    {
+      day: "Day 4",
+      interval: "3 days",
+      description: "Review after 3 days",
+      color: "bg-yellow-500",
+      position: 40
+    },
+    {
+      day: "Day 11",
+      interval: "1 week",
+      description: "Review after 1 week",
+      color: "bg-orange-500",
+      position: 55
+    },
+    {
+      day: "Day 25",
+      interval: "2 weeks",
+      description: "Review after 2 weeks",
+      color: "bg-red-500",
+      position: 70
+    },
+    {
+      day: "Day 55",
+      interval: "1 month",
+      description: "Review after 1 month",
+      color: "bg-purple-500",
+      position: 85
+    }
+  ];
+
   const handleStepSpin = () => {
     setCurrentStep((prev) => (prev + 1) % steps.length);
   };
+
+  const handleSpacedRepetitionAnimation = () => {
+    if (isAnimating) return;
+    
+    setIsAnimating(true);
+    setSpacedRepetitionStep(0);
+    
+    const animateStep = (step: number) => {
+      if (step < spacedRepetitionSteps.length) {
+        setTimeout(() => {
+          setSpacedRepetitionStep(step);
+          animateStep(step + 1);
+        }, 800);
+      } else {
+        setTimeout(() => {
+          setIsAnimating(false);
+          setSpacedRepetitionStep(0);
+        }, 1500);
+      }
+    };
+    
+    animateStep(0);
+  };
+
+  // Auto-play spaced repetition animation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isAnimating) {
+        handleSpacedRepetitionAnimation();
+      }
+    }, 8000); // Start new cycle every 8 seconds
+
+    return () => clearInterval(interval);
+  }, [isAnimating]);
 
   // Custom Owl Icon Component
   const OwlIcon = ({ className }: { className?: string }) => (
@@ -325,8 +406,161 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* Spaced Repetition Explanation Section */}
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container-section">
+            <div className="text-center mb-16">
+              <h2 className="text-section text-foreground mb-4">
+                Smart Learning with Spaced Repetition
+              </h2>
+              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
+                Our platform uses scientifically-proven spaced repetition to help you remember more with less effort
+              </p>
+            </div>
+
+            <div className="max-w-5xl mx-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                {/* Interactive Timeline */}
+                <div className="order-2 lg:order-1">
+                  <Card className="p-8 border-border bg-background/50 backdrop-blur">
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-semibold text-foreground">Learning Timeline</h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSpacedRepetitionAnimation}
+                          disabled={isAnimating}
+                          className="px-4 py-2"
+                        >
+                          {isAnimating ? (
+                            <>
+                              <RotateCcw className="w-4 h-4 mr-2 animate-spin" />
+                              Playing
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="w-4 h-4 mr-2" />
+                              Show Timeline
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Timeline Visualization */}
+                      <div className="relative">
+                        {/* Timeline Line */}
+                        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border transform -translate-y-1/2"></div>
+                        
+                        {/* Timeline Points */}
+                        <div className="relative flex justify-between items-center h-16">
+                          {spacedRepetitionSteps.map((step, index) => (
+                            <div
+                              key={index}
+                              className={`relative transition-all duration-500 ${
+                                index <= spacedRepetitionStep && isAnimating
+                                  ? 'scale-110 opacity-100'
+                                  : index === spacedRepetitionStep && isAnimating
+                                  ? 'scale-125 opacity-100'
+                                  : 'scale-100 opacity-60'
+                              }`}
+                              style={{ left: `${step.position}%` }}
+                            >
+                              {/* Timeline Point */}
+                              <div
+                                className={`w-4 h-4 rounded-full border-2 border-background transition-all duration-500 ${
+                                  index <= spacedRepetitionStep && isAnimating
+                                    ? step.color
+                                    : 'bg-muted border-border'
+                                }`}
+                              ></div>
+                              
+                              {/* Timeline Label */}
+                              <div className="absolute top-6 left-1/2 transform -translate-x-1/2 text-center">
+                                <div className={`text-xs font-medium transition-colors duration-300 ${
+                                  index <= spacedRepetitionStep && isAnimating
+                                    ? 'text-foreground'
+                                    : 'text-muted-foreground'
+                                }`}>
+                                  {step.day}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Current Step Description */}
+                      <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+                        <div className="flex items-center mb-2">
+                          <div className={`w-3 h-3 rounded-full mr-3 transition-colors duration-300 ${
+                            isAnimating ? spacedRepetitionSteps[spacedRepetitionStep]?.color || 'bg-muted' : 'bg-muted'
+                          }`}></div>
+                          <span className="text-sm font-medium text-foreground">
+                            {isAnimating ? spacedRepetitionSteps[spacedRepetitionStep]?.interval || 'Ready to start' : 'Click "Show Timeline" to see how it works'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground ml-6">
+                          {isAnimating ? spacedRepetitionSteps[spacedRepetitionStep]?.description || 'Watch the learning progression' : 'Spaced repetition shows you cards just before you forget them'}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Explanation Content */}
+                <div className="order-1 lg:order-2">
+                  <div className="space-y-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                        <Brain className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Science-Based Learning</h3>
+                        <p className="text-muted-foreground">
+                          Spaced repetition is backed by cognitive science research. It increases long-term retention by up to 200% compared to traditional study methods.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                        <Clock className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Optimal Timing</h3>
+                        <p className="text-muted-foreground">
+                          Cards appear just before you're likely to forget them. This timing strengthens memory pathways and reduces study time.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
+                        <TrendingUp className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Progressive Intervals</h3>
+                        <p className="text-muted-foreground">
+                          As you master each card, review intervals automatically increase from 1 day to several months, maximizing efficiency.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <p className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-lg">
+                        <strong className="text-foreground">Fun fact:</strong> This method was originally developed in the 1880s by Hermann Ebbinghaus and has been refined by modern research to become the most effective learning technique available.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Features Section */}
-        <section id="features" className="py-16 md:py-24 bg-muted/30">
+        <section id="features" className="py-16 md:py-24 bg-background">
           <div className="container-section">
             <div className="text-center mb-16">
               <h2 className="text-section text-foreground mb-4">
