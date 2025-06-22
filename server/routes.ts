@@ -3073,8 +3073,8 @@ async function processFlashcardJob(jobId: number) {
   // Get admin user stats
   app.get("/api/admin/user-stats", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
-      if (userRole !== 'admin') {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -3103,8 +3103,8 @@ async function processFlashcardJob(jobId: number) {
   // Get system metrics
   app.get("/api/admin/system-metrics", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
-      if (userRole !== 'admin') {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -3126,8 +3126,8 @@ async function processFlashcardJob(jobId: number) {
   // Get admin support tickets
   app.get("/api/admin/support-tickets", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
-      if (userRole !== 'admin') {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -3156,8 +3156,8 @@ async function processFlashcardJob(jobId: number) {
   // Get admin users list
   app.get("/api/admin/users", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
-      if (userRole !== 'admin') {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -3172,8 +3172,8 @@ async function processFlashcardJob(jobId: number) {
   // Get recent activity
   app.get("/api/admin/recent-activity", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
-      if (userRole !== 'admin') {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -3194,8 +3194,8 @@ async function processFlashcardJob(jobId: number) {
   // Respond to support ticket
   app.patch("/api/admin/support-tickets/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
-      if (userRole !== 'admin') {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -3221,8 +3221,8 @@ async function processFlashcardJob(jobId: number) {
   // Update user subscription
   app.patch("/api/admin/users/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
-      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
-      if (userRole !== 'admin') {
+      const user = await storage.getUserProfile(req.user!.id);
+      if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
       
