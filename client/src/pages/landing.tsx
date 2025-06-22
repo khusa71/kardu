@@ -1,212 +1,145 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { AuthModal } from "@/components/auth-modal";
-
 import { 
   Brain, FileText, Download, Zap, Shield, CheckCircle, Star, ArrowRight, 
   Menu, X, Upload, Bot, Rocket, ChevronRight, Feather, Clock, RotateCcw, 
-  TrendingUp, Sparkles, Users, Target, Timer, Lightbulb, Globe, Award
+  TrendingUp, Sparkles, Users, Target, Timer, Lightbulb, Globe, Award,
+  GraduationCap, BookOpen, Briefcase, Play
 } from "lucide-react";
 
 export default function Landing() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [showAllSteps, setShowAllSteps] = useState(false);
-  const [showAllFeatures, setShowAllFeatures] = useState(false);
-  const [spacedRepetitionStep, setSpacedRepetitionStep] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [activePersona, setActivePersona] = useState(0);
+  const [retentionStep, setRetentionStep] = useState(0);
+  const retentionRef = useRef<HTMLDivElement>(null);
 
-  const steps = [
-    {
-      number: "1",
-      icon: Upload,
-      title: "Upload a PDF",
-      description: "Simply drag and drop your study material, textbook, or notes in PDF format"
-    },
-    {
-      number: "2", 
-      icon: Bot,
-      title: "Generate Smart Flashcards",
-      description: "Our AI analyzes your content and creates targeted flashcards automatically"
-    },
-    {
-      number: "3",
-      icon: Rocket,
-      title: "Study or Export",
-      description: "Study directly in the app or export to Anki, Quizlet, CSV and more"
-    }
-  ];
-
-  const features = [
-    {
-      icon: Brain,
-      title: "AI-powered flashcard generation from your real content",
-      description: "Advanced AI analyzes your PDFs and creates high-quality flashcards tailored to your content and learning style"
-    },
-    {
-      icon: Download,
-      title: "Export to Anki, CSV, Quizlet & more",
-      description: "Export to Anki, CSV, JSON, or Quizlet format. Compatible with all major study platforms and tools"
-    },
-    {
-      icon: Shield,
-      title: "Private & secure — no files stored permanently",
-      description: "Your documents are processed securely with enterprise-grade encryption and never stored permanently"
-    }
-  ];
-
-  const spacedRepetitionSteps = [
-    {
-      day: "Today",
-      interval: "New card",
-      description: "First time seeing this card",
-      color: "bg-blue-500",
-      position: 10
-    },
-    {
-      day: "Day 1",
-      interval: "1 day",
-      description: "Review after 1 day",
-      color: "bg-green-500",
-      position: 25
-    },
-    {
-      day: "Day 4",
-      interval: "3 days",
-      description: "Review after 3 days",
-      color: "bg-yellow-500",
-      position: 40
-    },
-    {
-      day: "Day 11",
-      interval: "1 week",
-      description: "Review after 1 week",
-      color: "bg-orange-500",
-      position: 55
-    },
-    {
-      day: "Day 25",
-      interval: "2 weeks",
-      description: "Review after 2 weeks",
-      color: "bg-red-500",
-      position: 70
-    },
-    {
-      day: "Day 55",
-      interval: "1 month",
-      description: "Review after 1 month",
-      color: "bg-purple-500",
-      position: 85
-    }
-  ];
-
-  const handleStepSpin = () => {
-    setCurrentStep((prev) => (prev + 1) % steps.length);
-  };
-
-  const handleSpacedRepetitionAnimation = () => {
-    if (isAnimating) return;
-    
-    setIsAnimating(true);
-    setSpacedRepetitionStep(0);
-    
-    const animateStep = (step: number) => {
-      if (step < spacedRepetitionSteps.length) {
-        setTimeout(() => {
-          setSpacedRepetitionStep(step);
-          animateStep(step + 1);
-        }, 800);
-      } else {
-        setTimeout(() => {
-          setIsAnimating(false);
-          setSpacedRepetitionStep(0);
-        }, 1500);
-      }
-    };
-    
-    animateStep(0);
-  };
-
-  // Auto-play spaced repetition animation
+  // Auto-toggle personas
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isAnimating) {
-        handleSpacedRepetitionAnimation();
-      }
-    }, 8000); // Start new cycle every 8 seconds
-
+      setActivePersona((prev) => (prev + 1) % 4);
+    }, 3000);
     return () => clearInterval(interval);
-  }, [isAnimating]);
+  }, []);
 
-  // Custom Owl Icon Component
-  const OwlIcon = ({ className }: { className?: string }) => (
-    <svg 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      className={className}
-    >
-      {/* Owl body */}
-      <ellipse cx="12" cy="16" rx="6" ry="7" />
-      {/* Owl eyes */}
-      <circle cx="9" cy="11" r="2" />
-      <circle cx="15" cy="11" r="2" />
-      {/* Eye pupils */}
-      <circle cx="9" cy="11" r="0.5" fill="currentColor" />
-      <circle cx="15" cy="11" r="0.5" fill="currentColor" />
-      {/* Beak */}
-      <path d="M12 13 L11 15 L13 15 Z" fill="currentColor" />
-      {/* Ear tufts */}
-      <path d="M7 7 L8 9 L9 7" />
-      <path d="M15 7 L16 9 L17 7" />
-    </svg>
-  );
+  // Intersection Observer for retention graph animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            animateRetentionGraph();
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    if (retentionRef.current) {
+      observer.observe(retentionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const animateRetentionGraph = () => {
+    setRetentionStep(0);
+    const steps = [0, 1, 2, 3, 4, 5];
+    
+    steps.forEach((step, index) => {
+      setTimeout(() => {
+        setRetentionStep(step);
+      }, index * 500);
+    });
+  };
+
+  const personas = [
+    {
+      icon: GraduationCap,
+      title: "Student",
+      description: "Turn dense PDFs into bite-sized recall prompts, and crush your finals 2x faster."
+    },
+    {
+      icon: BookOpen,
+      title: "Exam Prepper",
+      description: "Transform study materials into targeted practice questions for certification success."
+    },
+    {
+      icon: Briefcase,
+      title: "Professional",
+      description: "Convert training documents and manuals into digestible learning modules."
+    },
+    {
+      icon: Brain,
+      title: "Lifelong Learner",
+      description: "Turn any content into memorable flashcards for continuous skill development."
+    }
+  ];
+
+  const retentionData = [
+    { day: 0, retention: 100, label: "Initial Learning" },
+    { day: 1, retention: 50, label: "After 1 Day" },
+    { day: 7, retention: 25, label: "After 1 Week" },
+    { day: 14, retention: 15, label: "After 2 Weeks" },
+    { day: 30, retention: 10, label: "After 1 Month" },
+    { day: 30, retention: 85, label: "With Spaced Repetition" }
+  ];
+
+  const testimonials = [
+    {
+      name: "Sarah K.",
+      quote: "Cut my study time in half. The AI really understands my textbooks.",
+      role: "Medical Student"
+    },
+    {
+      name: "Mike R.",
+      quote: "Finally passed my certification exam. The spaced repetition works.",
+      role: "IT Professional"
+    },
+    {
+      name: "Emma L.",
+      quote: "Game changer for language learning. Creates perfect vocabulary cards.",
+      role: "Graduate Student"
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-background dark:bg-background">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/95 dark:bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="container-section py-4">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <button 
-              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-              <div className="bg-primary text-primary-foreground rounded-xl p-2.5">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-br from-foreground to-foreground/80 text-background rounded-xl p-2.5">
                 <Feather className="w-6 h-6" />
               </div>
-              <span className="text-xl font-bold text-foreground">Kardu.io</span>
-            </button>
+              <span className="text-xl font-bold text-foreground">StudyCards AI</span>
+            </div>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
               <nav className="flex items-center space-x-6">
-                <Button 
-                  variant="ghost" 
-                  className="text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                <button 
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
                 >
                   Features
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                </button>
+                <button 
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
                 >
                   Pricing
-                </Button>
+                </button>
               </nav>
               <Button 
                 onClick={() => setShowAuthModal(true)} 
-                className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 font-medium rounded-xl"
+                className="bg-gradient-to-r from-foreground to-foreground/90 text-background hover:from-foreground/90 hover:to-foreground/80 px-6 py-2 font-medium rounded-lg"
               >
-                Get Started
+                Start Free Trial
               </Button>
             </div>
 
@@ -225,31 +158,29 @@ export default function Landing() {
           {mobileMenuOpen && (
             <div className="md:hidden mt-4 pb-6 border-t border-border pt-6">
               <div className="flex flex-col space-y-4">
-                <Button 
-                  variant="ghost" 
-                  className="justify-start text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                <button 
+                  className="text-left text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => {
                     document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
                     setMobileMenuOpen(false);
                   }}
                 >
                   Features
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="justify-start text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                </button>
+                <button 
+                  className="text-left text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => {
                     document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
                     setMobileMenuOpen(false);
                   }}
                 >
                   Pricing
-                </Button>
+                </button>
                 <Button 
                   onClick={() => setShowAuthModal(true)} 
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 justify-center font-medium rounded-xl mt-4"
+                  className="bg-gradient-to-r from-foreground to-foreground/90 text-background justify-center font-medium rounded-lg mt-4"
                 >
-                  Get Started
+                  Start Free Trial
                 </Button>
               </div>
             </div>
@@ -257,39 +188,41 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Beta Badge */}
-      <div className="bg-primary/10 border-primary/20 border-b text-center py-3">
-        <p className="text-sm text-primary font-medium">
-          🚀 In Beta – Help shape the future of learning with AI flashcards
-        </p>
-      </div>
-
       {/* Hero Section */}
-      <main className="bg-background relative overflow-hidden">
-        {/* Background Grid Pattern */}
-        <div className="absolute inset-0 bg-grid-small-black/[0.2] bg-grid-small-white/[0.2] dark:bg-grid-small-white/[0.2]" />
-        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/90" />
+      <section className="relative bg-background overflow-hidden">
+        {/* Subtle Grid Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/95" />
         
-        <section className="relative container-content py-20 md:py-32 lg:py-40">
+        {/* Floating Dots Animation */}
+        <div className="absolute inset-0 overflow-hidden">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 bg-foreground/10 rounded-full animate-pulse"
+              style={{
+                left: `${20 + i * 15}%`,
+                top: `${30 + (i % 2) * 40}%`,
+                animationDelay: `${i * 0.5}s`,
+                animationDuration: '3s'
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32 lg:py-40">
           <div className="max-w-4xl mx-auto text-center space-y-8">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-sm font-medium text-primary">
-              <Sparkles className="w-4 h-4" />
-              Beta Access Available
-            </div>
-            
             {/* Main Headline */}
             <div className="space-y-6">
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground">
-                PDF to{" "}
-                <span className="bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
-                  Smart Flashcards
+                Turn any PDF into{" "}
+                <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
+                  smart flashcards
                 </span>{" "}
-                in Seconds
+                — in seconds.
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                AI transforms your study materials into scientifically optimized flashcards. 
-                <span className="text-foreground font-medium"> Study smarter, not harder.</span>
+                AI-powered spaced repetition to help you learn faster, retain longer.
               </p>
             </div>
             
@@ -298,706 +231,372 @@ export default function Landing() {
               <Button 
                 onClick={() => setShowAuthModal(true)}
                 size="lg"
-                className="group bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-4 text-lg font-semibold rounded-2xl min-w-[220px] shadow-lg hover:shadow-xl transition-all duration-300"
+                className="group bg-gradient-to-r from-foreground to-foreground/90 text-background hover:from-foreground/90 hover:to-foreground/80 px-8 py-4 text-lg font-semibold rounded-lg min-w-[200px] shadow-lg transition-all duration-200"
               >
                 Start Free Trial
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
               </Button>
               <Button 
                 variant="outline"
                 size="lg"
-                className="px-8 py-4 text-lg font-medium rounded-2xl min-w-[200px] border-border hover:bg-muted/50 transition-all duration-300"
+                className="px-8 py-4 text-lg font-medium rounded-lg min-w-[160px] border-border hover:bg-muted/50 transition-all duration-200"
                 onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
               >
+                <Play className="w-5 h-5 mr-2" />
                 Watch Demo
               </Button>
             </div>
-
-            {/* Social Proof */}
-            <div className="pt-12 space-y-4">
-              <div className="flex justify-center items-center gap-2 text-sm text-muted-foreground">
-                <Users className="w-4 h-4" />
-                Join 500+ students already using StudyCards AI
-              </div>
-              <div className="flex justify-center items-center gap-6 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3 text-green-500" />
-                  No credit card required
-                </div>
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3 text-green-500" />
-                  3 free PDFs/month
-                </div>
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3 text-green-500" />
-                  Cancel anytime
-                </div>
-              </div>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* How It Works Section */}
-        <section id="how-it-works" className="py-16 md:py-24 bg-background">
-          <div className="container-section">
-            <div className="text-center mb-16">
-              <h2 className="text-section text-foreground mb-4">
-                How It Works
-              </h2>
-              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
-                Three simple steps to transform your PDFs into smart flashcards
+      {/* Who Is It For Section */}
+      <section className="py-16 md:py-20 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Perfect for Every Learner
+            </h2>
+          </div>
+
+          {/* Persona Tabs */}
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            {personas.map((persona, index) => (
+              <button
+                key={index}
+                onClick={() => setActivePersona(index)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  activePersona === index
+                    ? 'bg-foreground text-background'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <persona.icon className="w-4 h-4" />
+                {persona.title}
+              </button>
+            ))}
+          </div>
+
+          {/* Active Persona Content */}
+          <div className="max-w-2xl mx-auto text-center">
+            <div 
+              key={activePersona}
+              className="bg-card border border-border rounded-xl p-8 animate-fade-in"
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-foreground to-foreground/80 text-background rounded-xl flex items-center justify-center mx-auto mb-6">
+                {React.createElement(personas[activePersona].icon, { className: "w-8 h-8" })}
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-4">
+                As a {personas[activePersona].title}
+              </h3>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {personas[activePersona].description}
               </p>
             </div>
-
-            {/* Mobile Slot Machine Spinner */}
-            <div className="md:hidden">
-              {!showAllSteps ? (
-                <div className="max-w-sm mx-auto">
-                  <Card 
-                    className="p-6 border-border hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 active:scale-95"
-                    onClick={handleStepSpin}
-                  >
-                    <CardContent className="p-0 text-center">
-                      <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-colors">
-                        {currentStep === 0 && <Upload className="w-8 h-8 text-primary" />}
-                        {currentStep === 1 && <Bot className="w-8 h-8 text-primary" />}
-                        {currentStep === 2 && <Rocket className="w-8 h-8 text-primary" />}
-                      </div>
-                      <div className="text-3xl font-bold text-primary mb-2">
-                        {steps[currentStep].number}
-                      </div>
-                      <h3 className="text-xl font-semibold text-foreground mb-4">
-                        {steps[currentStep].title}
-                      </h3>
-                      <p className="text-muted-foreground leading-relaxed mb-6">
-                        {steps[currentStep].description}
-                      </p>
-                      <div className="flex justify-center space-x-2 mb-4">
-                        {steps.map((_, index) => (
-                          <div
-                            key={index}
-                            className={`w-2 h-2 rounded-full transition-colors ${
-                              index === currentStep ? 'bg-primary' : 'bg-muted'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-sm text-muted-foreground">Tap to see next step</p>
-                    </CardContent>
-                  </Card>
-                  
-                  <div className="text-center mt-6">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowAllSteps(true)}
-                      className="px-6 py-2"
-                    >
-                      Show All Steps
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {steps.map((step, index) => (
-                    <Card key={index} className="p-6 border-border">
-                      <CardContent className="p-0 text-center">
-                        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                          {index === 0 && <Upload className="w-6 h-6 text-primary" />}
-                          {index === 1 && <Bot className="w-6 h-6 text-primary" />}
-                          {index === 2 && <Rocket className="w-6 h-6 text-primary" />}
-                        </div>
-                        <div className="text-2xl font-bold text-primary mb-2">{step.number}</div>
-                        <h3 className="text-lg font-semibold text-foreground mb-3">{step.title}</h3>
-                        <p className="text-muted-foreground leading-relaxed">{step.description}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  <div className="text-center">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowAllSteps(false)}
-                      className="px-6 py-2"
-                    >
-                      Show Interactive Steps
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Desktop Horizontal Layout */}
-            <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-              {steps.map((step, index) => (
-                <div key={index} className="text-center group">
-                  <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
-                    {index === 0 && <Upload className="w-8 h-8 text-primary" />}
-                    {index === 1 && <Bot className="w-8 h-8 text-primary" />}
-                    {index === 2 && <Rocket className="w-8 h-8 text-primary" />}
-                  </div>
-                  <div className="text-2xl font-bold text-primary mb-2">{step.number}</div>
-                  <h3 className="text-xl font-semibold text-foreground mb-4">{step.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{step.description}</p>
-                </div>
-              ))}
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Spaced Repetition Explanation Section */}
-        <section className="py-16 md:py-24 bg-muted/30">
-          <div className="container-section">
-            <div className="text-center mb-16">
-              <h2 className="text-section text-foreground mb-4">
-                Smart Learning with Spaced Repetition
-              </h2>
-              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
-                Our platform uses scientifically-proven spaced repetition to help you remember more with less effort
-              </p>
-            </div>
-
-            <div className="max-w-5xl mx-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                {/* Interactive Timeline */}
-                <div className="order-2 lg:order-1">
-                  <Card className="p-8 border-border bg-background/50 backdrop-blur">
-                    <div className="mb-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-semibold text-foreground">Learning Timeline</h3>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSpacedRepetitionAnimation}
-                          disabled={isAnimating}
-                          className="px-4 py-2"
-                        >
-                          {isAnimating ? (
-                            <>
-                              <RotateCcw className="w-4 h-4 mr-2 animate-spin" />
-                              Playing
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="w-4 h-4 mr-2" />
-                              Show Timeline
-                            </>
-                          )}
-                        </Button>
-                      </div>
-
-                      {/* Timeline Visualization */}
-                      <div className="relative">
-                        {/* Timeline Line */}
-                        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border transform -translate-y-1/2"></div>
-                        
-                        {/* Timeline Points */}
-                        <div className="relative flex justify-between items-center h-16">
-                          {spacedRepetitionSteps.map((step, index) => (
-                            <div
-                              key={index}
-                              className={`relative transition-all duration-500 ${
-                                index <= spacedRepetitionStep && isAnimating
-                                  ? 'scale-110 opacity-100'
-                                  : index === spacedRepetitionStep && isAnimating
-                                  ? 'scale-125 opacity-100'
-                                  : 'scale-100 opacity-60'
-                              }`}
-                              style={{ left: `${step.position}%` }}
-                            >
-                              {/* Timeline Point */}
-                              <div
-                                className={`w-4 h-4 rounded-full border-2 border-background transition-all duration-500 ${
-                                  index <= spacedRepetitionStep && isAnimating
-                                    ? step.color
-                                    : 'bg-muted border-border'
-                                }`}
-                              ></div>
-                              
-                              {/* Timeline Label */}
-                              <div className="absolute top-6 left-1/2 transform -translate-x-1/2 text-center">
-                                <div className={`text-xs font-medium transition-colors duration-300 ${
-                                  index <= spacedRepetitionStep && isAnimating
-                                    ? 'text-foreground'
-                                    : 'text-muted-foreground'
-                                }`}>
-                                  {step.day}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Current Step Description */}
-                      <div className="mt-8 p-4 bg-muted/50 rounded-lg">
-                        <div className="flex items-center mb-2">
-                          <div className={`w-3 h-3 rounded-full mr-3 transition-colors duration-300 ${
-                            isAnimating ? spacedRepetitionSteps[spacedRepetitionStep]?.color || 'bg-muted' : 'bg-muted'
-                          }`}></div>
-                          <span className="text-sm font-medium text-foreground">
-                            {isAnimating ? spacedRepetitionSteps[spacedRepetitionStep]?.interval || 'Ready to start' : 'Click "Show Timeline" to see how it works'}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground ml-6">
-                          {isAnimating ? spacedRepetitionSteps[spacedRepetitionStep]?.description || 'Watch the learning progression' : 'Spaced repetition shows you cards just before you forget them'}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-
-                {/* Explanation Content */}
-                <div className="order-1 lg:order-2">
-                  <div className="space-y-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
-                        <Brain className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-foreground mb-2">Science-Based Learning</h3>
-                        <p className="text-muted-foreground">
-                          Spaced repetition is backed by cognitive science research. It increases long-term retention by up to 200% compared to traditional study methods.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
-                        <Clock className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-foreground mb-2">Optimal Timing</h3>
-                        <p className="text-muted-foreground">
-                          Cards appear just before you're likely to forget them. This timing strengthens memory pathways and reduces study time.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-1">
-                        <TrendingUp className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-foreground mb-2">Progressive Intervals</h3>
-                        <p className="text-muted-foreground">
-                          As you master each card, review intervals automatically increase from 1 day to several months, maximizing efficiency.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-4">
-                      <p className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-lg">
-                        <strong className="text-foreground">Fun fact:</strong> This method was originally developed in the 1880s by Hermann Ebbinghaus and has been refined by modern research to become the most effective learning technique available.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* Spaced Repetition Explanation */}
+      <section ref={retentionRef} className="py-16 md:py-20 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Smarter Studying Through Spaced Repetition
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Our AI adapts the scientifically proven spaced repetition method to your content and recall pace.
+            </p>
           </div>
-        </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-16 md:py-24 bg-background">
-          <div className="container-section">
-            <div className="text-center mb-16">
-              <h2 className="text-section text-foreground mb-4">
-                Everything You Need
-              </h2>
-              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
-                Powerful features designed to transform how you create and study with flashcards
-              </p>
-            </div>
-
-            {/* Mobile and Small Screens - Progressive Disclosure */}
-            <div className="md:hidden">
-              <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
-                {features.slice(0, showAllFeatures ? features.length : 2).map((feature, index) => (
-                  <Card 
-                    key={index} 
-                    className="p-6 border-border hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105 active:scale-95"
-                    onClick={() => {/* Add tap scale animation */}}
-                  >
-                    <CardContent className="p-0 text-center">
-                      <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors hover:bg-primary/20">
-                        {index === 0 && <Brain className="w-8 h-8 text-primary transition-transform hover:scale-110" />}
-                        {index === 1 && <Download className="w-8 h-8 text-primary transition-transform hover:scale-110" />}
-                        {index === 2 && <Shield className="w-8 h-8 text-primary transition-transform hover:scale-110" />}
-                      </div>
-                      <h3 className="text-lg font-semibold text-foreground mb-3">{feature.title}</h3>
-                      <p className="text-muted-foreground leading-relaxed text-sm">{feature.description}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              
-              {!showAllFeatures && (
-                <div className="text-center mt-8">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowAllFeatures(true)}
-                    className="px-6 py-2"
-                  >
-                    See All Features
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Tablet and Desktop - 2-Column Grid (switches to 1-column on <375px) */}
-            <div className="hidden md:block">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
-                {features.map((feature, index) => (
-                  <div key={index} className="text-center group">
-                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/20 transition-colors">
-                      {index === 0 && <Brain className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />}
-                      {index === 1 && <Download className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />}
-                      {index === 2 && <Shield className="w-8 h-8 text-primary transition-transform group-hover:scale-110" />}
-                    </div>
-                    <h3 className="text-xl font-semibold text-foreground mb-4">{feature.title}</h3>
-                    <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials Section */}
-        <section className="py-16 md:py-24 bg-background">
-          <div className="container-section">
-            <div className="text-center mb-16">
-              <h2 className="text-section text-foreground mb-4">
-                What Our Early Users Say
-              </h2>
-              <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
-                Used by early learners in our beta who gave us a 4.7/5 average rating.
-              </p>
-            </div>
-
-            {/* Mobile/Tablet: Staggered Layout */}
-            <div className="lg:hidden max-w-4xl mx-auto space-y-6">
-              {/* First testimonial - 90% width */}
-              <div className="w-[90%] mx-auto">
-                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95">
-                  <CardContent className="p-0">
-                    <div className="flex items-center mb-4">
-                      <div className="flex text-yellow-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground mb-4 italic text-base leading-relaxed">
-                      "This beta tool saved me hours of manual flashcard creation. The AI really understands the content."
-                    </p>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-sm font-medium text-primary">SM</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-foreground">Sarah M.</p>
-                        <p className="text-muted-foreground">Medical Student</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Second testimonial - 85% width, offset right */}
-              <div className="w-[85%] ml-auto">
-                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95">
-                  <CardContent className="p-0">
-                    <div className="flex items-center mb-4">
-                      <div className="flex text-yellow-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground mb-4 italic text-base leading-relaxed">
-                      "Perfect for studying complex textbooks. The export to Anki feature is exactly what I needed."
-                    </p>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-sm font-medium text-primary">AR</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-foreground">Alex R.</p>
-                        <p className="text-muted-foreground">Graduate Student</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Third testimonial - 90% width, offset left */}
-              <div className="w-[90%] mr-auto">
-                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95">
-                  <CardContent className="p-0">
-                    <div className="flex items-center mb-4">
-                      <div className="flex text-yellow-400">
-                        {[...Array(4)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
-                        ))}
-                        <Star className="w-4 h-4 text-gray-300" />
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground mb-4 italic text-base leading-relaxed">
-                      "Great potential! Looking forward to more features as the beta progresses."
-                    </p>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-sm font-medium text-primary">JK</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-foreground">Jordan K.</p>
-                        <p className="text-muted-foreground">Professional Learner</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Desktop: Traditional Grid Layout */}
-            <div className="hidden lg:block">
-              <div className="grid grid-cols-3 gap-8 max-w-6xl mx-auto">
-                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-                  <CardContent className="p-0">
-                    <div className="flex items-center mb-4">
-                      <div className="flex text-yellow-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground mb-4 italic">
-                      "This beta tool saved me hours of manual flashcard creation. The AI really understands the content."
-                    </p>
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
-                        <span className="text-xs font-medium text-primary">SM</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-foreground">Sarah M.</p>
-                        <p className="text-muted-foreground">Medical Student</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-                  <CardContent className="p-0">
-                    <div className="flex items-center mb-4">
-                      <div className="flex text-yellow-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground mb-4 italic">
-                      "Perfect for studying complex textbooks. The export to Anki feature is exactly what I needed."
-                    </p>
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
-                        <span className="text-xs font-medium text-primary">AR</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-foreground">Alex R.</p>
-                        <p className="text-muted-foreground">Graduate Student</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="p-6 border-border hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-                  <CardContent className="p-0">
-                    <div className="flex items-center mb-4">
-                      <div className="flex text-yellow-400">
-                        {[...Array(4)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
-                        ))}
-                        <Star className="w-4 h-4 text-gray-300" />
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground mb-4 italic">
-                      "Great potential! Looking forward to more features as the beta progresses."
-                    </p>
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
-                        <span className="text-xs font-medium text-primary">JK</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium text-foreground">Jordan K.</p>
-                        <p className="text-muted-foreground">Professional Learner</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing Section */}
-        <section id="pricing" className="py-16 md:py-24 bg-background">
-          <div className="container-content">
-            <div className="text-center mb-16">
-              <h2 className="text-section text-foreground mb-4">
-                Simple, transparent pricing
-              </h2>
-              <p className="text-body-lg text-muted-foreground">
-                Start free, upgrade when you need more
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {/* Free Plan */}
-              <Card className="relative p-8 border-border hover:shadow-lg transition-shadow">
-                <CardHeader className="p-0 pb-6">
-                  <CardTitle className="text-2xl font-bold text-foreground">Free</CardTitle>
-                  <CardDescription className="text-muted-foreground mt-2">
-                    3 free PDFs every month — no credit card required
-                  </CardDescription>
-                  <div className="text-4xl font-bold text-foreground mt-4">
-                    $0<span className="text-lg font-normal text-muted-foreground">/month</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <ul className="space-y-4 mb-8">
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                      <span className="text-foreground">3 PDF uploads per month</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                      <span className="text-foreground">Basic AI flashcard generation</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                      <span className="text-foreground">Export to all formats</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                      <span className="text-foreground">Built-in study mode</span>
-                    </li>
-                  </ul>
-                  <Button 
-                    className="w-full" 
-                    variant="outline" 
-                    onClick={() => setShowAuthModal(true)}
-                    size="lg"
-                  >
-                    Get Started Free
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Premium Plan */}
-              <Card className="relative p-8 border-2 border-primary hover:shadow-lg transition-shadow">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium">
-                    Most Popular
-                  </div>
-                </div>
-                <CardHeader className="p-0 pb-6">
-                  <CardTitle className="text-2xl font-bold text-foreground">Premium</CardTitle>
-                  <CardDescription className="text-muted-foreground mt-2">
-                    Ready for more? Unlock advanced AI and more uploads
-                  </CardDescription>
-                  <div className="text-4xl font-bold text-foreground mt-4">
-                    $9<span className="text-lg font-normal text-muted-foreground">/month</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <ul className="space-y-4 mb-8">
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                      <span className="text-foreground">100 PDF uploads per month</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                      <span className="text-foreground">Advanced AI with multiple providers</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                      <span className="text-foreground">OCR for scanned documents</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                      <span className="text-foreground">Priority processing</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-                      <span className="text-foreground">Advanced study analytics</span>
-                    </li>
-                  </ul>
-                  <Button 
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90" 
-                    onClick={() => setShowAuthModal(true)}
-                    size="lg"
-                  >
-                    Start Premium Trial
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-16 md:py-24 bg-muted/30">
-          <div className="container-content text-center">
-            <div className="space-y-8">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Explanation */}
+            <div className="space-y-6">
               <div className="space-y-4">
-                <h2 className="text-section text-foreground">
-                  Ready to transform your learning?
-                </h2>
-                <p className="text-body-lg text-muted-foreground max-w-2xl mx-auto">
-                  Join thousands of students and professionals who are already studying smarter with AI-generated flashcards
+                <h3 className="text-xl font-semibold text-foreground">
+                  Why Traditional Studying Fails
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Without reinforcement, we forget 50% of new information within 24 hours. 
+                  Spaced repetition fights this natural memory decay by scheduling reviews 
+                  at optimal intervals.
                 </p>
               </div>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-foreground">
+                  StudyCards AI Difference
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  Our system automatically schedules flashcard reviews based on your 
+                  performance, ensuring maximum retention with minimum time investment.
+                </p>
+              </div>
+            </div>
+
+            {/* Animated Retention Graph */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h4 className="text-lg font-semibold text-foreground mb-6 text-center">
+                Memory Retention Over Time
+              </h4>
+              <div className="relative h-64">
+                <svg viewBox="0 0 400 200" className="w-full h-full">
+                  {/* Grid lines */}
+                  {[0, 25, 50, 75, 100].map((y) => (
+                    <line 
+                      key={y}
+                      x1="50" 
+                      y1={200 - y * 1.5} 
+                      x2="350" 
+                      y2={200 - y * 1.5}
+                      stroke="currentColor"
+                      strokeOpacity="0.1"
+                      className="text-muted-foreground"
+                    />
+                  ))}
+                  
+                  {/* Decay curve (without spaced repetition) */}
+                  <path
+                    d="M 50 50 Q 150 100 200 125 Q 250 140 300 150 Q 325 155 350 160"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeOpacity="0.4"
+                    className="text-red-500"
+                  />
+                  
+                  {/* Spaced repetition curve */}
+                  {retentionStep >= 5 && (
+                    <path
+                      d="M 50 50 L 100 60 L 150 65 L 200 70 L 250 72 L 300 75 L 350 77"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      className="text-green-500 animate-fade-in"
+                    />
+                  )}
+                  
+                  {/* Data points */}
+                  {retentionData.slice(0, retentionStep + 1).map((point, index) => (
+                    <circle
+                      key={index}
+                      cx={50 + (point.day * 10)}
+                      cy={200 - (point.retention * 1.5)}
+                      r="4"
+                      fill="currentColor"
+                      className={index < 5 ? "text-red-500" : "text-green-500"}
+                    />
+                  ))}
+                  
+                  {/* Axes */}
+                  <line x1="50" y1="50" x2="50" y2="200" stroke="currentColor" strokeWidth="2" className="text-muted-foreground" />
+                  <line x1="50" y1="200" x2="350" y2="200" stroke="currentColor" strokeWidth="2" className="text-muted-foreground" />
+                </svg>
+                
+                {/* Labels */}
+                <div className="absolute bottom-0 left-12 text-xs text-muted-foreground">Days</div>
+                <div className="absolute top-1/2 left-2 text-xs text-muted-foreground -rotate-90 origin-center">Retention %</div>
+                
+                {/* Legend */}
+                <div className="absolute top-4 right-4 space-y-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-0.5 bg-red-500 opacity-40"></div>
+                    <span className="text-muted-foreground">Traditional</span>
+                  </div>
+                  {retentionStep >= 5 && (
+                    <div className="flex items-center gap-2 animate-fade-in">
+                      <div className="w-3 h-0.5 bg-green-500"></div>
+                      <span className="text-muted-foreground">Spaced Repetition</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground text-center mt-4">
+                StudyCards AI adapts this model for your content and recall pace.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-16 md:py-20 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Simple, Honest Pricing
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Start free, upgrade when you need more
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Free Plan */}
+            <Card className="border-border p-8">
+              <CardContent className="p-0">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Free</h3>
+                  <div className="text-3xl font-bold text-foreground mb-4">$0</div>
+                  <p className="text-muted-foreground">Perfect for trying out</p>
+                </div>
+                
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-foreground">3 PDFs per month</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-foreground">Basic AI quality</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-foreground">Export to all formats</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-foreground">Built-in study mode</span>
+                  </li>
+                </ul>
+                
                 <Button 
                   onClick={() => setShowAuthModal(true)}
-                  size="lg"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 text-lg font-semibold rounded-xl min-w-[220px]"
+                  variant="outline" 
+                  className="w-full py-3 font-medium"
                 >
-                  Get Started Now - Free
+                  Start Free
                 </Button>
-                <p className="text-sm text-muted-foreground">
-                  No credit card required
-                </p>
+              </CardContent>
+            </Card>
+
+            {/* Pro Plan */}
+            <Card className="border-foreground/20 p-8 relative">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <span className="bg-gradient-to-r from-foreground to-foreground/90 text-background px-3 py-1 rounded-full text-sm font-medium">
+                  Most Popular
+                </span>
               </div>
-            </div>
+              
+              <CardContent className="p-0">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Pro</h3>
+                  <div className="text-3xl font-bold text-foreground mb-4">$12</div>
+                  <p className="text-muted-foreground">per month</p>
+                </div>
+                
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-foreground">100 PDFs per month</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-foreground">Advanced AI quality</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-foreground">Priority processing</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-foreground">Advanced study analytics</span>
+                  </li>
+                </ul>
+                
+                <Button 
+                  onClick={() => setShowAuthModal(true)}
+                  className="w-full py-3 font-medium bg-gradient-to-r from-foreground to-foreground/90 text-background hover:from-foreground/90 hover:to-foreground/80"
+                >
+                  Start Free Trial
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-        </section>
-      </main>
+          
+          <p className="text-center text-sm text-muted-foreground mt-8">
+            No credit card required. Cancel anytime.
+          </p>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-16 md:py-20 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Loved by Learners
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <Card key={index} className="border-border p-6">
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-1 mb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <blockquote className="text-foreground mb-4 leading-relaxed">
+                    "{testimonial.quote}"
+                  </blockquote>
+                  <div className="text-sm">
+                    <div className="font-medium text-foreground">{testimonial.name}</div>
+                    <div className="text-muted-foreground">{testimonial.role}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-16 md:py-20 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6">
+            Start learning smarter — today.
+          </h2>
+          <p className="text-lg text-muted-foreground mb-8">
+            Takes less than 60 seconds. Works with any PDF.
+          </p>
+          <Button 
+            onClick={() => setShowAuthModal(true)}
+            size="lg"
+            className="bg-gradient-to-r from-foreground to-foreground/90 text-background hover:from-foreground/90 hover:to-foreground/80 px-8 py-4 text-lg font-semibold rounded-lg shadow-lg"
+          >
+            Start Free Trial
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-background border-t border-border py-12">
-        <div className="container-section">
-          <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+      <footer className="border-t border-border bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center space-x-3">
-              <div className="bg-primary text-primary-foreground rounded-xl p-2">
-                <Brain className="w-5 h-5" />
+              <div className="bg-gradient-to-br from-foreground to-foreground/80 text-background rounded-xl p-2">
+                <Feather className="w-5 h-5" />
               </div>
-              <span className="text-lg font-bold text-foreground">Kardu.io</span>
+              <span className="font-semibold text-foreground">StudyCards AI</span>
             </div>
             
-            <div className="text-center md:text-right">
-              <p className="text-sm text-muted-foreground">
-                &copy; 2024 Kardu.io. Powered by advanced AI technology.
-              </p>
+            <div className="flex items-center space-x-6 text-sm">
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">About</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Terms</a>
+              <a href="mailto:hello@studycards.ai" className="text-muted-foreground hover:text-foreground transition-colors">Contact</a>
             </div>
           </div>
         </div>
       </footer>
 
-      {/* Authentication Modal */}
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
     </div>
   );
 }
