@@ -48,6 +48,8 @@ export default function Upload() {
   
   // Core state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedHistoricalFile, setSelectedHistoricalFile] = useState<any>(null);
+  const [uploadMode, setUploadMode] = useState<'new' | 'historical'>('new');
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentJobId, setCurrentJobId] = useState<number | null>(null);
@@ -82,6 +84,14 @@ export default function Upload() {
     queryKey: ['/api/auth/user'],
     enabled: !!user,
   });
+
+  // Fetch historical files for reuse
+  const { data: historicalFiles = [] } = useQuery({
+    queryKey: ['/api/history'],
+    enabled: !!user,
+  });
+
+  const typedHistoricalFiles = (historicalFiles as any[]) || [];
 
   const isPremium = (userData as any)?.isPremium || false;
   const isEmailVerified = user && (user as any).email_confirmed_at != null;
@@ -126,6 +136,43 @@ export default function Upload() {
     onError: (error: any) => {
       toast({
         title: "Upload failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Historical file reprocess mutation
+  const reprocessMutation = useMutation({
+    mutationFn: async (payload: { jobId: number; settings: any }) => {
+      return await apiRequest('POST', '/api/reprocess', payload);
+    },
+    onSuccess: (data) => {
+      const jobId = data.jobId || data.id;
+      
+      if (!jobId) {
+        toast({
+          title: "Reprocess error",
+          description: "Job ID not found in response. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setCurrentJobId(jobId);
+      setCurrentStep(3);
+      setIsProcessing(true);
+      setUploadProgress(10);
+      setProcessingStage('Starting reprocessing...');
+      
+      toast({
+        title: "Reprocessing started!",
+        description: "Generating new flashcards from your historical PDF...",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Reprocess failed",
         description: error.message || "Please try again.",
         variant: "destructive",
       });
@@ -245,15 +292,35 @@ export default function Upload() {
       return;
     }
 
-    if (selectedFiles.length === 0) {
+    if (selectedFiles.length === 0 && !selectedHistoricalFile) {
       toast({
         title: "No files selected",
-        description: "Please select a PDF file first.",
+        description: "Please select a PDF file or choose from historical files.",
         variant: "destructive",
       });
       return;
     }
 
+    // Handle historical file reprocessing
+    if (selectedHistoricalFile) {
+      const settings = {
+        subject,
+        difficulty,
+        flashcardCount,
+        apiProvider,
+        focusAreas,
+        customContext: customContext.trim() || undefined,
+        customFileName: customFileName.trim() || undefined,
+      };
+
+      reprocessMutation.mutate({
+        jobId: selectedHistoricalFile.id,
+        settings,
+      });
+      return;
+    }
+
+    // Handle new file upload
     const formData = new FormData();
     selectedFiles.forEach((file) => {
       formData.append('pdfs', file);
@@ -416,6 +483,73 @@ export default function Upload() {
                       Configure Settings
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
+                  </div>
+                )}
+
+                {selectedHistoricalFile && (
+                  <div className="mt-6 space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-muted rounded">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="w-4 h-4" />
+                        <span className="text-sm">{selectedHistoricalFile.filename}</span>
+                        <Badge variant="secondary" className="ml-2">Historical</Badge>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedHistoricalFile(null)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Button onClick={() => setCurrentStep(2)} className="w-full mt-4">
+                      Configure Settings
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Historical Files Section */}
+                {Array.isArray(historicalFiles) && (historicalFiles as any[]).length > 0 && !selectedFiles.length && !selectedHistoricalFile && (
+                  <div className="mt-8 border-t pt-6">
+                    <h3 className="text-lg font-semibold mb-4 text-center">Or Reuse Previous PDFs</h3>
+                    <p className="text-sm text-muted-foreground text-center mb-4">
+                      Select from your previously uploaded files to generate new flashcards
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                      {(historicalFiles as any[]).slice(0, 10).map((file: any) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                          onClick={() => setSelectedHistoricalFile(file)}
+                        >
+                          <div className="flex items-center space-x-3 flex-1">
+                            <FileText className="w-5 h-5 text-muted-foreground" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{file.filename}</p>
+                              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                                <span>{Math.round(file.fileSize / 1024)} KB</span>
+                                <span>•</span>
+                                <span>{new Date(file.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {file.status === 'completed' && (
+                              <Badge variant="secondary" className="text-xs">
+                                {file.flashcardCount} cards
+                              </Badge>
+                            )}
+                            <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {(historicalFiles as any[]).length > 10 && (
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        Showing 10 most recent files
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -583,15 +717,15 @@ export default function Upload() {
                 <Button variant="outline" onClick={() => setCurrentStep(1)}>
                   Back
                 </Button>
-                <Button onClick={handleGenerate} disabled={uploadMutation.isPending}>
-                  {uploadMutation.isPending ? (
+                <Button onClick={handleGenerate} disabled={uploadMutation.isPending || reprocessMutation.isPending}>
+                  {(uploadMutation.isPending || reprocessMutation.isPending) ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
+                      {selectedHistoricalFile ? 'Reprocessing...' : 'Processing...'}
                     </>
                   ) : (
                     <>
-                      Generate Flashcards
+                      {selectedHistoricalFile ? 'Reprocess Historical PDF' : 'Generate Flashcards'}
                       <Sparkles className="w-4 h-4 ml-2" />
                     </>
                   )}

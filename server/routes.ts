@@ -1107,6 +1107,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reprocess historical PDF with new settings
+  app.post("/api/reprocess", verifySupabaseToken as any, requireApiKeys, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { jobId, settings } = req.body;
+
+      if (!jobId || !settings) {
+        return res.status(400).json({ 
+          message: "Job ID and settings are required",
+          required: ["jobId", "settings"]
+        });
+      }
+
+      // Validate settings
+      const {
+        subject,
+        difficulty,
+        flashcardCount,
+        apiProvider,
+        focusAreas,
+        customContext,
+        customFileName
+      } = settings;
+
+      if (!subject || !difficulty || !flashcardCount || !apiProvider) {
+        return res.status(400).json({ 
+          message: "Missing required settings",
+          required: ["subject", "difficulty", "flashcardCount", "apiProvider"]
+        });
+      }
+
+      // Get the original job to ensure user owns it
+      const originalJob = await storage.getFlashcardJob(jobId);
+      if (!originalJob || originalJob.userId !== userId) {
+        return res.status(404).json({ message: "Original job not found or access denied" });
+      }
+
+      // Get user for premium status check
+      const user = await storage.getUserProfile(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Validate premium access for advanced models
+      if (apiProvider === 'advanced' && !user.isPremium) {
+        return res.status(403).json({ 
+          message: "Advanced AI quality requires a Premium subscription.",
+          upgrade: true
+        });
+      }
+
+      // Create new job for reprocessing
+      const newJobData = {
+        userId,
+        filename: customFileName || `${originalJob.filename} (Reprocessed)`,
+        fileSize: originalJob.fileSize,
+        pageCount: originalJob.pageCount,
+        subject: subject.trim(),
+        difficulty,
+        flashcardCount: parseInt(flashcardCount),
+        aiProvider: getAvailableProvider(apiProvider, validateApiKeys()),
+        focusAreas: JSON.stringify(focusAreas),
+        customContext: customContext?.trim() || null,
+        status: 'pending' as const,
+        progress: 0,
+        currentTask: 'Starting reprocessing...',
+        pdfStorageKey: originalJob.pdfStorageKey, // Reuse the same PDF file
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const newJob = await storage.createFlashcardJob(newJobData);
+
+      // Start processing in background
+      processFlashcardJob(newJob.id);
+
+      res.json({
+        message: "Reprocessing started successfully",
+        jobId: newJob.id,
+        filename: newJob.filename,
+        settings: {
+          subject,
+          difficulty,
+          flashcardCount: parseInt(flashcardCount),
+          apiProvider
+        }
+      });
+
+    } catch (error) {
+      console.error("Reprocess error:", error);
+      res.status(500).json({ 
+        message: "Failed to start reprocessing",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Restart job endpoint
   app.post("/api/jobs/:id/restart", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {
