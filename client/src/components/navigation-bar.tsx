@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Menu, X, Home, Upload, History, BookOpen, LogOut, User, Brain, Feather } from "lucide-react";
+import { Menu, X, Home, Upload, History, BookOpen, LogOut, User, Brain, Feather, Settings, CreditCard, BarChart3, HelpCircle, Shield, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -98,15 +99,58 @@ export function NavigationBar({ onNavigate }: NavigationBarProps) {
                 {(userData as any)?.isPremium ? "Pro" : "Free"}
               </Badge>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleLogout}
-              className="px-4 py-2 transition-colors duration-200 hover:bg-muted"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            
+            {/* User Menu Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="flex items-center gap-2 w-full">
+                    <Settings className="w-4 h-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/subscription" className="flex items-center gap-2 w-full">
+                    <CreditCard className="w-4 h-4" />
+                    Subscription
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/analytics" className="flex items-center gap-2 w-full">
+                    <BarChart3 className="w-4 h-4" />
+                    Analytics
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/support" className="flex items-center gap-2 w-full">
+                    <HelpCircle className="w-4 h-4" />
+                    Help & Support
+                  </Link>
+                </DropdownMenuItem>
+                {userRole === 'admin' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin-panel" className="flex items-center gap-2 w-full">
+                        <Shield className="w-4 h-4" />
+                        Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-red-600">
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Mobile menu button */}

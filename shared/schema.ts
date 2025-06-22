@@ -140,6 +140,68 @@ export const temporaryDownloads = pgTable("temporary_downloads", {
   index("idx_temporary_downloads_expires").on(table.expiresAt),
 ]);
 
+// User preferences table for settings
+export const userPreferences = pgTable("user_preferences", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => userProfiles.id),
+  studySessionLength: integer("study_session_length").default(20), // Default 20 cards per session
+  dailyStudyGoal: integer("daily_study_goal").default(50), // Default 50 cards per day
+  difficultyProgression: text("difficulty_progression").default("adaptive"), // 'adaptive' | 'manual'
+  spaceRepetitionInterval: text("space_repetition_interval").default("sm2"), // 'sm2' | 'custom'
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+  emailNotifications: boolean("email_notifications").default(true),
+  studyReminders: boolean("study_reminders").default(true),
+  weeklyReports: boolean("weekly_reports").default(true),
+  theme: text("theme").default("system"), // 'light' | 'dark' | 'system'
+  language: text("language").default("en"), // ISO language code
+  timezone: text("timezone").default("UTC"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_preferences_user").on(table.userId),
+]);
+
+// Support tickets table
+export const supportTickets = pgTable("support_tickets", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => userProfiles.id),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  category: text("category").notNull(), // 'bug' | 'feature' | 'account' | 'billing' | 'general'
+  priority: text("priority").default("medium"), // 'low' | 'medium' | 'high' | 'urgent'
+  status: text("status").default("open"), // 'open' | 'in_progress' | 'closed' | 'resolved'
+  adminResponse: text("admin_response"),
+  respondedAt: timestamp("responded_at"),
+  closedAt: timestamp("closed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_support_tickets_user").on(table.userId),
+  index("idx_support_tickets_status").on(table.status),
+  index("idx_support_tickets_priority").on(table.priority),
+  index("idx_support_tickets_category").on(table.category),
+]);
+
+// Subscription history table for billing management
+export const subscriptionHistory = pgTable("subscription_history", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => userProfiles.id),
+  subscriptionId: text("subscription_id"), // Stripe subscription ID
+  planType: text("plan_type").notNull(), // 'free' | 'pro' | 'enterprise'
+  status: text("status").notNull(), // 'active' | 'cancelled' | 'expired' | 'past_due'
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  amount: numeric("amount", { precision: 10, scale: 2 }), // Monthly amount
+  currency: text("currency").default("USD"),
+  paymentMethod: text("payment_method"), // 'card' | 'paypal' | etc
+  stripeCustomerId: text("stripe_customer_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_subscription_history_user").on(table.userId),
+  index("idx_subscription_history_status").on(table.status),
+  index("idx_subscription_history_dates").on(table.startDate, table.endDate),
+]);
+
 export const insertFlashcardJobSchema = createInsertSchema(flashcardJobs).omit({
   id: true,
   createdAt: true,
@@ -165,6 +227,23 @@ export const insertTemporaryDownloadSchema = createInsertSchema(temporaryDownloa
   createdAt: true,
 });
 
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSubscriptionHistorySchema = createInsertSchema(subscriptionHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertFlashcardJob = z.infer<typeof insertFlashcardJobSchema>;
 export type FlashcardJob = typeof flashcardJobs.$inferSelect;
 export type Flashcard = typeof flashcards.$inferSelect;
@@ -177,6 +256,12 @@ export type StudySession = typeof studySessions.$inferSelect;
 export type InsertStudySession = z.infer<typeof insertStudySessionSchema>;
 export type TemporaryDownload = typeof temporaryDownloads.$inferSelect;
 export type InsertTemporaryDownload = z.infer<typeof insertTemporaryDownloadSchema>;
+export type UserPreferences = typeof userPreferences.$inferSelect;
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+export type SubscriptionHistory = typeof subscriptionHistory.$inferSelect;
+export type InsertSubscriptionHistory = z.infer<typeof insertSubscriptionHistorySchema>;
 
 export interface FlashcardPair {
   id?: number;

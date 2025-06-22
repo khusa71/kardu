@@ -18,6 +18,11 @@ import StudyMain from "@/pages/study-main";
 import Admin from "@/pages/admin";
 import AuthCallback from "@/pages/auth-callback";
 import ResetPassword from "@/pages/reset-password";
+import Settings from "@/pages/settings";
+import Subscription from "@/pages/subscription";
+import Analytics from "@/pages/analytics";
+import Support from "@/pages/support";
+import AdminPanel from "@/pages/admin-panel";
 
 // Redirect component for authenticated users visiting root
 function DashboardRedirect() {
@@ -84,7 +89,12 @@ function Router() {
       <Route path="/history" component={user ? History : LoginRedirect} />
       <Route path="/study" component={user ? StudyMain : LoginRedirect} />
       <Route path="/study/:jobId" component={user ? Study : LoginRedirect} />
+      <Route path="/settings" component={user ? Settings : LoginRedirect} />
+      <Route path="/subscription" component={user ? Subscription : LoginRedirect} />
+      <Route path="/analytics" component={user ? Analytics : LoginRedirect} />
+      <Route path="/support" component={user ? Support : LoginRedirect} />
       <Route path="/admin" component={user ? Admin : LoginRedirect} />
+      <Route path="/admin-panel" component={user ? AdminPanel : LoginRedirect} />
       <Route path="/success" component={Success} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/auth/callback" component={AuthCallback} />
