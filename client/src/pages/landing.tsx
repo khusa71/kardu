@@ -116,7 +116,7 @@ export default function Landing() {
               <div className="bg-gradient-to-br from-foreground to-foreground/80 text-background rounded-xl p-2.5">
                 <Feather className="w-6 h-6" />
               </div>
-              <span className="text-xl font-bold text-foreground">StudyCards AI</span>
+              <span className="text-xl font-bold text-foreground">Kardu.io</span>
             </div>
 
             {/* Desktop Navigation */}
@@ -187,7 +187,6 @@ export default function Landing() {
           )}
         </div>
       </header>
-
       {/* Hero Section */}
       <section className="relative bg-background overflow-hidden">
         {/* Grid Background */}
@@ -296,7 +295,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* How It Works Section */}
       <section id="how-it-works" className="py-12 md:py-16 bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -373,7 +371,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Who Is It For Section */}
       <section className="py-12 md:py-16 bg-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -502,7 +499,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Spaced Repetition Explanation */}
       <section ref={retentionRef} className="py-12 md:py-16 bg-gradient-to-br from-muted/10 via-background to-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -696,7 +692,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Pricing Section */}
       <section id="pricing" className="py-12 md:py-16 bg-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -797,7 +792,6 @@ export default function Landing() {
           </p>
         </div>
       </section>
-
       {/* Testimonials */}
       <section className="py-12 md:py-16 bg-muted/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -889,7 +883,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Final CTA */}
       <section className="py-12 md:py-16 bg-gradient-to-br from-background via-muted/10 to-background relative overflow-hidden">
         {/* Background Effects */}
@@ -942,7 +935,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="border-t border-border bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -963,7 +955,6 @@ export default function Landing() {
           </div>
         </div>
       </footer>
-
       {/* Auth Modal */}
       <AuthModal 
         isOpen={showAuthModal} 
