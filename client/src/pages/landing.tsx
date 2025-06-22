@@ -943,7 +943,7 @@ export default function Landing() {
               <div className="bg-gradient-to-br from-foreground to-foreground/80 text-background rounded-xl p-2">
                 <Feather className="w-5 h-5" />
               </div>
-              <span className="font-semibold text-foreground">StudyCards AI</span>
+              <span className="font-semibold text-foreground">Kardu.io</span>
             </div>
             
             <div className="flex items-center space-x-6 text-sm">
