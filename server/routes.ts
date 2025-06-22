@@ -1028,6 +1028,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug quota endpoint for testing
+  app.get("/api/debug-quota", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUserProfile(userId);
+      const quotaStatus = await getQuotaStatus(userId);
+      const canUploadTest = await canUserUpload(userId, 20);
+      
+      res.json({
+        user: {
+          id: user?.id,
+          email: user?.email,
+          isPremium: user?.isPremium,
+          uploadsThisMonth: user?.uploadsThisMonth,
+          maxMonthlyUploads: user?.maxMonthlyUploads,
+          updatedAt: user?.updatedAt
+        },
+        quotaStatus,
+        canUploadTest
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Get job status
   app.get("/api/jobs/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
     try {

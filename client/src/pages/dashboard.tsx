@@ -51,13 +51,15 @@ export default function Dashboard() {
     enabled: !!user,
   });
   
-  // Fetch user's flashcard history
+  // Fetch user's flashcard history with automatic refresh
   const { data: history = [], isLoading: historyLoading } = useQuery<HistoryItem[]>({
     queryKey: ["/api/history"],
     enabled: !!user,
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
   });
 
-  // Fetch comprehensive learning statistics
+  // Fetch comprehensive learning statistics with automatic refresh
   const { data: learningStats } = useQuery<{
     totalFlashcards: number;
     totalPagesProcessed: number;
@@ -67,6 +69,8 @@ export default function Dashboard() {
   }>({
     queryKey: ["/api/learning-stats"],
     enabled: !!user,
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
   });
 
   // Calculate user stats from API data and history

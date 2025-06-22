@@ -153,6 +153,10 @@ export function OptimizedStudyMode({ jobId, onComplete, onExit }: OptimizedStudy
     },
     onSuccess: (data: any) => {
       console.log('Study session completed:', data);
+      // Invalidate dashboard data to trigger immediate refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/learning-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/history'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
     },
     onError: (error) => {
       console.error('Failed to complete study session:', error);

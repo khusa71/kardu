@@ -39,8 +39,14 @@ export async function getUserQuota(userId: string): Promise<UsageQuota> {
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
-  const lastUpdate = user.updatedAt ? new Date(user.updatedAt) : new Date();
-  const needsReset = lastUpdate.getMonth() !== currentMonth || lastUpdate.getFullYear() !== currentYear;
+  const lastUpdate = user.updatedAt ? new Date(user.updatedAt) : new Date(0); // Use epoch if no update date
+  const lastUpdateMonth = lastUpdate.getMonth();
+  const lastUpdateYear = lastUpdate.getFullYear();
+  
+  // Only reset if we're in a different month AND year, or if it's been more than 30 days
+  const needsReset = (lastUpdateYear < currentYear) || 
+                     (lastUpdateYear === currentYear && lastUpdateMonth < currentMonth) ||
+                     (user.uploadsThisMonth === null); // First time user
 
   return {
     uploadsThisMonth: needsReset ? 0 : (user.uploadsThisMonth || 0),
@@ -103,11 +109,19 @@ export async function canUserUpload(
   const quota = await getUserQuota(userId);
   const limits = getQuotaLimits(user.isPremium || false);
 
-  // Check upload limit
+  // Check upload limit with debugging
+  console.log(`DEBUG: Quota check for user ${userId}:`, {
+    uploadsThisMonth: quota.uploadsThisMonth,
+    monthlyUploadLimit: limits.monthlyUploadLimit,
+    isPremium: user.isPremium,
+    needsReset: quota.needsReset
+  });
+
   if (quota.uploadsThisMonth >= limits.monthlyUploadLimit) {
+    console.log(`DEBUG: Upload blocked - limit reached`);
     return {
       canUpload: false,
-      reason: `Monthly upload limit reached (${limits.monthlyUploadLimit} uploads)`,
+      reason: `Monthly upload limit reached (${quota.uploadsThisMonth}/${limits.monthlyUploadLimit} uploads)`,
       quotaInfo: quota,
       limits
     };
