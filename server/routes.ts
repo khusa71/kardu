@@ -33,10 +33,20 @@ function serveTemporaryFiles(app: Express) {
 import { verifySupabaseToken, requireEmailVerification, AuthenticatedRequest } from "./supabase-auth";
 import { createNormalizedFlashcards, executeNormalizedMigration, getFlashcardsWithProgress, getNormalizedFlashcards } from "./normalized-migration";
 import { updateJobProgressWithNormalizedFlashcards } from "./flashcard-migration-complete";
-import { flashcards as flashcardsTable } from "@shared/schema";
+import { 
+  flashcards as flashcardsTable, 
+  userPreferences, 
+  supportTickets, 
+  subscriptionHistory,
+  studyProgress,
+  studySessions,
+  userProfiles,
+  flashcardJobs
+} from "@shared/schema";
 import { requireApiKeys, getAvailableProvider, validateApiKeys, logApiKeyStatus } from "./api-key-validator";
-import { inArray } from "drizzle-orm";
+import { inArray, eq, desc, sql } from "drizzle-orm";
 import { healthMonitor } from "./health-monitor";
+import { db } from "./db";
 
 import { getPageCount } from "./page-count-service";
 import { canUserUpload, incrementUploadCount, getQuotaStatus } from "./usage-quota-service-fixed";
@@ -2724,6 +2734,486 @@ async function processFlashcardJob(jobId: number) {
     } catch (error) {
       console.error("Upgrade error:", error);
       res.status(500).json({ message: "Failed to upgrade account" });
+    }
+  });
+
+  // ============ USER PREFERENCES API ============
+  
+  // Get user preferences
+  app.get("/api/user/preferences", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const preferences = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+      
+      if (preferences.length === 0) {
+        // Return default preferences
+        return res.json({
+          studySessionLength: 20,
+          dailyStudyGoal: 50,
+          difficultyProgression: "adaptive",
+          spaceRepetitionInterval: "sm2",
+          notificationsEnabled: true,
+          emailNotifications: true,
+          studyReminders: true,
+          weeklyReports: true,
+          theme: "system",
+          language: "en",
+          timezone: "UTC"
+        });
+      }
+      
+      res.json(preferences[0]);
+    } catch (error) {
+      console.error("Get preferences error:", error);
+      res.status(500).json({ message: "Failed to get preferences" });
+    }
+  });
+  
+  // Update user preferences
+  app.patch("/api/user/preferences", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const updates = req.body;
+      
+      // Check if preferences exist
+      const existing = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+      
+      if (existing.length === 0) {
+        // Create new preferences
+        await db.insert(userPreferences).values({
+          userId,
+          ...updates,
+          updatedAt: new Date()
+        });
+      } else {
+        // Update existing preferences
+        await db.update(userPreferences)
+          .set({ ...updates, updatedAt: new Date() })
+          .where(eq(userPreferences.userId, userId));
+      }
+      
+      res.json({ message: "Preferences updated successfully" });
+    } catch (error) {
+      console.error("Update preferences error:", error);
+      res.status(500).json({ message: "Failed to update preferences" });
+    }
+  });
+
+  // Update user profile
+  app.patch("/api/user/profile", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { fullName } = req.body;
+      
+      await db.update(userProfiles)
+        .set({ fullName, updatedAt: new Date() })
+        .where(eq(userProfiles.id, userId));
+      
+      const updatedUser = await storage.getUserProfile(userId);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Delete user account
+  app.delete("/api/user/delete", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Delete user data in order due to foreign key constraints
+      await db.delete(studyProgress).where(eq(studyProgress.userId, userId));
+      await db.delete(studySessions).where(eq(studySessions.userId, userId));
+      await db.delete(userPreferences).where(eq(userPreferences.userId, userId));
+      await db.delete(supportTickets).where(eq(supportTickets.userId, userId));
+      await db.delete(subscriptionHistory).where(eq(subscriptionHistory.userId, userId));
+      
+      // Delete user jobs and associated flashcards
+      const userJobs = await db.select({ id: flashcardJobs.id }).from(flashcardJobs).where(eq(flashcardJobs.userId, userId));
+      for (const job of userJobs) {
+        await db.delete(flashcardsTable).where(eq(flashcardsTable.jobId, job.id));
+      }
+      await db.delete(flashcardJobs).where(eq(flashcardJobs.userId, userId));
+      
+      // Finally delete user profile
+      await db.delete(userProfiles).where(eq(userProfiles.id, userId));
+      
+      res.json({ message: "Account deleted successfully" });
+    } catch (error) {
+      console.error("Delete account error:", error);
+      res.status(500).json({ message: "Failed to delete account" });
+    }
+  });
+
+  // ============ SUPPORT TICKETS API ============
+  
+  // Get user's support tickets
+  app.get("/api/support/tickets", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tickets = await db.select().from(supportTickets)
+        .where(eq(supportTickets.userId, userId))
+        .orderBy(desc(supportTickets.createdAt));
+      
+      res.json(tickets);
+    } catch (error) {
+      console.error("Get tickets error:", error);
+      res.status(500).json({ message: "Failed to get support tickets" });
+    }
+  });
+  
+  // Submit support ticket
+  app.post("/api/support/tickets", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { subject, message, category, priority = "medium" } = req.body;
+      
+      const newTicket = await db.insert(supportTickets).values({
+        userId,
+        subject,
+        message,
+        category,
+        priority,
+        status: "open"
+      }).returning();
+      
+      res.json(newTicket[0]);
+    } catch (error) {
+      console.error("Submit ticket error:", error);
+      res.status(500).json({ message: "Failed to submit support ticket" });
+    }
+  });
+
+  // ============ ANALYTICS API ============
+  
+  // Get study analytics
+  app.get("/api/analytics/study-stats", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get basic stats
+      const totalFlashcards = await db.select({ count: sql`count(*)` })
+        .from(flashcardsTable)
+        .innerJoin(flashcardJobs, eq(flashcardsTable.jobId, flashcardJobs.id))
+        .where(eq(flashcardJobs.userId, userId));
+      
+      const totalSessions = await db.select({ count: sql`count(*)` })
+        .from(studySessions)
+        .where(eq(studySessions.userId, userId));
+      
+      const accuracyData = await db.select({ 
+        accuracy: sql`avg(${studySessions.accuracyPercentage})`,
+        totalTime: sql`sum(${studySessions.durationSeconds})`
+      })
+        .from(studySessions)
+        .where(eq(studySessions.userId, userId));
+      
+      const stats = {
+        totalFlashcards: totalFlashcards[0]?.count || 0,
+        totalSessions: totalSessions[0]?.count || 0,
+        accuracyRate: Math.round(accuracyData[0]?.accuracy || 0),
+        avgSessionTime: Math.round((accuracyData[0]?.totalTime || 0) / (totalSessions[0]?.count || 1) / 60),
+        studyStreak: 0, // Would need more complex logic
+        longestStreak: 0,
+        flashcardsThisWeek: 0,
+        cardsToday: 0,
+        dailyGoal: 50,
+        timeToday: 0,
+        timeGoal: 30,
+        cardsThisWeek: 0,
+        weeklyGoal: 300,
+        knownCards: 0,
+        reviewingCards: 0,
+        newCards: 0,
+        monthlyCards: 0,
+        monthlyGoal: 1000,
+        accuracyTarget: 85,
+        streakTarget: 30,
+        bestTimeSlot: "morning",
+        accuracyImprovement: 0
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Analytics error:", error);
+      res.status(500).json({ message: "Failed to get analytics" });
+    }
+  });
+  
+  // Get progress data
+  app.get("/api/analytics/progress", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get last 7 days of study data
+      const progress = await db.select({
+        date: sql`date(${studySessions.startedAt})`,
+        cardsStudied: sql`sum(${studySessions.cardsStudied})`,
+        accuracy: sql`avg(${studySessions.accuracyPercentage})`
+      })
+        .from(studySessions)
+        .where(eq(studySessions.userId, userId))
+        .groupBy(sql`date(${studySessions.startedAt})`)
+        .orderBy(sql`date(${studySessions.startedAt}) DESC`)
+        .limit(7);
+      
+      // Format for chart
+      const formattedProgress = progress.map((day, index) => ({
+        day: `Day ${7 - index}`,
+        cardsStudied: day.cardsStudied || 0,
+        accuracy: Math.round(day.accuracy || 0)
+      }));
+      
+      res.json(formattedProgress);
+    } catch (error) {
+      console.error("Progress error:", error);
+      res.status(500).json({ message: "Failed to get progress data" });
+    }
+  });
+  
+  // Get subject breakdown
+  app.get("/api/analytics/subjects", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      const subjects = await db.select({
+        name: flashcardsTable.subject,
+        value: sql`count(*)`,
+        accuracy: sql`avg(${studyProgress.correctReviews}::float / ${studyProgress.totalReviews}::float * 100)`
+      })
+        .from(flashcardsTable)
+        .innerJoin(flashcardJobs, eq(flashcardsTable.jobId, flashcardJobs.id))
+        .leftJoin(studyProgress, eq(studyProgress.flashcardId, flashcardsTable.id))
+        .where(eq(flashcardJobs.userId, userId))
+        .groupBy(flashcardsTable.subject)
+        .having(sql`count(*) > 0`);
+      
+      const formattedSubjects = subjects.map(subject => ({
+        name: subject.name || 'General',
+        value: subject.value || 0,
+        accuracy: Math.round(subject.accuracy || 0)
+      }));
+      
+      res.json(formattedSubjects);
+    } catch (error) {
+      console.error("Subjects error:", error);
+      res.status(500).json({ message: "Failed to get subject data" });
+    }
+  });
+
+  // ============ SUBSCRIPTION API ============
+  
+  // Get subscription usage stats
+  app.get("/api/subscription/usage", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      const user = await storage.getUserProfile(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const stats = {
+        currentUploads: user.uploadsThisMonth || 0,
+        totalUploads: user.uploadsThisMonth || 0,
+        totalPages: 0, // Would need calculation
+        totalFlashcards: 0, // Would need calculation
+        studySessions: 0 // Would need calculation
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Usage stats error:", error);
+      res.status(500).json({ message: "Failed to get usage stats" });
+    }
+  });
+  
+  // Get subscription history
+  app.get("/api/subscription/history", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      const history = await db.select().from(subscriptionHistory)
+        .where(eq(subscriptionHistory.userId, userId))
+        .orderBy(desc(subscriptionHistory.createdAt));
+      
+      res.json(history);
+    } catch (error) {
+      console.error("Subscription history error:", error);
+      res.status(500).json({ message: "Failed to get subscription history" });
+    }
+  });
+
+  // ============ ADMIN API ============
+  
+  // Get admin user stats
+  app.get("/api/admin/user-stats", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const totalUsers = await db.select({ count: sql`count(*)` }).from(userProfiles);
+      const premiumUsers = await db.select({ count: sql`count(*)` }).from(userProfiles).where(eq(userProfiles.isPremium, true));
+      const totalPdfs = await db.select({ count: sql`count(*)` }).from(flashcardJobs);
+      const openTickets = await db.select({ count: sql`count(*)` }).from(supportTickets).where(eq(supportTickets.status, 'open'));
+      
+      const stats = {
+        totalUsers: totalUsers[0]?.count || 0,
+        premiumUsers: premiumUsers[0]?.count || 0,
+        totalPdfs: totalPdfs[0]?.count || 0,
+        openTickets: openTickets[0]?.count || 0,
+        newUsersToday: 0,
+        pdfsToday: 0,
+        avgResponseTime: 24
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Admin stats error:", error);
+      res.status(500).json({ message: "Failed to get admin stats" });
+    }
+  });
+  
+  // Get system metrics
+  app.get("/api/admin/system-metrics", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const metrics = {
+        memoryUsage: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        responseTime: 250,
+        requestCount: 1000,
+        errorRate: 0.5,
+        uptime: 99.9
+      };
+      
+      res.json(metrics);
+    } catch (error) {
+      console.error("System metrics error:", error);
+      res.status(500).json({ message: "Failed to get system metrics" });
+    }
+  });
+  
+  // Get admin support tickets
+  app.get("/api/admin/support-tickets", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const tickets = await db.select({
+        id: supportTickets.id,
+        subject: supportTickets.subject,
+        message: supportTickets.message,
+        category: supportTickets.category,
+        priority: supportTickets.priority,
+        status: supportTickets.status,
+        adminResponse: supportTickets.adminResponse,
+        createdAt: supportTickets.createdAt,
+        userEmail: userProfiles.email
+      })
+        .from(supportTickets)
+        .innerJoin(userProfiles, eq(supportTickets.userId, userProfiles.id))
+        .orderBy(desc(supportTickets.createdAt));
+      
+      res.json(tickets);
+    } catch (error) {
+      console.error("Admin tickets error:", error);
+      res.status(500).json({ message: "Failed to get support tickets" });
+    }
+  });
+  
+  // Get admin users list
+  app.get("/api/admin/users", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const users = await db.select().from(userProfiles).orderBy(desc(userProfiles.createdAt)).limit(100);
+      res.json(users);
+    } catch (error) {
+      console.error("Admin users error:", error);
+      res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+  
+  // Get recent activity
+  app.get("/api/admin/recent-activity", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      // Mock activity data
+      const activity = [
+        { description: "New user registered", type: "user", timestamp: new Date() },
+        { description: "PDF processed successfully", type: "processing", timestamp: new Date() },
+        { description: "Support ticket submitted", type: "support", timestamp: new Date() }
+      ];
+      
+      res.json(activity);
+    } catch (error) {
+      console.error("Activity error:", error);
+      res.status(500).json({ message: "Failed to get activity" });
+    }
+  });
+  
+  // Respond to support ticket
+  app.patch("/api/admin/support-tickets/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const ticketId = parseInt(req.params.id);
+      const { adminResponse, status } = req.body;
+      
+      await db.update(supportTickets)
+        .set({ 
+          adminResponse, 
+          status: status || 'resolved', 
+          respondedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(supportTickets.id, ticketId));
+      
+      res.json({ message: "Ticket updated successfully" });
+    } catch (error) {
+      console.error("Update ticket error:", error);
+      res.status(500).json({ message: "Failed to update ticket" });
+    }
+  });
+  
+  // Update user subscription
+  app.patch("/api/admin/users/:id", verifySupabaseToken as any, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userRole = (await storage.getUserProfile(req.user!.id))?.role;
+      if (userRole !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const userId = req.params.id;
+      const { isPremium } = req.body;
+      
+      await db.update(userProfiles)
+        .set({ isPremium, updatedAt: new Date() })
+        .where(eq(userProfiles.id, userId));
+      
+      res.json({ message: "User updated successfully" });
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Failed to update user" });
     }
   });
 

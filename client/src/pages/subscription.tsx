@@ -63,13 +63,10 @@ export default function Subscription() {
   // Create checkout session mutation
   const createCheckoutMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/create-checkout-session', {
-        method: 'POST',
-        body: JSON.stringify({ 
-          priceId: 'price_pro_monthly',
-          successUrl: `${window.location.origin}/subscription?success=true`,
-          cancelUrl: `${window.location.origin}/subscription?canceled=true`
-        }),
+      return apiRequest('POST', '/api/create-checkout-session', { 
+        priceId: 'price_pro_monthly',
+        successUrl: `${window.location.origin}/subscription?success=true`,
+        cancelUrl: `${window.location.origin}/subscription?canceled=true`
       });
     },
     onSuccess: (data: any) => {
@@ -84,9 +81,7 @@ export default function Subscription() {
   // Cancel subscription mutation
   const cancelSubscriptionMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/subscription/cancel', {
-        method: 'POST',
-      });
+      return apiRequest('POST', '/api/subscription/cancel');
     },
     onSuccess: () => {
       toast({ title: "Subscription canceled successfully" });
@@ -101,9 +96,7 @@ export default function Subscription() {
   // Reactivate subscription mutation
   const reactivateSubscriptionMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/subscription/reactivate', {
-        method: 'POST',
-      });
+      return apiRequest('POST', '/api/subscription/reactivate');
     },
     onSuccess: () => {
       toast({ title: "Subscription reactivated successfully" });
@@ -125,8 +118,8 @@ export default function Subscription() {
     }
   };
 
-  const isPremium = userData?.isPremium;
-  const currentUploads = usageStats?.currentUploads || 0;
+  const isPremium = (userData as any)?.isPremium;
+  const currentUploads = (usageStats as any)?.currentUploads || 0;
   const maxUploads = isPremium ? 100 : 3;
   const usagePercentage = (currentUploads / maxUploads) * 100;
 
